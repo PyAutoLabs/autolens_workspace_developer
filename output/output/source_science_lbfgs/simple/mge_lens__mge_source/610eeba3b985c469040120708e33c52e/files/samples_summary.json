@@ -1,0 +1,42 @@
+{
+    "type": "instance",
+    "class_path": "autofit.non_linear.samples.summary.SamplesSummary",
+    "arguments": {
+        "median_pdf_sample": null,
+        "log_evidence": null,
+        "errors_at_sigma_3": null,
+        "errors_at_sigma_1": null,
+        "model": null,
+        "values_at_sigma_3": null,
+        "values_at_sigma_1": null,
+        "max_log_likelihood_sample": {
+            "type": "instance",
+            "class_path": "autofit.non_linear.samples.sample.Sample",
+            "arguments": {
+                "log_likelihood": 5395.580835596191,
+                "log_prior": 1.2854895654468081,
+                "weight": 1.0,
+                "kwargs": {
+                    "type": "dict",
+                    "arguments": {
+                        "galaxies.lens.mass.centre.centre_0": -0.0008259028059881509,
+                        "galaxies.lens.mass.centre.centre_1": 0.0005946215313056699,
+                        "galaxies.lens.mass.einstein_radius": 1.5998967080230404,
+                        "galaxies.lens.mass.ell_comps.ell_comps_0": 0.053105298326504555,
+                        "galaxies.lens.mass.ell_comps.ell_comps_1": -0.013119584105963563,
+                        "galaxies.lens.shear.gamma_1": 0.04470679566912877,
+                        "galaxies.lens.shear.gamma_2": 0.05107154287755078,
+                        "galaxies.lens.bulge.profile_list.39.centre.centre_0": 0.0003881384725089415,
+                        "galaxies.lens.bulge.profile_list.39.centre.centre_1": -0.0002626835352481369,
+                        "galaxies.lens.bulge.profile_list.39.ell_comps.ell_comps_0": 0.05262879222974889,
+                        "galaxies.lens.bulge.profile_list.39.ell_comps.ell_comps_1": 0.0011974455996476042,
+                        "galaxies.source.bulge.profile_list.39.centre.centre_0": -3.683481512201444e-05,
+                        "galaxies.source.bulge.profile_list.39.centre.centre_1": 0.000575544742408202,
+                        "galaxies.source.bulge.profile_list.39.ell_comps.ell_comps_0": 0.07420867153790542,
+                        "galaxies.source.bulge.profile_list.39.ell_comps.ell_comps_1": -0.04899587232966543
+                    }
+                }
+            }
+        }
+    }
+}

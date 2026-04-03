@@ -1,0 +1,48 @@
+{
+    "type": "instance",
+    "class_path": "autofit.non_linear.samples.summary.SamplesSummary",
+    "arguments": {
+        "median_pdf_sample": null,
+        "log_evidence": null,
+        "errors_at_sigma_3": null,
+        "errors_at_sigma_1": null,
+        "model": null,
+        "values_at_sigma_3": null,
+        "values_at_sigma_1": null,
+        "max_log_likelihood_sample": {
+            "type": "instance",
+            "class_path": "autofit.non_linear.samples.sample.Sample",
+            "arguments": {
+                "log_likelihood": -35118.4612363343,
+                "log_prior": 0.7788534993040003,
+                "weight": 1.0,
+                "kwargs": {
+                    "type": "dict",
+                    "arguments": {
+                        "galaxies.lens.mass.centre.centre_0": 4.2116178509357487e-10,
+                        "galaxies.lens.mass.centre.centre_1": 4.8178698490010524e-09,
+                        "galaxies.lens.mass.einstein_radius": 1.59999999740907,
+                        "galaxies.lens.mass.ell_comps.ell_comps_0": 2.5042518157453566e-09,
+                        "galaxies.lens.mass.ell_comps.ell_comps_1": 0.052600001532966165,
+                        "galaxies.lens.shear.gamma_1": 0.04999999988486133,
+                        "galaxies.lens.shear.gamma_2": 0.049999996099965124,
+                        "galaxies.lens.bulge.centre.centre_0": -9.643486363307686e-09,
+                        "galaxies.lens.bulge.centre.centre_1": 8.00224598450046e-10,
+                        "galaxies.lens.bulge.ell_comps.ell_comps_0": 3.4233182580841536e-09,
+                        "galaxies.lens.bulge.ell_comps.ell_comps_1": 0.05260000408543196,
+                        "galaxies.lens.bulge.intensity": 1.9999999954990177,
+                        "galaxies.lens.bulge.effective_radius": 0.60000000566102,
+                        "galaxies.lens.bulge.sersic_index": 2.99999999524532,
+                        "galaxies.source.bulge.centre.centre_0": 5.308305075074957e-09,
+                        "galaxies.source.bulge.centre.centre_1": 9.537885343561256e-09,
+                        "galaxies.source.bulge.ell_comps.ell_comps_0": 1.168178120755884e-09,
+                        "galaxies.source.bulge.ell_comps.ell_comps_1": 0.11110000106363085,
+                        "galaxies.source.bulge.intensity": 4.000000006423161,
+                        "galaxies.source.bulge.effective_radius": 0.1000000068658,
+                        "galaxies.source.bulge.sersic_index": 1.00000000842524
+                    }
+                }
+            }
+        }
+    }
+}

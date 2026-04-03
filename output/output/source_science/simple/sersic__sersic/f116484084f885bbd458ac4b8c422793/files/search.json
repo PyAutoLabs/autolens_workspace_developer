@@ -1,0 +1,52 @@
+{
+    "type": "instance",
+    "class_path": "autofit.non_linear.search.nest.nautilus.search.Nautilus",
+    "arguments": {
+        "name": "sersic__sersic",
+        "n_like_new_bound": null,
+        "enlarge_per_dim": 1.1,
+        "n_points_min": null,
+        "inplace": false,
+        "n_eff": 500,
+        "initializer": {
+            "type": "instance",
+            "class_path": "autofit.non_linear.initializer.InitializerPrior",
+            "arguments": {}
+        },
+        "use_jax_vmap": true,
+        "unique_tag": "simple",
+        "n_networks": 4,
+        "n_live": 75,
+        "iterations_per_full_update": 1e+99,
+        "n_update": null,
+        "number_of_cores": 1,
+        "iterations_per_quick_update": 2000000.0,
+        "seed": null,
+        "initial_values": {
+            "type": "dict",
+            "arguments": {}
+        },
+        "path_prefix": {
+            "type": "path",
+            "path": "output/source_science"
+        },
+        "paths": {
+            "type": "instance",
+            "class_path": "autofit.non_linear.paths.directory.DirectoryPaths",
+            "arguments": {
+                "unique_tag": "simple",
+                "identifier": "f116484084f885bbd458ac4b8c422793",
+                "name": "sersic__sersic",
+                "is_identifier_in_paths": true,
+                "parent": null,
+                "image_path_suffix": "",
+                "path_prefix": {
+                    "type": "path",
+                    "path": "output/source_science"
+                }
+            }
+        },
+        "split_threshold": 100,
+        "n_shell": 1
+    }
+}

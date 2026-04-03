@@ -1,0 +1,343 @@
+"""
+Simulator: Start Here
+=====================
+
+This script is the starting point for simulating galaxy-galaxy strong lenses as CCD imaging data (E.g. Hubble Space
+Telescope, Euclid) and it provides an overview of the lens simulation API.
+
+After reading this script, the `examples` folder provide examples for simulating more complex lenses in different ways.
+
+__Model__
+
+This script simulates `Imaging` of a 'galaxy-scale' strong lens where:
+
+ - The lens galaxy's light profile is a `Sersic`.
+ - The lens galaxy's total mass distribution is an `Isothermal` and `ExternalShear`.
+ - The source galaxy's light is a `Sersic`.
+
+__Plotters__
+
+To output images of the simulated data, `Plotter` objects are used, which are high-level wrappers of matplotlib
+code which produce high quality visualization of strong lenses.
+
+The `PLotter` API is described in the `autolens_workspace/*/guides/plot` script.
+"""
+
+from autoconf import jax_wrapper  # Sets JAX environment before other imports
+
+# %matplotlib inline
+# from pyprojroot import here
+# workspace_path = str(here())
+# %cd $workspace_path
+# print(f"Working Directory has been set to `{workspace_path}`")
+
+import numpy as np
+from pathlib import Path
+import autolens as al
+import autolens.plot as aplt
+
+"""
+__Dataset Paths__
+
+The `dataset_type` describes the type of data being simulated and `dataset_name` gives it a descriptive name. They define the folder the dataset is output to on your hard-disk:
+
+ - The image will be output to `/autolens_workspace/dataset/dataset_type/dataset_name/image.fits`.
+ - The noise-map will be output to `/autolens_workspace/dataset/dataset_type/dataset_name/noise_map.fits`.
+ - The psf will be output to `/autolens_workspace/dataset/dataset_type/dataset_name/psf.fits`.
+"""
+dataset_type = "imaging"
+dataset_name = "simple"
+
+"""
+The path where the dataset will be output. 
+
+In this example, this is: `/autolens_workspace/dataset/imaging/simple`
+"""
+dataset_path = Path("dataset", dataset_type, dataset_name)
+
+"""
+__Grid__
+
+Define the 2d grid of (y,x) coordinates that the lens and source galaxy images are evaluated and therefore simulated 
+on, via the inputs:
+
+ - `shape_native`: The (y_pixels, x_pixels) 2D shape of the grid defining the shape of the data that is simulated.
+ - `pixel_scales`: The arc-second to pixel conversion factor of the grid and data.
+"""
+grid = al.Grid2D.uniform(
+    shape_native=(100, 100),
+    pixel_scales=0.1,
+)
+
+"""
+__Over Sampling__
+
+Over sampling is a numerical technique where the images of light profiles and galaxies are evaluated 
+on a higher resolution grid than the image data to ensure the calculation is accurate. 
+
+For lensing calculations, the high magnification regions of a lensed source galaxy require especially high levels of 
+over sampling to ensure the lensed images are evaluated accurately.
+
+Over sampling is a numerical technique where the images of light profiles and galaxies are evaluated 
+on a higher resolution grid than the image data to ensure the calculation is accurate. 
+
+An adaptive oversampling scheme is implemented, evaluating the central regions at (0.0", 0.0") of the light profile at a 
+resolution of 32x32, transitioning to 8x8 in intermediate areas, and 2x2 in the outskirts. This ensures precise and 
+accurate image simulation while focusing computational resources on the bright regions that demand higher oversampling.
+
+An adaptive oversampling grid cannot be defined for the lensed source because its light appears in different regions of 
+the image plane for each dataset. For this reason, most workspace examples utilize cored light profiles for the 
+source galaxy. Cored light profiles change gradually in their central regions, allowing accurate evaluation without 
+requiring oversampling.
+
+Once you are more experienced, you should read up on over-sampling in more detail via 
+the `autolens_workspace/*/guides/over_sampling.ipynb` notebook.
+"""
+over_sample_size = al.util.over_sample.over_sample_size_via_radial_bins_from(
+    grid=grid,
+    sub_size_list=[32, 8, 2],
+    radial_list=[0.3, 0.6],
+    centre_list=[(0.0, 0.0)],
+)
+
+grid = grid.apply_over_sampling(over_sample_size=over_sample_size)
+
+"""
+All CCD imaging data (e.g. Hubble Space Telescope, Euclid) are blurred by the telescope optics when they are imaged.
+
+The Point Spread Function (PSF) describes the blurring of the image by the telescope optics, in the form of a
+two dimensional convolution kernel. The lens modeling scripts use this PSF when fitting the data, to account for
+this blurring of the image.
+
+In this example, use a simple 2D Gaussian PSF, which is convolved with the image of the lens and source galaxies 
+when simulating the dataset.
+"""
+psf = al.Convolver.from_gaussian(
+    shape_native=(11, 11), sigma=0.1, pixel_scales=grid.pixel_scales
+)
+
+"""
+To simulate the `Imaging` dataset we first create a simulator, which includes:
+
+ - The exposure time of the simulated dataset, increasing this will increase the signal-to-noise of the simulated data.
+ - The PSF of the simulated dataset, which is convolved with the image of the lens and source galaxies.
+ - The background sky level of the simulated dataset, which is added to the image of the lens and source galaxies and
+  leads to a higher level of Poisson noise.
+ - Whether the simulated dataset includes Poisson noise.
+"""
+simulator = al.SimulatorImaging(
+    exposure_time=300.0,
+    psf=psf,
+    background_sky_level=0.1,
+    add_poisson_noise_to_data=True,
+)
+
+"""
+__Ray Tracing__
+
+We now define the lens galaxy's light (elliptical Sersic + Exponential), mass (SIE+Shear) and source galaxy light
+(elliptical Sersic) for this simulated lens.
+
+The following should be noted about the parameters below:
+
+ - The native units of light and mass profiles distance parameters (e.g. centres, effective_radius) are arc-seconds. 
+ - The intensity of the light profiles is in units of electrons per second per arc-second squared.
+ - The ellipticity of light and mass profiles are defined using the `ell_comps` parameter, however we below use
+   the convert module to input the `axis-ratio` (semi-major axis / semi-minor axis = b/a) and positive 
+   angle (degrees defined counter clockwise from the positive x-axis).
+ - The external shear is defined using the (gamma_1, gamma_2) convention.
+ - The input redshifts are used to determine which galaxy is the lens (e.g. lower redshift) and which is the 
+   source (e.g. higher redshift).
+ - The source uses a cored Sersic with a radius half the pixel-scale, ensuring that over-sampling is not necessary.
+"""
+lens_galaxy = al.Galaxy(
+    redshift=0.5,
+    bulge=al.lp.Sersic(
+        centre=(0.0, 0.0),
+        ell_comps=al.convert.ell_comps_from(axis_ratio=0.9, angle=45.0),
+        intensity=2.0,
+        effective_radius=0.6,
+        sersic_index=3.0,
+    ),
+    mass=al.mp.Isothermal(
+        centre=(0.0, 0.0),
+        einstein_radius=1.6,
+        ell_comps=al.convert.ell_comps_from(axis_ratio=0.9, angle=45.0),
+    ),
+    shear=al.mp.ExternalShear(gamma_1=0.05, gamma_2=0.05),
+)
+
+source_galaxy = al.Galaxy(
+    redshift=1.0,
+    bulge=al.lp.SersicCore(
+        centre=(0.0, 0.0),
+        ell_comps=al.convert.ell_comps_from(axis_ratio=0.8, angle=60.0),
+        intensity=4.0,
+        effective_radius=0.1,
+        sersic_index=1.0,
+    ),
+)
+
+
+"""
+We now pass these galaxies to a `Tracer`, which performs the ray-tracing calculations they describe and returns
+the image of the strong lens system they produce.
+"""
+tracer = al.Tracer(galaxies=[lens_galaxy, source_galaxy])
+
+"""
+We can plot the `Tracer``s image, which is the image we'll next simulate as CCD imaging data.
+"""
+"""
+By passing the `Tracer` and grid to the simulator, we create the simulated CCD imaging dataset.
+"""
+dataset = simulator.via_tracer_from(tracer=tracer, grid=grid)
+
+"""
+We now plot the simulated `Imaging` dataset before outputting it to fits.
+
+Note how unlike the `Tracer` image above, the simulated `Imaging` dataset includes the blurring effects of the 
+telescope's PSF and also has noise.
+"""
+"""
+__Output__
+
+Output the simulated dataset to the dataset path as .fits files.
+
+If you are unfamiliar with .fits files, this is the standard file format of astronomical data and you can open 
+them using the software ds9 (https://sites.google.com/cfa.harvard.edu/saoimageds9/home).
+"""
+dataset.output_to_fits(
+    data_path=dataset_path / "data.fits",
+    psf_path=dataset_path / "psf.fits",
+    noise_map_path=dataset_path / "noise_map.fits",
+    overwrite=True,
+)
+
+"""
+__Visualize__
+
+In the same folder as the .fits files, we also output subplots of the simulated dataset in .png format, as well as 
+other images which summarise the dataset.
+
+Having .png files like this is useful, as they can be opened quickly and easily by the user to check the dataset.
+
+For a faster run time, this visualization uses a regular grid which does not perferm the iterative ray-tracing.
+"""
+"""
+__Tracer json__
+
+Save the `Tracer` in the dataset folder as a .json file, ensuring the true light profiles, mass profiles and galaxies
+are safely stored and available to check how the dataset was simulated in the future. 
+
+This can be loaded via the method `tracer = al.from_json()`.
+"""
+al.output_to_json(
+    obj=tracer,
+    file_path=Path(dataset_path, "tracer.json"),
+)
+
+"""
+__Source Flux__
+
+A key quantity for a source galaxy is its total flux, which can be used to compute magnitudes (see 
+`autolens_workspace/*/guides/units/flux`) example for more details on this).
+
+The most simple way to compute the total flux of a light profile is to create a grid of (y,x) coordinates over which
+we compute the image of the light profile, and then sum the image. 
+
+The units of the light profile `intensity` are the units of the data the light profile was fitted to. In this example
+we will assume everything is in electrons per second (`e- s^-1`), which is typical for Hubble Space Telescope imaging data.
+"""
+print(f"Source Galaxy's Intensity {source_galaxy.bulge.intensity} e- s^-1")
+
+"""
+The total flux, in units of `e- s^-1` , is computed by summing the image of the light profile over all pixels.
+
+Note that we can use a `grid` of any shape and pixel scale here, the important thing is that it is so large
+and high enough resolution that it captures all the light from the light profile.
+
+Note that we are using the source galaxy's true light profile, which corresponds to its emission in the source-plane.
+For real datasets, we have to infer this via lens modeling.
+"""
+grid = al.Grid2D.uniform(shape_native=(250, 250), pixel_scales=0.02)
+
+image = source_galaxy.bulge.image_2d_from(grid=grid)
+
+total_flux = np.sum(image)  # in units e- s^-1 as summed over pixels
+
+print(f"Total Source Flux: {total_flux} e- s^-1")
+
+"""
+Below, we will compare how this true source flux compares to the inferred source fluxes we compute using different
+source modeling techniques (e.g. parametric and pixelized source models). Converting the flux to magnitudes or
+other quantities used for tasks like SED fitting is described in the `autolens_workspace/*/guides/units/flux` example.
+
+__Source Magnification__
+
+The overall magnification of the source is estimated as the ratio of total surface brightness in the image-plane and 
+total surface brightness in the source-plane.
+
+Note that the surface brightness is different to the total flux above, as surface brightness is flux per unit area. 
+We therefore explicitly mention how area folds into the calculation below.
+
+To ensure the magnification is stable and that we resolve all source emission in both the image-plane and source-plane 
+we use a very high resolution grid, higher than we used to compute the total flux above.
+"""
+grid = al.Grid2D.uniform(shape_native=(400, 400), pixel_scales=0.03)
+
+"""
+We repeat our calculation of the source's total flux in the source-plane using this higher resolution grid, note
+that we do not take the area into account, the reason for this is explained below.
+"""
+image = source_galaxy.bulge.image_2d_from(grid=grid)
+
+total_source_plane_flux = np.sum(image)  # in units e- s^-1 as summed over pixels
+
+"""
+We now need the total flux of the lensed source in the image-plane, that is how much flux we measure after
+gravitational lensing.
+
+To calculation this, we first ray-trace the grid above from the image-plane to the source-plane using the tracer
+and then pass it to the source galaxy's light profile to compute the lensed image.
+"""
+traced_grid_list = tracer.traced_grid_2d_list_from(grid=grid)
+
+source_plane_grid = traced_grid_list[1]
+
+lensed_source_image = source_galaxy.bulge.image_2d_from(grid=source_plane_grid)
+
+total_image_plane_flux = np.sum(
+    lensed_source_image
+)  # in units e- s^-1 as summed over pixels
+
+"""
+We now take the ratio of the total image-plane flux to source-plane flux to estimate the magnification.
+
+Because both fluxes were computed on grids with the same total area and area per pixel, we do not need to
+explicitly account for area in this calculation. This is because the area terms cancel out when taking the ratio.
+Were the grid areas different, we would need to include area terms in the calculation.
+"""
+source_magnification = total_image_plane_flux / total_source_plane_flux
+
+print(f"Source Magnification: {source_magnification}")
+
+
+"""
+We now create a dictionary called `source_science_dict` which contains the source flux and magnification, which 
+we will output to a .json file in the dataset folder.
+"""
+source_science_dict = {
+    "image_plane_flux": float(total_image_plane_flux),
+    "source_plane_flux": float(total_source_plane_flux),
+    "source_magnification": float(source_magnification),
+}
+
+al.output_to_json(
+    file_path=dataset_path / "source_science.json",
+    obj=source_science_dict,
+)
+
+"""
+The dataset can be viewed in the folder `autolens_workspace/imaging/simple`.
+"""

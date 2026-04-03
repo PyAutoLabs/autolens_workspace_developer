@@ -1,0 +1,52 @@
+{
+    "type": "instance",
+    "class_path": "autofit.non_linear.search.nest.nautilus.search.Nautilus",
+    "arguments": {
+        "n_eff": 500,
+        "enlarge_per_dim": 1.1,
+        "name": "mge_lens__mge_source",
+        "initializer": {
+            "type": "instance",
+            "class_path": "autofit.non_linear.initializer.InitializerPrior",
+            "arguments": {}
+        },
+        "n_like_new_bound": null,
+        "inplace": false,
+        "use_jax_vmap": true,
+        "n_points_min": null,
+        "split_threshold": 100,
+        "paths": {
+            "type": "instance",
+            "class_path": "autofit.non_linear.paths.directory.DirectoryPaths",
+            "arguments": {
+                "identifier": "77fcd0f34c3b5fc1f9a5ded1b47ecbca",
+                "image_path_suffix": "",
+                "name": "mge_lens__mge_source",
+                "path_prefix": {
+                    "type": "path",
+                    "path": "output/source_science_v2"
+                },
+                "is_identifier_in_paths": true,
+                "parent": null,
+                "unique_tag": "simple_v2"
+            }
+        },
+        "n_networks": 4,
+        "n_update": null,
+        "number_of_cores": 1,
+        "seed": null,
+        "path_prefix": {
+            "type": "path",
+            "path": "output/source_science_v2"
+        },
+        "n_shell": 1,
+        "iterations_per_full_update": 1e+99,
+        "initial_values": {
+            "type": "dict",
+            "arguments": {}
+        },
+        "n_live": 75,
+        "iterations_per_quick_update": 2000000.0,
+        "unique_tag": "simple_v2"
+    }
+}

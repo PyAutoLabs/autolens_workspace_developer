@@ -1,0 +1,362 @@
+{
+    "type": "instance",
+    "class_path": "autofit.non_linear.search.mle.bfgs.search.LBFGS",
+    "arguments": {
+        "path_prefix": {
+            "type": "path",
+            "path": "output/source_science_lbfgs"
+        },
+        "iterations_per_quick_update": 1e+99,
+        "initializer": {
+            "type": "instance",
+            "class_path": "autofit.non_linear.initializer.InitializerParamStartPoints",
+            "arguments": {
+                "parameter_dict": {
+                    "type": "compound_dict",
+                    "arguments": [
+                        {
+                            "key": {
+                                "type": "Gaussian",
+                                "id": 5,
+                                "mean": 0.0,
+                                "sigma": 0.05
+                            },
+                            "value": {
+                                "type": "tuple",
+                                "values": [
+                                    -1e-08,
+                                    1e-08
+                                ]
+                            }
+                        },
+                        {
+                            "key": {
+                                "type": "Gaussian",
+                                "id": 6,
+                                "mean": 0.0,
+                                "sigma": 0.05
+                            },
+                            "value": {
+                                "type": "tuple",
+                                "values": [
+                                    -1e-08,
+                                    1e-08
+                                ]
+                            }
+                        },
+                        {
+                            "key": {
+                                "type": "Uniform",
+                                "id": 7,
+                                "lower_limit": 1.2,
+                                "upper_limit": 2.0
+                            },
+                            "value": {
+                                "type": "tuple",
+                                "values": [
+                                    1.5999999900000001,
+                                    1.60000001
+                                ]
+                            }
+                        },
+                        {
+                            "key": {
+                                "type": "Gaussian",
+                                "id": 8,
+                                "mean": 0.0,
+                                "sigma": 0.2
+                            },
+                            "value": {
+                                "type": "tuple",
+                                "values": [
+                                    -1e-08,
+                                    1e-08
+                                ]
+                            }
+                        },
+                        {
+                            "key": {
+                                "type": "Gaussian",
+                                "id": 9,
+                                "mean": 0.1,
+                                "sigma": 0.2
+                            },
+                            "value": {
+                                "type": "tuple",
+                                "values": [
+                                    0.05259999,
+                                    0.05260001
+                                ]
+                            }
+                        },
+                        {
+                            "key": {
+                                "type": "Gaussian",
+                                "id": 12,
+                                "mean": 0.05,
+                                "sigma": 0.05
+                            },
+                            "value": {
+                                "type": "tuple",
+                                "values": [
+                                    0.04999999,
+                                    0.050000010000000004
+                                ]
+                            }
+                        },
+                        {
+                            "key": {
+                                "type": "Gaussian",
+                                "id": 13,
+                                "mean": 0.05,
+                                "sigma": 0.05
+                            },
+                            "value": {
+                                "type": "tuple",
+                                "values": [
+                                    0.04999999,
+                                    0.050000010000000004
+                                ]
+                            }
+                        },
+                        {
+                            "key": {
+                                "type": "Gaussian",
+                                "id": 21,
+                                "mean": 0.0,
+                                "sigma": 0.05
+                            },
+                            "value": {
+                                "type": "tuple",
+                                "values": [
+                                    -1e-08,
+                                    1e-08
+                                ]
+                            }
+                        },
+                        {
+                            "key": {
+                                "type": "Gaussian",
+                                "id": 22,
+                                "mean": 0.0,
+                                "sigma": 0.05
+                            },
+                            "value": {
+                                "type": "tuple",
+                                "values": [
+                                    -1e-08,
+                                    1e-08
+                                ]
+                            }
+                        },
+                        {
+                            "key": {
+                                "type": "Gaussian",
+                                "id": 23,
+                                "mean": 0.0,
+                                "sigma": 0.2
+                            },
+                            "value": {
+                                "type": "tuple",
+                                "values": [
+                                    -1e-08,
+                                    1e-08
+                                ]
+                            }
+                        },
+                        {
+                            "key": {
+                                "type": "Gaussian",
+                                "id": 24,
+                                "mean": 0.05,
+                                "sigma": 0.2
+                            },
+                            "value": {
+                                "type": "tuple",
+                                "values": [
+                                    0.05259999,
+                                    0.05260001
+                                ]
+                            }
+                        },
+                        {
+                            "key": {
+                                "type": "LogUniform",
+                                "id": 25,
+                                "lower_limit": 0.1,
+                                "upper_limit": 10.0
+                            },
+                            "value": {
+                                "type": "tuple",
+                                "values": [
+                                    1.99999999,
+                                    2.00000001
+                                ]
+                            }
+                        },
+                        {
+                            "key": {
+                                "type": "Uniform",
+                                "id": 26,
+                                "lower_limit": 0.2,
+                                "upper_limit": 1.2
+                            },
+                            "value": {
+                                "type": "tuple",
+                                "values": [
+                                    0.5999999899999999,
+                                    0.60000001
+                                ]
+                            }
+                        },
+                        {
+                            "key": {
+                                "type": "Uniform",
+                                "id": 27,
+                                "lower_limit": 0.5,
+                                "upper_limit": 6.0
+                            },
+                            "value": {
+                                "type": "tuple",
+                                "values": [
+                                    2.99999999,
+                                    3.00000001
+                                ]
+                            }
+                        },
+                        {
+                            "key": {
+                                "type": "Gaussian",
+                                "id": 35,
+                                "mean": 0.0,
+                                "sigma": 0.1
+                            },
+                            "value": {
+                                "type": "tuple",
+                                "values": [
+                                    -1e-08,
+                                    1e-08
+                                ]
+                            }
+                        },
+                        {
+                            "key": {
+                                "type": "Gaussian",
+                                "id": 36,
+                                "mean": 0.0,
+                                "sigma": 0.1
+                            },
+                            "value": {
+                                "type": "tuple",
+                                "values": [
+                                    -1e-08,
+                                    1e-08
+                                ]
+                            }
+                        },
+                        {
+                            "key": {
+                                "type": "Gaussian",
+                                "id": 37,
+                                "mean": 0.0,
+                                "sigma": 0.3
+                            },
+                            "value": {
+                                "type": "tuple",
+                                "values": [
+                                    -1e-08,
+                                    1e-08
+                                ]
+                            }
+                        },
+                        {
+                            "key": {
+                                "type": "Gaussian",
+                                "id": 38,
+                                "mean": 0.1,
+                                "sigma": 0.3
+                            },
+                            "value": {
+                                "type": "tuple",
+                                "values": [
+                                    0.11109999000000001,
+                                    0.11110001
+                                ]
+                            }
+                        },
+                        {
+                            "key": {
+                                "type": "LogUniform",
+                                "id": 39,
+                                "lower_limit": 0.1,
+                                "upper_limit": 20.0
+                            },
+                            "value": {
+                                "type": "tuple",
+                                "values": [
+                                    3.99999999,
+                                    4.00000001
+                                ]
+                            }
+                        },
+                        {
+                            "key": {
+                                "type": "Uniform",
+                                "id": 40,
+                                "lower_limit": 0.02,
+                                "upper_limit": 0.5
+                            },
+                            "value": {
+                                "type": "tuple",
+                                "values": [
+                                    0.09999999000000001,
+                                    0.10000001
+                                ]
+                            }
+                        },
+                        {
+                            "key": {
+                                "type": "Uniform",
+                                "id": 41,
+                                "lower_limit": 0.5,
+                                "upper_limit": 4.0
+                            },
+                            "value": {
+                                "type": "tuple",
+                                "values": [
+                                    0.99999999,
+                                    1.00000001
+                                ]
+                            }
+                        }
+                    ]
+                }
+            }
+        },
+        "name": "sersic__sersic",
+        "iterations_per_full_update": 1e+99,
+        "initial_values": {
+            "type": "dict",
+            "arguments": {}
+        },
+        "unique_tag": "simple",
+        "number_of_cores": 1,
+        "paths": {
+            "type": "instance",
+            "class_path": "autofit.non_linear.paths.directory.DirectoryPaths",
+            "arguments": {
+                "path_prefix": {
+                    "type": "path",
+                    "path": "output/source_science_lbfgs"
+                },
+                "name": "sersic__sersic",
+                "identifier": "02225adc12ce35bf75e01737f99bc95a",
+                "unique_tag": "simple",
+                "image_path_suffix": "",
+                "is_identifier_in_paths": true,
+                "parent": null
+            }
+        },
+        "inplace": false
+    }
+}

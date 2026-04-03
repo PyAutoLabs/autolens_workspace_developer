@@ -1,0 +1,51 @@
+{
+    "dataset_path": "dataset/imaging/simple",
+    "zero_point_assumption": 25.0,
+    "truth": {
+        "image_plane_flux": 5473.963135628589,
+        "source_plane_flux": 156.725331383583,
+        "source_magnification": 34.92711157350271,
+        "source_magnitude_zp_25": 19.51215200801491
+    },
+    "fits": {
+        "sersic__sersic": {
+            "image_plane_flux": 5577.227555955768,
+            "source_plane_flux": 168.20904867252446,
+            "source_magnification": 33.15652516895045,
+            "source_magnitude_zp_25": 19.435376613455194,
+            "delta_source_plane_flux": 11.483717288941449,
+            "frac_source_plane_flux": 1.0732728856756104,
+            "delta_image_plane_flux": 103.26442032717932,
+            "frac_image_plane_flux": 1.0188646539570314,
+            "delta_source_magnification": -1.7705864045522546,
+            "frac_source_magnification": 0.9493062459280056,
+            "delta_source_magnitude_zp_25": -0.07677539455971427
+        },
+        "mge_lens__sersic_source": {
+            "image_plane_flux": 5587.62096883542,
+            "source_plane_flux": 169.33233375555625,
+            "source_magnification": 32.99795641452367,
+            "source_magnitude_zp_25": 19.428150265229036,
+            "delta_source_plane_flux": 12.607002371973238,
+            "frac_source_plane_flux": 1.0804401066546019,
+            "delta_image_plane_flux": 113.65783320683113,
+            "frac_image_plane_flux": 1.020763353787873,
+            "delta_source_magnification": -1.9291551589790359,
+            "frac_source_magnification": 0.944766255436863,
+            "delta_source_magnitude_zp_25": -0.08400174278587258
+        },
+        "mge_lens__mge_source": {
+            "image_plane_flux": 6243.504560811959,
+            "source_plane_flux": 333.94650786830783,
+            "source_magnification": 18.696121725201845,
+            "source_magnitude_zp_25": 18.690807734154756,
+            "delta_source_plane_flux": 177.22117648472482,
+            "frac_source_plane_flux": 2.1307755735477025,
+            "delta_image_plane_flux": 769.5414251833699,
+            "frac_image_plane_flux": 1.1405821351215588,
+            "delta_source_magnification": -16.23098984830086,
+            "frac_source_magnification": 0.5352896613238861,
+            "delta_source_magnitude_zp_25": -0.8213442738601522
+        }
+    }
+}
