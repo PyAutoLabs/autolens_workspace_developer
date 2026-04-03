@@ -1,0 +1,21 @@
+Total Free Parameters = 18
+Total Starting Points = 18
+
+galaxies.lens.mass.centre.centre_0: Start[0.0]
+galaxies.lens.mass.centre.centre_1: Start[0.0]
+galaxies.lens.mass.einstein_radius: Start[1.6]
+galaxies.lens.mass.ell_comps.ell_comps_0: Start[0.0]
+galaxies.lens.mass.ell_comps.ell_comps_1: Start[0.0526]
+galaxies.lens.shear.gamma_1: Start[0.05]
+galaxies.lens.shear.gamma_2: Start[0.05]
+galaxies.lens.bulge.profile_list.39.centre.centre_0: Start[0.0]
+galaxies.lens.bulge.profile_list.39.centre.centre_1: Start[0.0]
+galaxies.lens.bulge.profile_list.39.ell_comps.ell_comps_0: Start[0.0]
+galaxies.lens.bulge.profile_list.39.ell_comps.ell_comps_1: Start[0.0526]
+galaxies.source.bulge.centre.centre_0: Start[0.0]
+galaxies.source.bulge.centre.centre_1: Start[0.0]
+galaxies.source.bulge.ell_comps.ell_comps_0: Start[0.0]
+galaxies.source.bulge.ell_comps.ell_comps_1: Start[0.1111]
+galaxies.source.bulge.intensity: Start[4.0]
+galaxies.source.bulge.effective_radius: Start[0.1]
+galaxies.source.bulge.sersic_index: Start[1.0]

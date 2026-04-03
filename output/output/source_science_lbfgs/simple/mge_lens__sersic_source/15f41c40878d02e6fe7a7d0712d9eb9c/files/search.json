@@ -1,0 +1,321 @@
+{
+    "type": "instance",
+    "class_path": "autofit.non_linear.search.mle.bfgs.search.LBFGS",
+    "arguments": {
+        "path_prefix": {
+            "type": "path",
+            "path": "output/source_science_lbfgs"
+        },
+        "iterations_per_quick_update": 1e+99,
+        "initializer": {
+            "type": "instance",
+            "class_path": "autofit.non_linear.initializer.InitializerParamStartPoints",
+            "arguments": {
+                "parameter_dict": {
+                    "type": "compound_dict",
+                    "arguments": [
+                        {
+                            "key": {
+                                "type": "Gaussian",
+                                "id": 47,
+                                "mean": 0.0,
+                                "sigma": 0.05
+                            },
+                            "value": {
+                                "type": "tuple",
+                                "values": [
+                                    -1e-08,
+                                    1e-08
+                                ]
+                            }
+                        },
+                        {
+                            "key": {
+                                "type": "Gaussian",
+                                "id": 48,
+                                "mean": 0.0,
+                                "sigma": 0.05
+                            },
+                            "value": {
+                                "type": "tuple",
+                                "values": [
+                                    -1e-08,
+                                    1e-08
+                                ]
+                            }
+                        },
+                        {
+                            "key": {
+                                "type": "Uniform",
+                                "id": 49,
+                                "lower_limit": 1.2,
+                                "upper_limit": 2.0
+                            },
+                            "value": {
+                                "type": "tuple",
+                                "values": [
+                                    1.5999999900000001,
+                                    1.60000001
+                                ]
+                            }
+                        },
+                        {
+                            "key": {
+                                "type": "Gaussian",
+                                "id": 50,
+                                "mean": 0.0,
+                                "sigma": 0.2
+                            },
+                            "value": {
+                                "type": "tuple",
+                                "values": [
+                                    -1e-08,
+                                    1e-08
+                                ]
+                            }
+                        },
+                        {
+                            "key": {
+                                "type": "Gaussian",
+                                "id": 51,
+                                "mean": 0.1,
+                                "sigma": 0.2
+                            },
+                            "value": {
+                                "type": "tuple",
+                                "values": [
+                                    0.05259999,
+                                    0.05260001
+                                ]
+                            }
+                        },
+                        {
+                            "key": {
+                                "type": "Gaussian",
+                                "id": 54,
+                                "mean": 0.05,
+                                "sigma": 0.05
+                            },
+                            "value": {
+                                "type": "tuple",
+                                "values": [
+                                    0.04999999,
+                                    0.050000010000000004
+                                ]
+                            }
+                        },
+                        {
+                            "key": {
+                                "type": "Gaussian",
+                                "id": 55,
+                                "mean": 0.05,
+                                "sigma": 0.05
+                            },
+                            "value": {
+                                "type": "tuple",
+                                "values": [
+                                    0.04999999,
+                                    0.050000010000000004
+                                ]
+                            }
+                        },
+                        {
+                            "key": {
+                                "type": "Uniform",
+                                "id": 56,
+                                "lower_limit": -0.1,
+                                "upper_limit": 0.1
+                            },
+                            "value": {
+                                "type": "tuple",
+                                "values": [
+                                    -1e-08,
+                                    1e-08
+                                ]
+                            }
+                        },
+                        {
+                            "key": {
+                                "type": "Uniform",
+                                "id": 57,
+                                "lower_limit": -0.1,
+                                "upper_limit": 0.1
+                            },
+                            "value": {
+                                "type": "tuple",
+                                "values": [
+                                    -1e-08,
+                                    1e-08
+                                ]
+                            }
+                        },
+                        {
+                            "key": {
+                                "type": "TruncatedGaussian",
+                                "id": 58,
+                                "mean": 0.0,
+                                "sigma": 0.3,
+                                "lower_limit": -1.0,
+                                "upper_limit": 1.0
+                            },
+                            "value": {
+                                "type": "tuple",
+                                "values": [
+                                    -1e-08,
+                                    1e-08
+                                ]
+                            }
+                        },
+                        {
+                            "key": {
+                                "type": "TruncatedGaussian",
+                                "id": 59,
+                                "mean": 0.0,
+                                "sigma": 0.3,
+                                "lower_limit": -1.0,
+                                "upper_limit": 1.0
+                            },
+                            "value": {
+                                "type": "tuple",
+                                "values": [
+                                    0.05259999,
+                                    0.05260001
+                                ]
+                            }
+                        },
+                        {
+                            "key": {
+                                "type": "Gaussian",
+                                "id": 267,
+                                "mean": 0.0,
+                                "sigma": 0.1
+                            },
+                            "value": {
+                                "type": "tuple",
+                                "values": [
+                                    -1e-08,
+                                    1e-08
+                                ]
+                            }
+                        },
+                        {
+                            "key": {
+                                "type": "Gaussian",
+                                "id": 268,
+                                "mean": 0.0,
+                                "sigma": 0.1
+                            },
+                            "value": {
+                                "type": "tuple",
+                                "values": [
+                                    -1e-08,
+                                    1e-08
+                                ]
+                            }
+                        },
+                        {
+                            "key": {
+                                "type": "Gaussian",
+                                "id": 269,
+                                "mean": 0.0,
+                                "sigma": 0.3
+                            },
+                            "value": {
+                                "type": "tuple",
+                                "values": [
+                                    -1e-08,
+                                    1e-08
+                                ]
+                            }
+                        },
+                        {
+                            "key": {
+                                "type": "Gaussian",
+                                "id": 270,
+                                "mean": 0.1,
+                                "sigma": 0.3
+                            },
+                            "value": {
+                                "type": "tuple",
+                                "values": [
+                                    0.11109999000000001,
+                                    0.11110001
+                                ]
+                            }
+                        },
+                        {
+                            "key": {
+                                "type": "LogUniform",
+                                "id": 271,
+                                "lower_limit": 0.1,
+                                "upper_limit": 20.0
+                            },
+                            "value": {
+                                "type": "tuple",
+                                "values": [
+                                    3.99999999,
+                                    4.00000001
+                                ]
+                            }
+                        },
+                        {
+                            "key": {
+                                "type": "Uniform",
+                                "id": 272,
+                                "lower_limit": 0.02,
+                                "upper_limit": 0.5
+                            },
+                            "value": {
+                                "type": "tuple",
+                                "values": [
+                                    0.09999999000000001,
+                                    0.10000001
+                                ]
+                            }
+                        },
+                        {
+                            "key": {
+                                "type": "Uniform",
+                                "id": 273,
+                                "lower_limit": 0.5,
+                                "upper_limit": 4.0
+                            },
+                            "value": {
+                                "type": "tuple",
+                                "values": [
+                                    0.99999999,
+                                    1.00000001
+                                ]
+                            }
+                        }
+                    ]
+                }
+            }
+        },
+        "name": "mge_lens__sersic_source",
+        "iterations_per_full_update": 1e+99,
+        "initial_values": {
+            "type": "dict",
+            "arguments": {}
+        },
+        "unique_tag": "simple",
+        "number_of_cores": 1,
+        "paths": {
+            "type": "instance",
+            "class_path": "autofit.non_linear.paths.directory.DirectoryPaths",
+            "arguments": {
+                "path_prefix": {
+                    "type": "path",
+                    "path": "output/source_science_lbfgs"
+                },
+                "name": "mge_lens__sersic_source",
+                "identifier": "15f41c40878d02e6fe7a7d0712d9eb9c",
+                "unique_tag": "simple",
+                "image_path_suffix": "",
+                "is_identifier_in_paths": true,
+                "parent": null
+            }
+        },
+        "inplace": false
+    }
+}

@@ -1,0 +1,50 @@
+Total Free Parameters = 21
+
+model                                                                           Collection (N=21)
+    galaxies                                                                    Collection (N=21)
+        lens                                                                    Galaxy (N=14)
+            bulge                                                               Sersic (N=7)
+            mass                                                                Isothermal (N=5)
+            shear                                                               ExternalShear (N=2)
+        source                                                                  Galaxy (N=7)
+            bulge                                                               SersicCore (N=7)
+
+galaxies
+    lens
+        redshift                                                                0.5
+        bulge
+            centre
+                centre_0                                                        GaussianPrior [21], mean = 0.0, sigma = 0.05
+                centre_1                                                        GaussianPrior [22], mean = 0.0, sigma = 0.05
+            ell_comps
+                ell_comps_0                                                     GaussianPrior [23], mean = 0.0, sigma = 0.2
+                ell_comps_1                                                     GaussianPrior [24], mean = 0.05, sigma = 0.2
+            intensity                                                           LogUniformPrior [25], lower_limit = 0.1, upper_limit = 10.0
+            effective_radius                                                    UniformPrior [26], lower_limit = 0.2, upper_limit = 1.2
+            sersic_index                                                        UniformPrior [27], lower_limit = 0.5, upper_limit = 6.0
+        mass
+            centre
+                centre_0                                                        GaussianPrior [5], mean = 0.0, sigma = 0.05
+                centre_1                                                        GaussianPrior [6], mean = 0.0, sigma = 0.05
+            ell_comps
+                ell_comps_0                                                     GaussianPrior [8], mean = 0.0, sigma = 0.2
+                ell_comps_1                                                     GaussianPrior [9], mean = 0.1, sigma = 0.2
+            einstein_radius                                                     UniformPrior [7], lower_limit = 1.2, upper_limit = 2.0
+        shear
+            gamma_1                                                             GaussianPrior [12], mean = 0.05, sigma = 0.05
+            gamma_2                                                             GaussianPrior [13], mean = 0.05, sigma = 0.05
+    source
+        redshift                                                                1.0
+        bulge
+            centre
+                centre_0                                                        GaussianPrior [35], mean = 0.0, sigma = 0.1
+                centre_1                                                        GaussianPrior [36], mean = 0.0, sigma = 0.1
+            ell_comps
+                ell_comps_0                                                     GaussianPrior [37], mean = 0.0, sigma = 0.3
+                ell_comps_1                                                     GaussianPrior [38], mean = 0.1, sigma = 0.3
+            effective_radius                                                    UniformPrior [40], lower_limit = 0.02, upper_limit = 0.5
+            sersic_index                                                        UniformPrior [41], lower_limit = 0.5, upper_limit = 4.0
+            radius_break                                                        0.05
+            intensity                                                           LogUniformPrior [39], lower_limit = 0.1, upper_limit = 20.0
+            gamma                                                               0.25
+            alpha                                                               3.0
