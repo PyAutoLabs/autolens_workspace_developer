@@ -31,12 +31,27 @@ import numpy as np
 import jax
 import jax.numpy as jnp
 import time
+import subprocess
+import sys
 from pathlib import Path
 from contextlib import contextmanager
 
 import autofit as af
 import autolens as al
 import autoarray as aa
+
+# ---------------------------------------------------------------------------
+# Instrument configuration
+# ---------------------------------------------------------------------------
+
+INSTRUMENTS = {
+    "euclid": {"pixel_scale": 0.1},
+    "hst": {"pixel_scale": 0.05},
+    "jwst": {"pixel_scale": 0.03},
+    "ao": {"pixel_scale": 0.01},
+}
+
+instrument = "hst"  # <-- change this to profile a different instrument
 
 
 # ---------------------------------------------------------------------------
@@ -107,6 +122,7 @@ def jit_profile(func, label, *args, n_repeats=10):
 
 
 timer = Timer()
+likelihood_steps = []  # (label, per_call_seconds) for the final summary
 
 # ===================================================================
 # PART A — Setup (not JIT-compiled)
@@ -116,17 +132,30 @@ timer = Timer()
 # 1. Dataset
 # ---------------------------------------------------------------------------
 
-print("\n--- Dataset loading & masking ---")
+print(f"\n--- Dataset loading & masking [{instrument}] ---")
+
+_script_dir = Path(__file__).resolve().parent
+pixel_scale = INSTRUMENTS[instrument]["pixel_scale"]
+dataset_path = Path("jax_profiling") / "imaging" / "dataset" / "imaging" / instrument
+
+if al.util.dataset.should_simulate(str(dataset_path)):
+    print(f"  Simulating {instrument} dataset...")
+    subprocess.run(
+        [
+            sys.executable,
+            str(_script_dir / "simulators" / "imaging.py"),
+            "--instrument", instrument,
+        ],
+        cwd=str(_script_dir),
+        check=True,
+    )
 
 with timer.section("dataset_load"):
-    dataset_name = "source_complex"
-    dataset_path = Path("dataset") / "imaging" / dataset_name
-
     dataset = al.Imaging.from_fits(
         data_path=dataset_path / "data.fits",
         psf_path=dataset_path / "psf.fits",
         noise_map_path=dataset_path / "noise_map.fits",
-        pixel_scales=0.05,
+        pixel_scales=pixel_scale,
     )
 
 with timer.section("mask_and_oversample"):
@@ -157,48 +186,22 @@ with timer.section("mask_and_oversample"):
 print("\n--- Model construction ---")
 
 with timer.section("model_build"):
-    bulge = al.model_util.mge_model_from(
+    lens_bulge = al.model_util.mge_model_from(
         mask_radius=mask_radius, total_gaussians=20, centre_prior_is_uniform=True
     )
 
-    mass = af.Model(al.mp.NFWSph)
-
-    total_gaussians = 3
-    mask_radius = 3.0
-    log10_sigma_list = np.linspace(-2, np.log10(mask_radius), total_gaussians)
-
-    centre_0 = af.UniformPrior(lower_limit=-0.1, upper_limit=0.1)
-    centre_1 = af.UniformPrior(lower_limit=-0.1, upper_limit=0.1)
-
-    gaussian_list = af.Collection(
-        af.Model(al.lmp_linear.GaussianGradient) for _ in range(total_gaussians)
-    )
-
-    for i, gaussian in enumerate(gaussian_list):
-        gaussian.centre.centre_0 = centre_0
-        gaussian.centre.centre_1 = centre_1
-        gaussian.ell_comps = gaussian_list[0].ell_comps
-        gaussian.sigma = 10 ** log10_sigma_list[i]
-        gaussian.mass_to_light_ratio = 10.0
-        gaussian.mass_to_light_gradient = 1.0
-
-    bulge_gaussian_list = list(gaussian_list)
-
-    bulge = af.Model(
-        al.lp_basis.Basis,
-        profile_list=bulge_gaussian_list,
-    )
-
+    mass = af.Model(al.mp.Isothermal)
     shear = af.Model(al.mp.ExternalShear)
 
-    lens = af.Model(al.Galaxy, redshift=0.5, bulge=bulge, mass=mass, shear=shear)
+    lens = af.Model(
+        al.Galaxy, redshift=0.5, bulge=lens_bulge, mass=mass, shear=shear
+    )
 
-    mask_radius = 3.0
-    bulge = al.model_util.mge_model_from(
+    source_bulge = al.model_util.mge_model_from(
         mask_radius=mask_radius, total_gaussians=20, centre_prior_is_uniform=False
     )
 
-    source = af.Model(al.Galaxy, redshift=1.0, bulge=bulge)
+    source = af.Model(al.Galaxy, redshift=1.0, bulge=source_bulge)
 
     model = af.Collection(galaxies=af.Collection(lens=lens, source=source))
 
@@ -217,6 +220,22 @@ with timer.section("instance_from_vector"):
 tracer = al.Tracer(galaxies=list(instance.galaxies))
 
 print(f"  Tracer planes: {tracer.total_planes}")
+
+# ---------------------------------------------------------------------------
+# Key configuration that dictates run time
+# ---------------------------------------------------------------------------
+
+n_image_pixels = dataset.data.shape[0]
+n_over_sampled_pixels = dataset.grids.lp.over_sampled.shape[0]
+n_linear_gaussians = len(tracer.cls_list_from(cls=al.lp_linear.LightProfileLinear))
+
+print("\n--- Configuration (determines run time) ---")
+print(f"  Instrument:              {instrument}")
+print(f"  Pixel scale:             {pixel_scale} arcsec/pixel")
+print(f"  Mask radius:             {mask_radius} arcsec")
+print(f"  Image pixels (masked):   {n_image_pixels}")
+print(f"  Over-sampled pixels:     {n_over_sampled_pixels}")
+print(f"  Linear Gaussians:        {n_linear_gaussians}")
 
 # ---------------------------------------------------------------------------
 # 4. Full-pipeline reference (FitImaging) — eager baseline
@@ -277,6 +296,7 @@ def ray_trace_raw(grid_raw):
     return jnp.stack([tg.array for tg in traced])
 
 _, traced_grids_raw = jit_profile(ray_trace_raw, "ray_trace_jit", grid_lp_raw)
+likelihood_steps.append(("Ray-trace grids", timer.records[-1][1] / 10))
 
 print(f"  traced_grids shape: {traced_grids_raw.shape}")
 
@@ -314,6 +334,7 @@ with timer.section("profile_subtract_eager"):
 _, profile_subtracted = jit_profile(
     profile_subtract, "profile_subtract_jit", data_array, blurred_img_jnp
 )
+likelihood_steps.append(("Profile-subtracted image", timer.records[-1][1] / 10))
 
 print(f"  profile_subtracted shape: {profile_subtracted.shape}")
 
@@ -383,6 +404,7 @@ with timer.section("data_vector_eager"):
 _, data_vector = jit_profile(
     compute_data_vector, "data_vector_jit", bmm_jnp, profile_sub_jnp, noise_jnp
 )
+likelihood_steps.append(("Data vector (D)", timer.records[-1][1] / 10))
 
 print(f"  data_vector shape: {data_vector.shape}")
 
@@ -410,6 +432,7 @@ with timer.section("curvature_matrix_eager"):
 _, curvature_matrix = jit_profile(
     compute_curvature_matrix, "curvature_matrix_jit", bmm_jnp, noise_jnp
 )
+likelihood_steps.append(("Curvature matrix (F)", timer.records[-1][1] / 10))
 
 print(f"  curvature_matrix shape: {curvature_matrix.shape}")
 
@@ -436,6 +459,7 @@ _, reconstruction = jit_profile(
     compute_reconstruction, "reconstruction_jit",
     jnp.array(data_vector), jnp.array(curvature_matrix)
 )
+likelihood_steps.append(("Reconstruction (NNLS)", timer.records[-1][1] / 10))
 
 print(f"  reconstruction shape: {reconstruction.shape}")
 
@@ -459,6 +483,7 @@ with timer.section("mapped_recon_eager"):
 _, mapped_recon = jit_profile(
     compute_mapped_recon, "mapped_recon_jit", bmm_jnp, jnp.array(reconstruction)
 )
+likelihood_steps.append(("Mapped reconstructed image", timer.records[-1][1] / 10))
 
 print(f"  mapped_reconstructed_image shape: {mapped_recon.shape}")
 
@@ -488,6 +513,7 @@ _, log_like = jit_profile(
     compute_log_likelihood, "log_likelihood_jit",
     data_array, noise_jnp, blurred_img_jnp, mapped_recon_jnp
 )
+likelihood_steps.append(("Chi-squared & log likelihood", timer.records[-1][1] / 10))
 
 print(f"  log_likelihood = {log_like}")
 
@@ -523,6 +549,7 @@ fitness = Fitness(
 jnp_params = jnp.array(model.physical_values_from_prior_medians)
 
 _, full_result = jit_profile(fitness.call, "full_pipeline", jnp_params)
+full_pipeline_per_call = timer.records[-1][1] / 10
 
 print(f"  full log_likelihood = {full_result}")
 
@@ -539,15 +566,25 @@ with timer.section("vmap_first_call"):
     result_vmap = fitness._vmap(parameters)
     block(result_vmap)
 
-with timer.section("vmap_cached_call"):
-    result_vmap = fitness._vmap(parameters)
-    block(result_vmap)
+n_vmap_repeats = 10
+with timer.section(f"vmap_steady_x{n_vmap_repeats}"):
+    for _ in range(n_vmap_repeats):
+        result_vmap = fitness._vmap(parameters)
+        block(result_vmap)
+
+vmap_batch_time = timer.records[-1][1] / n_vmap_repeats
+vmap_per_call = vmap_batch_time / batch_size
+vmap_speedup = full_pipeline_per_call / vmap_per_call
 
 print(f"  batch results = {result_vmap}")
+print(f"  vmap batch of {batch_size}:   {vmap_batch_time:.6f} s")
+print(f"  vmap per call:         {vmap_per_call:.6f} s")
+print(f"  single JIT per call:   {full_pipeline_per_call:.6f} s")
+print(f"  vmap speedup:          {vmap_speedup:.1f}x faster per likelihood")
 
 np.testing.assert_allclose(
     np.array(result_vmap),
-    -93643.31852545,
+    float(full_result),
     rtol=1e-4,
     err_msg="mge: JAX vmap likelihood mismatch",
 )
@@ -571,18 +608,126 @@ print(
     f"{(memory_analysis.output_size_in_bytes + memory_analysis.temp_size_in_bytes) / 1024**2:.3f} MB"
 )
 
-try:
-    cost = compiled_batched.cost_analysis()
-    if cost is not None:
-        for i, device_cost in enumerate(cost):
-            print(f"\n  Device {i} cost analysis:")
-            for key, value in sorted(device_cost.items()):
-                print(f"    {key}: {value}")
-except Exception as e:
-    print(f"  cost_analysis not available: {e}")
 
 # ===================================================================
-# Summary
+# JAX Likelihood Function Summary
 # ===================================================================
 
-timer.summary()
+import json
+import matplotlib
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt
+
+al_version = al.__version__
+
+print("\n" + "=" * 70)
+print(f"JAX LIKELIHOOD FUNCTION SUMMARY — {instrument.upper()} — v{al_version}")
+print("=" * 70)
+print(f"  Instrument:            {instrument}")
+print(f"  Pixel scale:           {pixel_scale} arcsec/pixel")
+print(f"  Mask radius:           {mask_radius} arcsec")
+print(f"  Image pixels (masked): {n_image_pixels}")
+print(f"  Over-sampled pixels:   {n_over_sampled_pixels}")
+print(f"  Linear Gaussians:      {n_linear_gaussians}")
+print("-" * 70)
+
+max_label = max(len(label) for label, _ in likelihood_steps)
+step_total = 0.0
+for i, (label, per_call) in enumerate(likelihood_steps, 1):
+    print(f"  {i:>2}. {label:<{max_label}}  {per_call:>12.6f} s")
+    step_total += per_call
+
+print("-" * 70)
+print(f"      {'TOTAL (step-by-step)':<{max_label}}  {step_total:>12.6f} s")
+print(f"      {'Full pipeline (single JIT)':<{max_label}}  {full_pipeline_per_call:>12.6f} s")
+print(f"      {f'vmap batch={batch_size} (per call)':<{max_label}}  {vmap_per_call:>12.6f} s")
+print(f"      {f'vmap speedup vs single JIT':<{max_label}}  {vmap_speedup:>11.1f}x")
+print("=" * 70)
+
+# --- Save results dictionary ---
+
+likelihood_summary = {
+    "autolens_version": al_version,
+    "instrument": instrument,
+    "configuration": {
+        "pixel_scale_arcsec": pixel_scale,
+        "mask_radius_arcsec": mask_radius,
+        "image_pixels_masked": int(n_image_pixels),
+        "over_sampled_pixels": int(n_over_sampled_pixels),
+        "linear_gaussians": int(n_linear_gaussians),
+    },
+    "steps": {label: per_call for label, per_call in likelihood_steps},
+    "total_step_by_step": step_total,
+    "full_pipeline_single_jit": full_pipeline_per_call,
+    "vmap": {
+        "batch_size": batch_size,
+        "batch_time": vmap_batch_time,
+        "per_call": vmap_per_call,
+        "speedup_vs_single_jit": round(vmap_speedup, 1),
+    },
+}
+
+results_dir = _script_dir / "results"
+results_dir.mkdir(parents=True, exist_ok=True)
+
+dict_path = results_dir / f"mge_likelihood_summary_{instrument}_v{al_version}.json"
+dict_path.write_text(json.dumps(likelihood_summary, indent=2))
+print(f"\n  Results dict saved to: {dict_path}")
+
+# --- Save bar chart ---
+
+labels = [label for label, _ in likelihood_steps]
+times = [per_call for _, per_call in likelihood_steps]
+
+fig, ax = plt.subplots(figsize=(10, 5))
+y_pos = range(len(labels))
+bars = ax.barh(y_pos, times, color="#4C72B0", edgecolor="white", height=0.6)
+
+for bar, t in zip(bars, times):
+    ax.text(
+        bar.get_width() + max(times) * 0.01,
+        bar.get_y() + bar.get_height() / 2,
+        f"{t:.6f} s",
+        va="center",
+        fontsize=9,
+    )
+
+ax.axvline(
+    full_pipeline_per_call,
+    color="#C44E52",
+    linestyle="--",
+    linewidth=1.5,
+    label=f"Full pipeline (single JIT): {full_pipeline_per_call:.6f} s",
+)
+ax.axvline(
+    vmap_per_call,
+    color="#55A868",
+    linestyle="--",
+    linewidth=1.5,
+    label=f"vmap batch={batch_size} per call: {vmap_per_call:.6f} s ({vmap_speedup:.1f}x faster)",
+)
+
+ax.set_yticks(y_pos)
+ax.set_yticklabels(labels, fontsize=10)
+ax.invert_yaxis()
+ax.set_xlabel("Time per call (s)", fontsize=11)
+fig.suptitle(
+    f"MGE Imaging Likelihood — {instrument.upper()}",
+    fontsize=12,
+    fontweight="bold",
+)
+ax.set_title(
+    f"AutoLens v{al_version}  |  {pixel_scale}\"/px  |  {n_image_pixels} pixels  |  "
+    f"{n_over_sampled_pixels} over-sampled  |  {n_linear_gaussians} Gaussians  |  "
+    f"total: {step_total:.6f} s",
+    fontsize=9,
+)
+ax.legend(loc="lower right", fontsize=9)
+ax.margins(x=0.15)
+fig.tight_layout()
+
+chart_path = results_dir / f"mge_likelihood_summary_{instrument}_v{al_version}.png"
+fig.savefig(chart_path, dpi=150)
+plt.close(fig)
+print(f"  Bar chart saved to:    {chart_path}")
+
