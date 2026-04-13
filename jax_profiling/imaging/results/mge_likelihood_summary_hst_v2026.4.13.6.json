@@ -1,0 +1,31 @@
+{
+  "autolens_version": "2026.4.13.6",
+  "instrument": "hst",
+  "configuration": {
+    "pixel_scale_arcsec": 0.05,
+    "mask_radius_arcsec": 3.5,
+    "image_pixels_masked": 15361,
+    "over_sampled_pixels": 17980,
+    "linear_gaussians": 0
+  },
+  "steps": {
+    "Ray-trace grids": 0.0027979999998933637,
+    "Blurred image (non-linear)": 0.0005909100000280887,
+    "Profile-subtracted image": 0.0001505899999756366,
+    "Mapping matrix": 0.08214578999977676,
+    "Blurred mapping matrix": 0.2590818599994236,
+    "Data vector (D)": 0.0007389500002318528,
+    "Curvature matrix (F)": 0.0060362000003806315,
+    "Reconstruction (NNLS)": 0.002322709999862127,
+    "Mapped reconstructed image": 0.0006779099996492733,
+    "Chi-squared & log likelihood": 0.000413960000150837
+  },
+  "total_step_by_step": 0.35495687999937214,
+  "full_pipeline_single_jit": 0.26286068000044904,
+  "vmap": {
+    "batch_size": 3,
+    "batch_time": 0.4166532199997164,
+    "per_call": 0.13888440666657212,
+    "speedup_vs_single_jit": 1.9
+  }
+}
