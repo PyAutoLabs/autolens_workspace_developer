@@ -317,6 +317,22 @@ with timer.section("blurred_image_eager"):
 
 print(f"  blurred_image shape: {blurred_image.array.shape}")
 
+jnp_params = jnp.array(param_vector)
+
+def blurred_image_from_params(params):
+    """Reconstruct tracer from params, compute blurred image — fully JIT-traceable."""
+    inst = model.instance_from_vector(vector=params, xp=jnp)
+    t = al.Tracer(galaxies=list(inst.galaxies))
+    result = t.blurred_image_2d_from(
+        grid=grid_lp, psf=dataset.psf, blurring_grid=grid_blurring, xp=jnp,
+    )
+    return result.array
+
+_, blurred_img_jit = jit_profile(
+    blurred_image_from_params, "blurred_image_jit", jnp_params
+)
+likelihood_steps.append(("Blurred image (non-linear)", timer.records[-1][1] / 10))
+
 # ---------------------------------------------------------------------------
 # Step 3: Profile-subtracted image
 # ---------------------------------------------------------------------------
@@ -368,6 +384,31 @@ with timer.section("mapping_matrix"):
 
 print(f"  mapping_matrix shape: {mapping_matrix.shape}")
 
+def mapping_matrix_from_params(params):
+    """Reconstruct tracer from params, compute mapping matrix — fully JIT-traceable."""
+    inst = model.instance_from_vector(vector=params, xp=jnp)
+    t = al.Tracer(galaxies=list(inst.galaxies))
+    tti = al.TracerToInversion(
+        dataset=aa.DatasetInterface(
+            data=fit.profile_subtracted_image,
+            noise_map=dataset.noise_map,
+            grids=dataset.grids,
+            psf=dataset.psf,
+            sparse_operator=dataset.sparse_operator,
+        ),
+        tracer=t,
+        settings=al.Settings(use_border_relocator=True),
+        xp=jnp,
+    )
+    funcs = list(tti.lp_linear_func_list_galaxy_dict.keys())
+    matrices = [f.mapping_matrix for f in funcs]
+    return jnp.hstack(matrices) if len(matrices) > 1 else matrices[0]
+
+_, mm_jit = jit_profile(mapping_matrix_from_params, "mapping_matrix_jit", jnp_params)
+likelihood_steps.append(("Mapping matrix", timer.records[-1][1] / 10))
+
+print(f"  mapping_matrix (JIT) shape: {mm_jit.shape}")
+
 # ---------------------------------------------------------------------------
 # Step 5: Blurred mapping matrix (PSF convolution of each profile)
 # ---------------------------------------------------------------------------
@@ -379,6 +420,31 @@ with timer.section("blurred_mapping_matrix"):
     blurred_mapping_matrix = np.hstack(blurred_matrices) if len(blurred_matrices) > 1 else blurred_matrices[0]
 
 print(f"  blurred_mapping_matrix shape: {blurred_mapping_matrix.shape}")
+
+def blurred_mm_from_params(params):
+    """Reconstruct tracer from params, compute blurred mapping matrix — fully JIT-traceable."""
+    inst = model.instance_from_vector(vector=params, xp=jnp)
+    t = al.Tracer(galaxies=list(inst.galaxies))
+    tti = al.TracerToInversion(
+        dataset=aa.DatasetInterface(
+            data=fit.profile_subtracted_image,
+            noise_map=dataset.noise_map,
+            grids=dataset.grids,
+            psf=dataset.psf,
+            sparse_operator=dataset.sparse_operator,
+        ),
+        tracer=t,
+        settings=al.Settings(use_border_relocator=True),
+        xp=jnp,
+    )
+    funcs = list(tti.lp_linear_func_list_galaxy_dict.keys())
+    matrices = [f.operated_mapping_matrix_override for f in funcs]
+    return jnp.hstack(matrices) if len(matrices) > 1 else matrices[0]
+
+_, bmm_jit = jit_profile(blurred_mm_from_params, "blurred_mm_jit", jnp_params)
+likelihood_steps.append(("Blurred mapping matrix", timer.records[-1][1] / 10))
+
+print(f"  blurred_mapping_matrix (JIT) shape: {bmm_jit.shape}")
 
 # ---------------------------------------------------------------------------
 # Step 6: Data vector (D)
