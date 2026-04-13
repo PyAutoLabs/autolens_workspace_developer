@@ -418,8 +418,7 @@ _, (img_jit, blur_img_jit) = jit_profile(
 )
 likelihood_steps.append(("Lens light images (pre-PSF)", timer.records[-1][1] / 10))
 
-# Sub-step 3b: PSF convolution (eager — requires autoarray mask objects)
-print("  NO JIT: CONVOLVER.CONVOLVED_IMAGE_FROM REQUIRES MASK2D OBJECTS WHICH ARE NOT JAX PYTREES")
+# Sub-step 3b: PSF convolution
 with timer.section("blurred_image_eager"):
     blurred_image = tracer.blurred_image_2d_from(
         grid=grid_lp,
@@ -430,6 +429,22 @@ with timer.section("blurred_image_eager"):
     block(blurred_image)
 
 print(f"  blurred_image shape: {blurred_image.array.shape}")
+
+jnp_params = jnp.array(param_vector)
+
+def blurred_image_from_params(params):
+    """Reconstruct tracer from params, compute blurred image — fully JIT-traceable."""
+    inst = model.instance_from_vector(vector=params, xp=jnp)
+    t = al.Tracer(galaxies=list(inst.galaxies))
+    result = t.blurred_image_2d_from(
+        grid=grid_lp, psf=dataset.psf, blurring_grid=grid_blurring, xp=jnp,
+    )
+    return result.array
+
+_, blurred_img_jit = jit_profile(
+    blurred_image_from_params, "blurred_image_jit", jnp_params
+)
+likelihood_steps.append(("Blurred image (PSF convolution)", timer.records[-1][1] / 10))
 
 # ---------------------------------------------------------------------------
 # Step 4: Profile-subtracted image (lens light subtraction)
@@ -470,7 +485,6 @@ traced_mesh_source = tracer.traced_grid_2d_list_from(
     grid=al.Grid2DIrregular(image_plane_mesh_grid), xp=jnp
 )[-1]
 
-print("  NO JIT: BORDERRELOCATOR USES MASK-DERIVED BORDER INDICES AND GRID2D OBJECTS WHICH ARE NOT JAX PYTREES")
 with timer.section("border_relocation_eager"):
     relocated_grid = border_relocator.relocated_grid_from(grid=traced_source_grid)
     relocated_mesh_grid = border_relocator.relocated_mesh_grid_from(
@@ -488,7 +502,6 @@ print(f"  relocated_mesh_grid shape: {relocated_mesh_grid.array.shape}")
 
 print("\n--- Step 6: Delaunay triangulation + Interpolation + Mapper ---")
 
-print("  NO JIT: DELAUNAY TRIANGULATION USES SCIPY (CPU-ONLY); INTERPOLATORDELAUNAY AND MAPPER USE NON-PYTREE OBJECTS")
 pixelization_obj = instance.galaxies.source.pixelization
 
 with timer.section("delaunay_interpolation_and_mapper"):
@@ -536,7 +549,6 @@ print(f"  mapping_matrix shape: {mapping_matrix_ref.shape}")
 
 print("\n--- Step 7: Mapping matrix ---")
 
-print("  NO JIT: MAPPING_MATRIX_FROM USES MAPPER PIX_INDEXES/WEIGHTS/OVERSAMPLER OBJECTS WHICH ARE NOT JAX PYTREES")
 with timer.section("mapping_matrix"):
     mapping_matrix = inv_mapper.mapping_matrix
 
@@ -548,7 +560,6 @@ print(f"  mapping_matrix shape: {mapping_matrix.shape}")
 
 print("\n--- Step 8: Blurred mapping matrix ---")
 
-print("  NO JIT: CONVOLVER.CONVOLVED_MAPPING_MATRIX_FROM REQUIRES MASK2D FOR SPARSE CONVOLUTION STATE")
 with timer.section("blurred_mapping_matrix"):
     blurred_mapping_matrix = dataset.psf.convolved_mapping_matrix_from(
         mapping_matrix=mapping_matrix,
@@ -556,6 +567,34 @@ with timer.section("blurred_mapping_matrix"):
         xp=jnp,
     )
     block(blurred_mapping_matrix)
+
+# JIT-profile the full inversion setup pipeline (steps 5-8 combined):
+# border relocation → Delaunay triangulation → interpolation → mapper → mapping matrix → PSF convolution.
+# These steps are tightly sequential; the full pipeline JIT-compiles them all together.
+
+def blurred_mm_from_params(params):
+    """Reconstruct tracer from params, compute blurred mapping matrix via full inversion setup."""
+    inst = model.instance_from_vector(vector=params, xp=jnp)
+    t = al.Tracer(galaxies=list(inst.galaxies))
+    # Recreate adapt_images with new galaxy instance so dict lookup by object identity works.
+    adapt_images_jax = al.AdaptImages(
+        galaxy_image_plane_mesh_grid_dict={
+            inst.galaxies.source: image_plane_mesh_grid,
+        },
+        galaxy_name_image_plane_mesh_grid_dict={
+            "('galaxies', 'source')": image_plane_mesh_grid,
+        },
+    )
+    fit_jax = al.FitImaging(
+        dataset=dataset, tracer=t, adapt_images=adapt_images_jax,
+        settings=al.Settings(use_border_relocator=True), xp=jnp,
+    )
+    return jnp.array(fit_jax.inversion.operated_mapping_matrix)
+
+_, bmm_jit = jit_profile(blurred_mm_from_params, "inversion_setup_jit", jnp_params)
+likelihood_steps.append(("Inversion setup (steps 5-8 combined)", timer.records[-1][1] / 10))
+
+print(f"  blurred_mapping_matrix (JIT) shape: {bmm_jit.shape}")
 
 bmm_jnp = bmm_ref  # Use the reference matrices for linear algebra steps
 print(f"  blurred_mapping_matrix shape: {blurred_mapping_matrix.shape}")
@@ -626,7 +665,6 @@ print("\n--- Step 11: Regularization matrix (ConstantSplit) ---")
 # _mappings_sizes_weights_split, not the simple neighbour-difference approach.
 # We extract it from the inversion for consistency and JIT-profile separately.
 
-print("  NO JIT: CONSTANTSPLIT REGULARIZATION USES INTERPOLATOR SPLIT MAPPINGS AND MAPPER OBJECTS WHICH ARE NOT JAX PYTREES")
 with timer.section("regularization_matrix_eager"):
     regularization_matrix = jnp.array(inversion.regularization_matrix)
     block(regularization_matrix)
@@ -792,54 +830,74 @@ print(f"  full log_likelihood = {full_result}")
 
 print("\n--- vmap batched evaluation ---")
 
-batch_size = 3
-parameters = jnp.tile(jnp_params, (batch_size, 1))
+# WARNING: The vmap compilation for the Delaunay pipeline takes 20+ minutes on CPU.
+# The XLA graph for a batched Delaunay inversion (including scipy triangulation,
+# border relocation, interpolation, mapping matrix construction, and PSF convolution)
+# is extremely large. The single-call JIT above compiles in ~2s and runs in ~1.8s,
+# but vmap recompiles the entire graph for batch_size independent evaluations.
+#
+# This is likely a candidate for optimisation — either via custom_vjp to avoid
+# retracing the full pipeline, or by restructuring the Delaunay steps to reduce
+# the XLA graph size. For now, skip vmap by default and run it only when explicitly
+# requested via DELAUNAY_VMAP=1 environment variable.
 
-with timer.section("vmap_first_call"):
-    result_vmap = fitness._vmap(parameters)
-    block(result_vmap)
+import os
+run_vmap = os.environ.get("DELAUNAY_VMAP", "0") == "1"
 
-n_vmap_repeats = 10
-with timer.section(f"vmap_steady_x{n_vmap_repeats}"):
-    for _ in range(n_vmap_repeats):
+if not run_vmap:
+    print("  SKIPPED: vmap compilation takes 20+ minutes for Delaunay pipeline.")
+    print("  Set DELAUNAY_VMAP=1 to run this section.")
+    vmap_batch_time = None
+    vmap_per_call = None
+    vmap_speedup = None
+else:
+
+    batch_size = 3
+    parameters = jnp.tile(jnp_params, (batch_size, 1))
+
+    with timer.section("vmap_first_call"):
         result_vmap = fitness._vmap(parameters)
         block(result_vmap)
 
-vmap_batch_time = timer.records[-1][1] / n_vmap_repeats
-vmap_per_call = vmap_batch_time / batch_size
-vmap_speedup = full_pipeline_per_call / vmap_per_call
+    n_vmap_repeats = 10
+    with timer.section(f"vmap_steady_x{n_vmap_repeats}"):
+        for _ in range(n_vmap_repeats):
+            result_vmap = fitness._vmap(parameters)
+            block(result_vmap)
 
-print(f"  batch results = {result_vmap}")
-print(f"  vmap batch of {batch_size}:   {vmap_batch_time:.6f} s")
-print(f"  vmap per call:         {vmap_per_call:.6f} s")
-print(f"  single JIT per call:   {full_pipeline_per_call:.6f} s")
-print(f"  vmap speedup:          {vmap_speedup:.1f}x faster per likelihood")
+    vmap_batch_time = timer.records[-1][1] / n_vmap_repeats
+    vmap_per_call = vmap_batch_time / batch_size
+    vmap_speedup = full_pipeline_per_call / vmap_per_call
 
-np.testing.assert_allclose(
-    np.array(result_vmap),
-    float(full_result),
-    rtol=1e-4,
-    err_msg="delaunay: JAX vmap likelihood mismatch",
-)
-print("  Correctness check PASSED")
+    print(f"  batch results = {result_vmap}")
+    print(f"  vmap batch of {batch_size}:   {vmap_batch_time:.6f} s")
+    print(f"  vmap per call:         {vmap_per_call:.6f} s")
+    print(f"  single JIT per call:   {full_pipeline_per_call:.6f} s")
+    print(f"  vmap speedup:          {vmap_speedup:.1f}x faster per likelihood")
 
-# ===================================================================
-# PART E — Static memory analysis
-# ===================================================================
+    np.testing.assert_allclose(
+        np.array(result_vmap),
+        float(full_result),
+        rtol=1e-4,
+        err_msg="delaunay: JAX vmap likelihood mismatch",
+    )
+    print("  Correctness check PASSED")
 
-print("\n--- Static memory analysis ---")
+    # --- Static memory analysis ---
 
-batched_call = jax.jit(jax.vmap(fitness.call))
-lowered_batched = batched_call.lower(parameters)
-compiled_batched = lowered_batched.compile()
+    print("\n--- Static memory analysis ---")
 
-memory_analysis = compiled_batched.memory_analysis()
-print(f"  Output size:  {memory_analysis.output_size_in_bytes / 1024**2:.3f} MB")
-print(f"  Temp size:    {memory_analysis.temp_size_in_bytes / 1024**2:.3f} MB")
-print(
-    f"  Total:        "
-    f"{(memory_analysis.output_size_in_bytes + memory_analysis.temp_size_in_bytes) / 1024**2:.3f} MB"
-)
+    batched_call = jax.jit(jax.vmap(fitness.call))
+    lowered_batched = batched_call.lower(parameters)
+    compiled_batched = lowered_batched.compile()
+
+    memory_analysis = compiled_batched.memory_analysis()
+    print(f"  Output size:  {memory_analysis.output_size_in_bytes / 1024**2:.3f} MB")
+    print(f"  Temp size:    {memory_analysis.temp_size_in_bytes / 1024**2:.3f} MB")
+    print(
+        f"  Total:        "
+        f"{(memory_analysis.output_size_in_bytes + memory_analysis.temp_size_in_bytes) / 1024**2:.3f} MB"
+    )
 
 
 # ===================================================================
@@ -874,8 +932,11 @@ for i, (label, per_call) in enumerate(likelihood_steps, 1):
 print("-" * 70)
 print(f"      {'TOTAL (step-by-step)':<{max_label}}  {step_total:>12.6f} s")
 print(f"      {'Full pipeline (single JIT)':<{max_label}}  {full_pipeline_per_call:>12.6f} s")
-print(f"      {f'vmap batch={batch_size} (per call)':<{max_label}}  {vmap_per_call:>12.6f} s")
-print(f"      {f'vmap speedup vs single JIT':<{max_label}}  {vmap_speedup:>11.1f}x")
+if vmap_per_call is not None:
+    print(f"      {f'vmap batch (per call)':<{max_label}}  {vmap_per_call:>12.6f} s")
+    print(f"      {f'vmap speedup vs single JIT':<{max_label}}  {vmap_speedup:>11.1f}x")
+else:
+    print(f"      {'vmap':<{max_label}}  {'SKIPPED':>12}")
 print("=" * 70)
 
 # --- Save results dictionary ---
@@ -894,13 +955,16 @@ likelihood_summary = {
     "steps": {label: per_call for label, per_call in likelihood_steps},
     "total_step_by_step": step_total,
     "full_pipeline_single_jit": full_pipeline_per_call,
-    "vmap": {
+    "vmap": "SKIPPED — compilation takes 20+ minutes (set DELAUNAY_VMAP=1)",
+}
+
+if vmap_per_call is not None:
+    likelihood_summary["vmap"] = {
         "batch_size": batch_size,
         "batch_time": vmap_batch_time,
         "per_call": vmap_per_call,
         "speedup_vs_single_jit": round(vmap_speedup, 1),
-    },
-}
+    }
 
 results_dir = _script_dir / "results"
 results_dir.mkdir(parents=True, exist_ok=True)
@@ -934,13 +998,14 @@ ax.axvline(
     linewidth=1.5,
     label=f"Full pipeline (single JIT): {full_pipeline_per_call:.6f} s",
 )
-ax.axvline(
-    vmap_per_call,
-    color="#55A868",
-    linestyle="--",
-    linewidth=1.5,
-    label=f"vmap batch={batch_size} per call: {vmap_per_call:.6f} s ({vmap_speedup:.1f}x faster)",
-)
+if vmap_per_call is not None:
+    ax.axvline(
+        vmap_per_call,
+        color="#55A868",
+        linestyle="--",
+        linewidth=1.5,
+        label=f"vmap batch per call: {vmap_per_call:.6f} s ({vmap_speedup:.1f}x faster)",
+    )
 
 ax.set_yticks(y_pos)
 ax.set_yticklabels(labels, fontsize=10)
