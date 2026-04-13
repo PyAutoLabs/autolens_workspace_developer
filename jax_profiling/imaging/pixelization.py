@@ -341,7 +341,6 @@ _, (img_jit, blur_img_jit) = jit_profile(
 likelihood_steps.append(("Lens light images (pre-PSF)", timer.records[-1][1] / 10))
 
 # Sub-step 2b: PSF convolution (eager — requires autoarray mask objects)
-print("  NO JIT: CONVOLVER.CONVOLVED_IMAGE_FROM REQUIRES MASK2D OBJECTS WHICH ARE NOT JAX PYTREES")
 with timer.section("blurred_image_eager"):
     blurred_image = tracer.blurred_image_2d_from(
         grid=grid_lp,
@@ -352,6 +351,22 @@ with timer.section("blurred_image_eager"):
     block(blurred_image)
 
 print(f"  blurred_image shape: {blurred_image.array.shape}")
+
+jnp_params = jnp.array(param_vector)
+
+def blurred_image_from_params(params):
+    """Reconstruct tracer from params, compute blurred image — fully JIT-traceable."""
+    inst = model.instance_from_vector(vector=params, xp=jnp)
+    t = al.Tracer(galaxies=list(inst.galaxies))
+    result = t.blurred_image_2d_from(
+        grid=grid_lp, psf=dataset.psf, blurring_grid=grid_blurring, xp=jnp,
+    )
+    return result.array
+
+_, blurred_img_jit = jit_profile(
+    blurred_image_from_params, "blurred_image_jit", jnp_params
+)
+likelihood_steps.append(("Blurred image (PSF convolution)", timer.records[-1][1] / 10))
 
 # ---------------------------------------------------------------------------
 # Step 3: Profile-subtracted image (lens light subtraction)
@@ -390,7 +405,6 @@ traced_source_grid = tracer.traced_grid_2d_list_from(
     grid=dataset.grids.pixelization, xp=jnp
 )[-1]
 
-print("  NO JIT: BORDERRELOCATOR USES MASK-DERIVED BORDER INDICES AND GRID2D OBJECTS WHICH ARE NOT JAX PYTREES")
 with timer.section("border_relocation_eager"):
     relocated_grid = border_relocator.relocated_grid_from(grid=traced_source_grid)
     block(relocated_grid)
@@ -435,7 +449,6 @@ print("\n--- Step 6: Interpolation + Mapper ---")
 
 pixelization_obj = instance.galaxies.source.pixelization
 
-print("  NO JIT: INTERPOLATOR AND MAPPER CONSTRUCTION USE GRID2D/GRID2DIRREGULAR AND OVERSAMPLER OBJECTS WHICH ARE NOT JAX PYTREES")
 with timer.section("interpolation_and_mapper"):
     interpolator = pixelization_obj.mesh.interpolator_from(
         source_plane_data_grid=relocated_grid,
@@ -480,7 +493,6 @@ print(f"  mapping_matrix shape: {mapping_matrix_ref.shape}")
 
 print("\n--- Step 7: Mapping matrix ---")
 
-print("  NO JIT: MAPPING_MATRIX_FROM USES MAPPER PIX_INDEXES/WEIGHTS/OVERSAMPLER OBJECTS WHICH ARE NOT JAX PYTREES")
 with timer.section("mapping_matrix"):
     mapping_matrix = inv_mapper.mapping_matrix
 
@@ -492,7 +504,6 @@ print(f"  mapping_matrix shape: {mapping_matrix.shape}")
 
 print("\n--- Step 8: Blurred mapping matrix ---")
 
-print("  NO JIT: CONVOLVER.CONVOLVED_MAPPING_MATRIX_FROM REQUIRES MASK2D FOR SPARSE CONVOLUTION STATE")
 with timer.section("blurred_mapping_matrix"):
     blurred_mapping_matrix = dataset.psf.convolved_mapping_matrix_from(
         mapping_matrix=mapping_matrix,
@@ -500,6 +511,25 @@ with timer.section("blurred_mapping_matrix"):
         xp=jnp,
     )
     block(blurred_mapping_matrix)
+
+# JIT-profile the full inversion setup pipeline (steps 4-8 combined):
+# border relocation → overlay grid → interpolation → mapper → mapping matrix → PSF convolution.
+# These steps are tightly sequential; the full pipeline JIT-compiles them all together.
+
+def blurred_mm_from_params(params):
+    """Reconstruct tracer from params, compute blurred mapping matrix via full inversion setup."""
+    inst = model.instance_from_vector(vector=params, xp=jnp)
+    t = al.Tracer(galaxies=list(inst.galaxies))
+    fit_jax = al.FitImaging(
+        dataset=dataset, tracer=t,
+        settings=al.Settings(use_border_relocator=True), xp=jnp,
+    )
+    return jnp.array(fit_jax.inversion.operated_mapping_matrix)
+
+_, bmm_jit = jit_profile(blurred_mm_from_params, "inversion_setup_jit", jnp_params)
+likelihood_steps.append(("Inversion setup (steps 4-8 combined)", timer.records[-1][1] / 10))
+
+print(f"  blurred_mapping_matrix (JIT) shape: {bmm_jit.shape}")
 
 bmm_jnp = bmm_ref  # Use the reference matrices for linear algebra steps
 print(f"  blurred_mapping_matrix shape: {blurred_mapping_matrix.shape}")
