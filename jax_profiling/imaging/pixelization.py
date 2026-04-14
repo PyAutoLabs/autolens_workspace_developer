@@ -627,7 +627,11 @@ print("\n--- Step 12: Regularized reconstruction ---")
 
 def compute_reconstruction(data_vector, curvature_matrix, regularization_matrix):
     curvature_reg_matrix = curvature_matrix + regularization_matrix
-    return jnp.linalg.solve(curvature_reg_matrix, data_vector)
+    return al.util.inversion.reconstruction_positive_only_from(
+        data_vector=data_vector,
+        curvature_reg_matrix=curvature_reg_matrix,
+        xp=jnp,
+    )
 
 with timer.section("reconstruction_eager"):
     reconstruction = compute_reconstruction(

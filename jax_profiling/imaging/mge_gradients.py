@@ -549,6 +549,192 @@ test_grad("Step 8: Log likelihood", step_log_likelihood, jnp_params)
 
 
 # ===================================================================
+# PART B.5 -- NNLS backward-pass diagnostics
+# ===================================================================
+#
+# The NNLS step poisons downstream gradients. This section drills into the
+# jaxnnls forward + custom_vjp backward pass to isolate the failure mode:
+#
+#   - Condition number of Q (curvature matrix)
+#   - Whether the relaxed NNLS solver converges within its iteration cap
+#   - Magnitude / finiteness of the relaxed dual slack ratio P_inv_vec = z/s
+#   - Finiteness of the KKT Cholesky factor L_H
+#   - Whether increasing target_kappa (1e-3 -> 1e-2 -> 1e-1) repairs the NaN
+#
+# This does not depend on jax.grad internals -- it calls the forward/backward
+# primitives of jaxnnls directly with the real (Q, q) produced by the pipeline.
+
+print("\n" + "=" * 70)
+print("PART B.5 -- NNLS BACKWARD-PASS DIAGNOSTICS")
+print("=" * 70)
+
+
+def _build_Q_q(params):
+    """Rebuild (curvature_reg_matrix, data_vector) for the given params."""
+    inst = model.instance_from_vector(vector=params, xp=jnp)
+    t = al.Tracer(galaxies=list(inst.galaxies))
+    tti = al.TracerToInversion(
+        dataset=aa.DatasetInterface(
+            data=fit.profile_subtracted_image,
+            noise_map=dataset.noise_map,
+            grids=dataset.grids,
+            psf=dataset.psf,
+            sparse_operator=dataset.sparse_operator,
+        ),
+        tracer=t,
+        settings=al.Settings(use_border_relocator=True),
+        xp=jnp,
+    )
+    funcs = list(tti.lp_linear_func_list_galaxy_dict.keys())
+    matrices = [f.operated_mapping_matrix_override for f in funcs]
+    bmm = jnp.hstack(matrices) if len(matrices) > 1 else matrices[0]
+
+    q = al.util.inversion_imaging.data_vector_via_blurred_mapping_matrix_from(
+        blurred_mapping_matrix=bmm,
+        image=data_array,
+        noise_map=noise_map_array,
+    )
+    n_linear = bmm.shape[1]
+    Q = al.util.inversion.curvature_matrix_via_mapping_matrix_from(
+        mapping_matrix=bmm,
+        noise_map=noise_map_array,
+        add_to_curvature_diag=True,
+        no_regularization_index_list=list(range(n_linear)),
+        xp=jnp,
+    )
+    return Q, q
+
+
+Q_eval, q_eval = _build_Q_q(jnp_params)
+Q_np = np.array(Q_eval)
+q_np = np.array(q_eval)
+
+print(f"\n--- Inputs to NNLS ---")
+print(f"  Q shape        : {Q_np.shape}")
+print(f"  q shape        : {q_np.shape}")
+print(f"  Q symmetry err : {np.max(np.abs(Q_np - Q_np.T)):.6g}")
+print(f"  Q cond (2-norm): {np.linalg.cond(Q_np):.6g}")
+eigs = np.linalg.eigvalsh(0.5 * (Q_np + Q_np.T))
+print(f"  Q eig min/max  : {eigs.min():.6g} / {eigs.max():.6g}")
+print(f"  Q is pos-def   : {eigs.min() > 0}")
+print(f"  q finite       : {np.all(np.isfinite(q_np))}")
+
+# Drive the jaxnnls primitives directly so we can inspect intermediates.
+from jaxnnls.pdip import solve_nnls, factorize_kkt, solve_kkt_rhs
+from jaxnnls.pdip_relaxed import solve_relaxed_nnls
+
+
+def _diagnose_kappa(Q, q, target_kappa, precondition=False):
+    print(f"\n--- target_kappa = {target_kappa:g} ---")
+    # solve_nnls / solve_relaxed_nnls return: (x, s, z, converged, pdip_iter)
+    x, s, z, conv_fw, iter_fw = solve_nnls(Q, q)
+    x_np = np.array(x)
+    print(f"  forward converged  : {int(conv_fw)}  iters: {int(iter_fw)} (cap 50)")
+    print(f"  x (primal) min/max : {x_np.min():.6g} / {x_np.max():.6g}")
+    print(f"  x finite           : {np.all(np.isfinite(x_np))}")
+    print(f"  # active (x<=eps)  : {int(np.sum(x_np <= 1e-12))} / {x_np.size}")
+
+    xr, sr, zr, conv_rx, iter_rx = solve_relaxed_nnls(
+        Q, q, x, s, z, target_kappa=target_kappa
+    )
+    sr_np = np.array(sr)
+    zr_np = np.array(zr)
+    print(f"  relaxed converged  : {int(conv_rx)}  iters: {int(iter_rx)} (cap 50)")
+    print(f"  sr min/max         : {np.nanmin(sr_np):.6g} / {np.nanmax(sr_np):.6g}")
+    print(f"  zr min/max         : {np.nanmin(zr_np):.6g} / {np.nanmax(zr_np):.6g}")
+    print(f"  sr finite          : {int(np.isfinite(sr_np).sum())}/{sr_np.size}")
+    print(f"  zr finite          : {int(np.isfinite(zr_np).sum())}/{zr_np.size}")
+    with np.errstate(divide="ignore", invalid="ignore"):
+        P_inv = zr_np / sr_np
+    print(f"  P_inv_vec finite   : {int(np.isfinite(P_inv).sum())}/{P_inv.size}")
+    if np.any(np.isfinite(P_inv)):
+        finite_P = P_inv[np.isfinite(P_inv)]
+        print(f"  P_inv min/max (fin): {finite_P.min():.6g} / {finite_P.max():.6g}")
+    prod = sr_np * zr_np
+    if np.any(np.isfinite(prod)):
+        fprod = prod[np.isfinite(prod)]
+        print(f"  sr*zr min/max (fin): {fprod.min():.6g} / {fprod.max():.6g} "
+              f"(target: {target_kappa:g})")
+
+    # factorize_kkt returns (P_inv_vec, (chol_factor, lower_flag)) for cho_factor.
+    try:
+        P_inv_vec_j, L_H_pack = factorize_kkt(Q, sr, zr)
+        L_H_mat = L_H_pack[0] if isinstance(L_H_pack, tuple) else L_H_pack
+        L_H_np = np.array(L_H_mat)
+        print(f"  L_H finite         : {np.all(np.isfinite(L_H_np))}")
+        diag_abs = np.abs(np.diag(L_H_np))
+        print(f"  L_H diag min/max   : {diag_abs.min():.6g} / {diag_abs.max():.6g}")
+    except Exception as e:
+        print(f"  factorize_kkt raised: {type(e).__name__}: {e}")
+
+    # End-to-end grad using patched kappa.
+    import jaxnnls.diff_qp as _dq
+
+    def _loss(params):
+        Q_p, q_p = _build_Q_q(params)
+        if precondition:
+            d = jnp.sqrt(jnp.diag(Q_p))
+            D = 1.0 / d
+            Q_p = (Q_p * D[:, None]) * D[None, :]
+            q_p = q_p * D
+            y = _dq.solve_nnls_primal(Q_p, q_p, target_kappa=target_kappa)
+            x_p = y * D
+        else:
+            x_p = _dq.solve_nnls_primal(Q_p, q_p, target_kappa=target_kappa)
+        return jnp.sum(x_p)
+
+    try:
+        val, grad = jax.value_and_grad(_loss)(jnp_params)
+        grad_np = np.array(grad)
+        n_nan = int(np.sum(~np.isfinite(grad_np)))
+        print(f"  grad finite entries: {grad_np.size - n_nan}/{grad_np.size}")
+        if n_nan < grad_np.size:
+            finite_g = grad_np[np.isfinite(grad_np)]
+            print(f"  grad norm (finite) : {np.linalg.norm(finite_g):.6g}")
+        if n_nan == 0:
+            print(f"  *** kappa={target_kappa:g} PRODUCES FULLY FINITE GRADIENTS ***")
+    except Exception as e:
+        print(f"  grad raised        : {type(e).__name__}: {e}")
+
+
+# Report JAX dtype precision -- x64 is usually off by default and forward
+# NNLS + ill-conditioned Q benefits heavily from float64.
+print(f"\n  JAX x64 enabled    : {jax.config.read('jax_enable_x64')}")
+print(f"  Q dtype            : {Q_eval.dtype}")
+
+for kappa in (1e-3, 1e-2, 1e-1, 1.0):
+    _diagnose_kappa(Q_eval, q_eval, kappa)
+
+
+# -----------------------------------------------------------------------------
+# Jacobi (diagonal) preconditioning trial
+#
+# Scale D = diag(Q)^{-1/2}.  The problem `min 0.5 x^T Q x - q^T x, x >= 0`
+# becomes `min 0.5 y^T (D Q D) y - (D q)^T y, y >= 0` via x = D y.  D is
+# diagonal and positive, so positivity is preserved. Condition number
+# typically drops by several orders of magnitude.
+# -----------------------------------------------------------------------------
+
+print("\n--- Jacobi preconditioning trial ---")
+d = np.sqrt(np.diag(Q_np))
+if np.any(d == 0):
+    print("  diag(Q) has zeros, Jacobi preconditioning skipped")
+else:
+    D = 1.0 / d
+    Q_pc_np = (Q_np * D[:, None]) * D[None, :]
+    q_pc_np = q_np * D
+    print(f"  original cond(Q)   : {np.linalg.cond(Q_np):.6g}")
+    print(f"  precond cond(Q)    : {np.linalg.cond(Q_pc_np):.6g}")
+    eigs_pc = np.linalg.eigvalsh(0.5 * (Q_pc_np + Q_pc_np.T))
+    print(f"  precond eig min/max: {eigs_pc.min():.6g} / {eigs_pc.max():.6g}")
+
+    Q_pc = jnp.array(Q_pc_np)
+    q_pc = jnp.array(q_pc_np)
+    for kappa in (1e-3, 1e-2, 1e-1):
+        _diagnose_kappa(Q_pc, q_pc, kappa, precondition=True)
+
+
+# ===================================================================
 # PART C -- Full pipeline gradient (via Fitness)
 # ===================================================================
 
