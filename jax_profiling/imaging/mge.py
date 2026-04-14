@@ -20,6 +20,9 @@ the pipeline individually:
 9. Map reconstruction back to image plane
 10. Chi-squared and log likelihood
 
+Note: because the MGE model uses only linear light profiles (lp_linear),
+there is no non-linear blurred image or profile-subtracted image step.
+
 Caveat: XLA may fuse operations differently when compiled as one program vs
 separate pieces, so per-step timings are approximate. They are still useful
 for identifying which step dominates.
@@ -268,13 +271,11 @@ print("=" * 70)
 # JIT boundaries.  See CLAUDE.md for rationale.
 
 grid_lp_raw = jnp.array(dataset.grids.lp.array)
-grid_blurring_raw = jnp.array(dataset.grids.blurring.array)
 data_array = jnp.array(dataset.data.array)
 noise_map_array = jnp.array(dataset.noise_map.array)
 
 # Keep autoarray objects for eager calls that need them.
 grid_lp = dataset.grids.lp
-grid_blurring = dataset.grids.blurring
 
 # ---------------------------------------------------------------------------
 # Step 1: Ray-trace grids
@@ -300,65 +301,13 @@ likelihood_steps.append(("Ray-trace grids", timer.records[-1][1] / 10))
 
 print(f"  traced_grids shape: {traced_grids_raw.shape}")
 
-# ---------------------------------------------------------------------------
-# Step 2: Blurred image of non-linear light profiles
-# ---------------------------------------------------------------------------
-
-print("\n--- Step 2: Blurred image (non-linear profiles) ---")
-
-with timer.section("blurred_image_eager"):
-    blurred_image = tracer.blurred_image_2d_from(
-        grid=grid_lp,
-        psf=dataset.psf,
-        blurring_grid=grid_blurring,
-        xp=jnp,
-    )
-    block(blurred_image)
-
-print(f"  blurred_image shape: {blurred_image.array.shape}")
-
 jnp_params = jnp.array(param_vector)
 
-def blurred_image_from_params(params):
-    """Reconstruct tracer from params, compute blurred image — fully JIT-traceable."""
-    inst = model.instance_from_vector(vector=params, xp=jnp)
-    t = al.Tracer(galaxies=list(inst.galaxies))
-    result = t.blurred_image_2d_from(
-        grid=grid_lp, psf=dataset.psf, blurring_grid=grid_blurring, xp=jnp,
-    )
-    return result.array
-
-_, blurred_img_jit = jit_profile(
-    blurred_image_from_params, "blurred_image_jit", jnp_params
-)
-likelihood_steps.append(("Blurred image (non-linear)", timer.records[-1][1] / 10))
-
 # ---------------------------------------------------------------------------
-# Step 3: Profile-subtracted image
+# Step 2: Build linear objects and mapping matrix
 # ---------------------------------------------------------------------------
 
-print("\n--- Step 3: Profile-subtracted image ---")
-
-def profile_subtract(data, blurred_image):
-    return data - blurred_image
-
-with timer.section("profile_subtract_eager"):
-    blurred_img_jnp = jnp.array(blurred_image.array)
-    profile_subtracted = profile_subtract(data_array, blurred_img_jnp)
-    block(profile_subtracted)
-
-_, profile_subtracted = jit_profile(
-    profile_subtract, "profile_subtract_jit", data_array, blurred_img_jnp
-)
-likelihood_steps.append(("Profile-subtracted image", timer.records[-1][1] / 10))
-
-print(f"  profile_subtracted shape: {profile_subtracted.shape}")
-
-# ---------------------------------------------------------------------------
-# Step 4: Build linear objects and mapping matrix
-# ---------------------------------------------------------------------------
-
-print("\n--- Step 4: Mapping matrix (linear profile images) ---")
+print("\n--- Step 2: Mapping matrix (linear profile images) ---")
 
 with timer.section("linear_obj_setup"):
     tracer_to_inv = al.TracerToInversion(
@@ -410,10 +359,10 @@ likelihood_steps.append(("Mapping matrix", timer.records[-1][1] / 10))
 print(f"  mapping_matrix (JIT) shape: {mm_jit.shape}")
 
 # ---------------------------------------------------------------------------
-# Step 5: Blurred mapping matrix (PSF convolution of each profile)
+# Step 3: Blurred mapping matrix (PSF convolution of each profile)
 # ---------------------------------------------------------------------------
 
-print("\n--- Step 5: Blurred mapping matrix ---")
+print("\n--- Step 3: Blurred mapping matrix ---")
 
 with timer.section("blurred_mapping_matrix"):
     blurred_matrices = [func.operated_mapping_matrix_override for func in lp_linear_funcs]
@@ -447,10 +396,10 @@ likelihood_steps.append(("Blurred mapping matrix", timer.records[-1][1] / 10))
 print(f"  blurred_mapping_matrix (JIT) shape: {bmm_jit.shape}")
 
 # ---------------------------------------------------------------------------
-# Step 6: Data vector (D)
+# Step 4: Data vector (D)
 # ---------------------------------------------------------------------------
 
-print("\n--- Step 6: Data vector ---")
+print("\n--- Step 4: Data vector ---")
 
 def compute_data_vector(blurred_mapping_matrix, image, noise_map):
     return al.util.inversion_imaging.data_vector_via_blurred_mapping_matrix_from(
@@ -460,25 +409,24 @@ def compute_data_vector(blurred_mapping_matrix, image, noise_map):
     )
 
 bmm_jnp = jnp.array(blurred_mapping_matrix)
-profile_sub_jnp = jnp.array(fit.profile_subtracted_image.array)
 noise_jnp = jnp.array(dataset.noise_map.array)
 
 with timer.section("data_vector_eager"):
-    data_vector = compute_data_vector(bmm_jnp, profile_sub_jnp, noise_jnp)
+    data_vector = compute_data_vector(bmm_jnp, data_array, noise_jnp)
     block(data_vector)
 
 _, data_vector = jit_profile(
-    compute_data_vector, "data_vector_jit", bmm_jnp, profile_sub_jnp, noise_jnp
+    compute_data_vector, "data_vector_jit", bmm_jnp, data_array, noise_jnp
 )
 likelihood_steps.append(("Data vector (D)", timer.records[-1][1] / 10))
 
 print(f"  data_vector shape: {data_vector.shape}")
 
 # ---------------------------------------------------------------------------
-# Step 7: Curvature matrix (F)
+# Step 5: Curvature matrix (F)
 # ---------------------------------------------------------------------------
 
-print("\n--- Step 7: Curvature matrix ---")
+print("\n--- Step 5: Curvature matrix ---")
 
 n_linear = bmm_jnp.shape[1]
 
@@ -503,10 +451,10 @@ likelihood_steps.append(("Curvature matrix (F)", timer.records[-1][1] / 10))
 print(f"  curvature_matrix shape: {curvature_matrix.shape}")
 
 # ---------------------------------------------------------------------------
-# Step 8: Reconstruction (positive-only NNLS)
+# Step 6: Reconstruction (positive-only NNLS)
 # ---------------------------------------------------------------------------
 
-print("\n--- Step 8: Reconstruction (NNLS) ---")
+print("\n--- Step 6: Reconstruction (NNLS) ---")
 
 def compute_reconstruction(data_vector, curvature_matrix):
     return al.util.inversion.reconstruction_positive_only_from(
@@ -530,10 +478,10 @@ likelihood_steps.append(("Reconstruction (NNLS)", timer.records[-1][1] / 10))
 print(f"  reconstruction shape: {reconstruction.shape}")
 
 # ---------------------------------------------------------------------------
-# Step 9: Map reconstruction back to image plane
+# Step 7: Map reconstruction back to image plane
 # ---------------------------------------------------------------------------
 
-print("\n--- Step 9: Mapped reconstructed image ---")
+print("\n--- Step 7: Mapped reconstructed image ---")
 
 def compute_mapped_recon(blurred_mapping_matrix, reconstruction):
     return al.util.inversion.mapped_reconstructed_data_via_mapping_matrix_from(
@@ -554,30 +502,28 @@ likelihood_steps.append(("Mapped reconstructed image", timer.records[-1][1] / 10
 print(f"  mapped_reconstructed_image shape: {mapped_recon.shape}")
 
 # ---------------------------------------------------------------------------
-# Step 10: Chi-squared and log likelihood
+# Step 8: Chi-squared and log likelihood
 # ---------------------------------------------------------------------------
 
-print("\n--- Step 10: Chi-squared & log likelihood ---")
+print("\n--- Step 8: Chi-squared & log likelihood ---")
 
-def compute_log_likelihood(data, noise_map, blurred_image, mapped_recon):
-    model_data = blurred_image + mapped_recon
-    residual = data - model_data
+def compute_log_likelihood(data, noise_map, mapped_recon):
+    residual = data - mapped_recon
     chi_squared = jnp.sum((residual / noise_map) ** 2)
     noise_norm = jnp.sum(jnp.log(2 * jnp.pi * noise_map ** 2))
     return -0.5 * (chi_squared + noise_norm)
 
-blurred_img_jnp = jnp.array(blurred_image.array)
 mapped_recon_jnp = jnp.array(mapped_recon)
 
 with timer.section("log_likelihood_eager"):
     log_like = compute_log_likelihood(
-        data_array, noise_jnp, blurred_img_jnp, mapped_recon_jnp
+        data_array, noise_jnp, mapped_recon_jnp
     )
     block(log_like)
 
 _, log_like = jit_profile(
     compute_log_likelihood, "log_likelihood_jit",
-    data_array, noise_jnp, blurred_img_jnp, mapped_recon_jnp
+    data_array, noise_jnp, mapped_recon_jnp
 )
 likelihood_steps.append(("Chi-squared & log likelihood", timer.records[-1][1] / 10))
 

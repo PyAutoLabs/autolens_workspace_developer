@@ -7,6 +7,10 @@ imaging likelihood pipeline.  The existing ``mge.py`` profiles each step
 under ``jax.jit``; this companion script replaces JIT profiling with gradient
 testing so you can isolate exactly which step breaks ``jax.grad``.
 
+Because the MGE model uses only linear light profiles (``lp_linear``), there
+is no non-linear blurred image step — all light is reconstructed via the
+linear inversion.
+
 Each step defines a function ``params -> scalar`` and calls
 ``jax.value_and_grad``.  The output is a summary table showing which steps
 produce valid (finite, non-zero) gradients and which do not.
@@ -237,7 +241,6 @@ print(f"  log_likelihood = {fit.log_likelihood}")
 
 # Extract raw arrays for intermediate-step tests.
 grid_lp = dataset.grids.lp
-grid_blurring = dataset.grids.blurring
 data_array = jnp.array(dataset.data.array)
 noise_map_array = jnp.array(dataset.noise_map.array)
 
@@ -265,21 +268,7 @@ def step_ray_trace(params):
 test_grad("Step 1: Ray-trace grids", step_ray_trace, jnp_params)
 
 # ---------------------------------------------------------------------------
-# Step 2: Blurred image (non-linear profiles)
-# ---------------------------------------------------------------------------
-
-def step_blurred_image(params):
-    inst = model.instance_from_vector(vector=params, xp=jnp)
-    t = al.Tracer(galaxies=list(inst.galaxies))
-    result = t.blurred_image_2d_from(
-        grid=grid_lp, psf=dataset.psf, blurring_grid=grid_blurring, xp=jnp,
-    )
-    return jnp.sum(result.array)
-
-test_grad("Step 2: Blurred image (non-linear profiles)", step_blurred_image, jnp_params)
-
-# ---------------------------------------------------------------------------
-# Step 3: Mapping matrix (linear profile images)
+# Step 2: Mapping matrix (linear profile images)
 # ---------------------------------------------------------------------------
 
 def step_mapping_matrix(params):
@@ -302,10 +291,10 @@ def step_mapping_matrix(params):
     mm = jnp.hstack(matrices) if len(matrices) > 1 else matrices[0]
     return jnp.sum(mm)
 
-test_grad("Step 3: Mapping matrix", step_mapping_matrix, jnp_params)
+test_grad("Step 2: Mapping matrix", step_mapping_matrix, jnp_params)
 
 # ---------------------------------------------------------------------------
-# Step 4: Blurred mapping matrix (PSF convolution of each profile)
+# Step 3: Blurred mapping matrix (PSF convolution of each profile)
 # ---------------------------------------------------------------------------
 
 def step_blurred_mapping_matrix(params):
@@ -328,20 +317,15 @@ def step_blurred_mapping_matrix(params):
     bmm = jnp.hstack(matrices) if len(matrices) > 1 else matrices[0]
     return jnp.sum(bmm)
 
-test_grad("Step 4: Blurred mapping matrix", step_blurred_mapping_matrix, jnp_params)
+test_grad("Step 3: Blurred mapping matrix", step_blurred_mapping_matrix, jnp_params)
 
 # ---------------------------------------------------------------------------
-# Step 5: Data vector (D)
+# Step 4: Data vector (D)
 # ---------------------------------------------------------------------------
 
 def step_data_vector(params):
     inst = model.instance_from_vector(vector=params, xp=jnp)
     t = al.Tracer(galaxies=list(inst.galaxies))
-
-    blurred_img = t.blurred_image_2d_from(
-        grid=grid_lp, psf=dataset.psf, blurring_grid=grid_blurring, xp=jnp,
-    )
-    profile_subtracted = data_array - blurred_img.array
 
     tti = al.TracerToInversion(
         dataset=aa.DatasetInterface(
@@ -361,15 +345,15 @@ def step_data_vector(params):
 
     data_vector = al.util.inversion_imaging.data_vector_via_blurred_mapping_matrix_from(
         blurred_mapping_matrix=bmm,
-        image=profile_subtracted,
+        image=data_array,
         noise_map=noise_map_array,
     )
     return jnp.sum(data_vector)
 
-test_grad("Step 5: Data vector (D)", step_data_vector, jnp_params)
+test_grad("Step 4: Data vector (D)", step_data_vector, jnp_params)
 
 # ---------------------------------------------------------------------------
-# Step 6: Curvature matrix (F)
+# Step 5: Curvature matrix (F)
 # ---------------------------------------------------------------------------
 
 def step_curvature_matrix(params):
@@ -401,20 +385,15 @@ def step_curvature_matrix(params):
     )
     return jnp.sum(curvature)
 
-test_grad("Step 6: Curvature matrix (F)", step_curvature_matrix, jnp_params)
+test_grad("Step 5: Curvature matrix (F)", step_curvature_matrix, jnp_params)
 
 # ---------------------------------------------------------------------------
-# Step 7: Reconstruction (NNLS)
+# Step 6: Reconstruction (NNLS)
 # ---------------------------------------------------------------------------
 
 def step_reconstruction(params):
     inst = model.instance_from_vector(vector=params, xp=jnp)
     t = al.Tracer(galaxies=list(inst.galaxies))
-
-    blurred_img = t.blurred_image_2d_from(
-        grid=grid_lp, psf=dataset.psf, blurring_grid=grid_blurring, xp=jnp,
-    )
-    profile_subtracted = data_array - blurred_img.array
 
     tti = al.TracerToInversion(
         dataset=aa.DatasetInterface(
@@ -434,7 +413,7 @@ def step_reconstruction(params):
 
     data_vector = al.util.inversion_imaging.data_vector_via_blurred_mapping_matrix_from(
         blurred_mapping_matrix=bmm,
-        image=profile_subtracted,
+        image=data_array,
         noise_map=noise_map_array,
     )
 
@@ -454,20 +433,15 @@ def step_reconstruction(params):
     )
     return jnp.sum(reconstruction)
 
-test_grad("Step 7: Reconstruction (NNLS)", step_reconstruction, jnp_params)
+test_grad("Step 6: Reconstruction (NNLS)", step_reconstruction, jnp_params)
 
 # ---------------------------------------------------------------------------
-# Step 8: Mapped reconstructed image
+# Step 7: Mapped reconstructed image
 # ---------------------------------------------------------------------------
 
 def step_mapped_recon(params):
     inst = model.instance_from_vector(vector=params, xp=jnp)
     t = al.Tracer(galaxies=list(inst.galaxies))
-
-    blurred_img = t.blurred_image_2d_from(
-        grid=grid_lp, psf=dataset.psf, blurring_grid=grid_blurring, xp=jnp,
-    )
-    profile_subtracted = data_array - blurred_img.array
 
     tti = al.TracerToInversion(
         dataset=aa.DatasetInterface(
@@ -487,7 +461,7 @@ def step_mapped_recon(params):
 
     data_vector = al.util.inversion_imaging.data_vector_via_blurred_mapping_matrix_from(
         blurred_mapping_matrix=bmm,
-        image=profile_subtracted,
+        image=data_array,
         noise_map=noise_map_array,
     )
 
@@ -513,20 +487,15 @@ def step_mapped_recon(params):
     )
     return jnp.sum(mapped_recon)
 
-test_grad("Step 8: Mapped reconstructed image", step_mapped_recon, jnp_params)
+test_grad("Step 7: Mapped reconstructed image", step_mapped_recon, jnp_params)
 
 # ---------------------------------------------------------------------------
-# Step 9: Log likelihood (chi-squared)
+# Step 8: Log likelihood (chi-squared)
 # ---------------------------------------------------------------------------
 
 def step_log_likelihood(params):
     inst = model.instance_from_vector(vector=params, xp=jnp)
     t = al.Tracer(galaxies=list(inst.galaxies))
-
-    blurred_img = t.blurred_image_2d_from(
-        grid=grid_lp, psf=dataset.psf, blurring_grid=grid_blurring, xp=jnp,
-    )
-    profile_subtracted = data_array - blurred_img.array
 
     tti = al.TracerToInversion(
         dataset=aa.DatasetInterface(
@@ -546,7 +515,7 @@ def step_log_likelihood(params):
 
     data_vector = al.util.inversion_imaging.data_vector_via_blurred_mapping_matrix_from(
         blurred_mapping_matrix=bmm,
-        image=profile_subtracted,
+        image=data_array,
         noise_map=noise_map_array,
     )
 
@@ -571,13 +540,12 @@ def step_log_likelihood(params):
         xp=jnp,
     )
 
-    model_data = blurred_img.array + mapped_recon
-    residual = data_array - model_data
+    residual = data_array - mapped_recon
     chi_squared = jnp.sum((residual / noise_map_array) ** 2)
     noise_norm = jnp.sum(jnp.log(2 * jnp.pi * noise_map_array ** 2))
     return -0.5 * (chi_squared + noise_norm)
 
-test_grad("Step 9: Log likelihood", step_log_likelihood, jnp_params)
+test_grad("Step 8: Log likelihood", step_log_likelihood, jnp_params)
 
 
 # ===================================================================
