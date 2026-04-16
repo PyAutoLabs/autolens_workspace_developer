@@ -28,6 +28,25 @@ separate pieces, so per-step timings are approximate. They are still useful
 for identifying which step dominates.
 
 All JAX timings use `block_until_ready()` to force synchronous measurement.
+
+Pytree-native parameter inputs (recommended pattern)
+----------------------------------------------------
+
+This script uses ``af.ModelInstance`` as the JIT input via PyAutoFit's
+opt-in pytree registration (``autofit.jax.register_model(model)``). The
+JIT'd closures consume the instance directly, so:
+
+* ``model.instance_from_vector`` is no longer called inside the JIT trace —
+  parameter unpacking happens once at registration time and JAX walks the
+  pytree on every call.
+* Parameter identity is preserved through ``jax.jit`` and ``jax.vmap``;
+  XLA cache keys reflect the structured pytree, not a flat vector shape.
+* ``vmap`` batching is ``jax.tree_util.tree_map`` over the instance leaves
+  — callers no longer have to stack a ``(batch, N)`` array.
+
+New profiling scripts should follow this pattern. The flat-vector path in
+``Fitness.call`` / ``model.instance_from_vector(..., xp=jnp)`` remains the
+production likelihood entry point and is intentionally untouched here.
 """
 
 import numpy as np
@@ -42,6 +61,7 @@ from contextlib import contextmanager
 import autofit as af
 import autolens as al
 import autoarray as aa
+from autofit.jax import register_model as _register_model_pytrees
 
 # ---------------------------------------------------------------------------
 # Instrument configuration
@@ -220,6 +240,18 @@ with timer.section("instance_from_vector"):
     param_vector = model.physical_values_from_prior_medians
     instance = model.instance_from_vector(vector=param_vector)
 
+# Register every concrete `model.cls` (Galaxy, profile classes, ModelInstance,
+# Collection, …) with `jax.tree_util` so the instance can cross JIT/vmap
+# boundaries directly. This must happen AFTER the model is built, because
+# registration walks the model's class graph.
+with timer.section("register_pytrees"):
+    _register_model_pytrees(model)
+
+# JIT input: the instance itself, with all parameter leaves promoted to JAX
+# arrays. We keep `instance` (the eager NumPy version) around for any
+# non-JIT setup that needs to read parameter values directly.
+params_tree = jax.tree_util.tree_map(jnp.asarray, instance)
+
 tracer = al.Tracer(galaxies=list(instance.galaxies))
 
 print(f"  Tracer planes: {tracer.total_planes}")
@@ -301,8 +333,6 @@ likelihood_steps.append(("Ray-trace grids", timer.records[-1][1] / 10))
 
 print(f"  traced_grids shape: {traced_grids_raw.shape}")
 
-jnp_params = jnp.array(param_vector)
-
 # ---------------------------------------------------------------------------
 # Step 2: Build linear objects and mapping matrix
 # ---------------------------------------------------------------------------
@@ -333,10 +363,13 @@ with timer.section("mapping_matrix"):
 
 print(f"  mapping_matrix shape: {mapping_matrix.shape}")
 
-def mapping_matrix_from_params(params):
-    """Reconstruct tracer from params, compute mapping matrix — fully JIT-traceable."""
-    inst = model.instance_from_vector(vector=params, xp=jnp)
-    t = al.Tracer(galaxies=list(inst.galaxies))
+def mapping_matrix_from_params(params_tree):
+    """Compute mapping matrix from a pytree-shaped ``ModelInstance``.
+
+    No flat-vector unpacking inside the trace: ``params_tree`` is the
+    structured instance directly (registered as a JAX pytree above).
+    """
+    t = al.Tracer(galaxies=list(params_tree.galaxies))
     tti = al.TracerToInversion(
         dataset=aa.DatasetInterface(
             data=fit.profile_subtracted_image,
@@ -353,7 +386,7 @@ def mapping_matrix_from_params(params):
     matrices = [f.mapping_matrix for f in funcs]
     return jnp.hstack(matrices) if len(matrices) > 1 else matrices[0]
 
-_, mm_jit = jit_profile(mapping_matrix_from_params, "mapping_matrix_jit", jnp_params)
+_, mm_jit = jit_profile(mapping_matrix_from_params, "mapping_matrix_jit", params_tree)
 likelihood_steps.append(("Mapping matrix", timer.records[-1][1] / 10))
 
 print(f"  mapping_matrix (JIT) shape: {mm_jit.shape}")
@@ -370,10 +403,9 @@ with timer.section("blurred_mapping_matrix"):
 
 print(f"  blurred_mapping_matrix shape: {blurred_mapping_matrix.shape}")
 
-def blurred_mm_from_params(params):
-    """Reconstruct tracer from params, compute blurred mapping matrix — fully JIT-traceable."""
-    inst = model.instance_from_vector(vector=params, xp=jnp)
-    t = al.Tracer(galaxies=list(inst.galaxies))
+def blurred_mm_from_params(params_tree):
+    """Compute blurred mapping matrix from a pytree-shaped ``ModelInstance``."""
+    t = al.Tracer(galaxies=list(params_tree.galaxies))
     tti = al.TracerToInversion(
         dataset=aa.DatasetInterface(
             data=fit.profile_subtracted_image,
@@ -390,7 +422,7 @@ def blurred_mm_from_params(params):
     matrices = [f.operated_mapping_matrix_override for f in funcs]
     return jnp.hstack(matrices) if len(matrices) > 1 else matrices[0]
 
-_, bmm_jit = jit_profile(blurred_mm_from_params, "blurred_mm_jit", jnp_params)
+_, bmm_jit = jit_profile(blurred_mm_from_params, "blurred_mm_jit", params_tree)
 likelihood_steps.append(("Blurred mapping matrix", timer.records[-1][1] / 10))
 
 print(f"  blurred_mapping_matrix (JIT) shape: {bmm_jit.shape}")
@@ -547,20 +579,23 @@ print("\n" + "=" * 70)
 print("FULL-PIPELINE JIT (for comparison)")
 print("=" * 70)
 
-from autofit.non_linear.fitness import Fitness
+# Build the analysis with ``use_jax=True`` so its ``log_likelihood_function``
+# threads ``xp=jnp`` through every internal call (border relocation, profile
+# evaluation, inversion, etc.). This is the same wiring that ``Fitness.call``
+# uses in production — we just feed it our pytree-native instance directly
+# instead of going through ``model.instance_from_vector(parameters, xp=jnp)``.
+analysis = al.AnalysisImaging(dataset=dataset, use_jax=True)
 
-analysis = al.AnalysisImaging(dataset=dataset)
+def full_pipeline_from_params(params_tree):
+    """Full likelihood from a pytree-shaped ``ModelInstance``.
 
-fitness = Fitness(
-    model=model,
-    analysis=analysis,
-    fom_is_log_likelihood=True,
-    resample_figure_of_merit=-1.0e99,
-)
+    No flat-vector unpacking inside the trace — the instance crosses the JIT
+    boundary directly, with constants (redshifts, etc.) kept static via the
+    ``aux_data`` partition set up by ``autofit.jax.register_model``.
+    """
+    return analysis.log_likelihood_function(instance=params_tree)
 
-jnp_params = jnp.array(model.physical_values_from_prior_medians)
-
-_, full_result = jit_profile(fitness.call, "full_pipeline", jnp_params)
+_, full_result = jit_profile(full_pipeline_from_params, "full_pipeline", params_tree)
 full_pipeline_per_call = timer.records[-1][1] / 10
 
 print(f"  full log_likelihood = {full_result}")
@@ -572,16 +607,25 @@ print(f"  full log_likelihood = {full_result}")
 print("\n--- vmap batched evaluation ---")
 
 batch_size = 3
-parameters = jnp.tile(jnp_params, (batch_size, 1))
+
+# Build the batched pytree: every leaf gets a fresh leading batch axis. No
+# flat-vector reshaping required — JAX walks the pytree via the registration
+# we added in PART A.
+parameters = jax.tree_util.tree_map(
+    lambda leaf: jnp.broadcast_to(leaf, (batch_size, *leaf.shape)),
+    params_tree,
+)
+
+vmapped_full = jax.jit(jax.vmap(full_pipeline_from_params))
 
 with timer.section("vmap_first_call"):
-    result_vmap = fitness._vmap(parameters)
+    result_vmap = vmapped_full(parameters)
     block(result_vmap)
 
 n_vmap_repeats = 10
 with timer.section(f"vmap_steady_x{n_vmap_repeats}"):
     for _ in range(n_vmap_repeats):
-        result_vmap = fitness._vmap(parameters)
+        result_vmap = vmapped_full(parameters)
         block(result_vmap)
 
 vmap_batch_time = timer.records[-1][1] / n_vmap_repeats
@@ -608,8 +652,7 @@ print("  Correctness check PASSED")
 
 print("\n--- Static memory analysis ---")
 
-batched_call = jax.jit(jax.vmap(fitness.call))
-lowered_batched = batched_call.lower(parameters)
+lowered_batched = vmapped_full.lower(parameters)
 compiled_batched = lowered_batched.compile()
 
 memory_analysis = compiled_batched.memory_analysis()
