@@ -4,11 +4,11 @@ Developer workspace for profiling and optimising PyAutoLens JAX pipelines.
 
 ## Running Scripts
 
-Scripts expect to be run from their own directory so relative paths to `dataset/` resolve:
+Scripts run from the workspace root (`autolens_workspace_developer/`). All relative `dataset/` and output paths inside scripts must be written relative to the workspace root (e.g. `Path("jax_profiling") / "imaging" / "dataset" / ...`):
 
 ```bash
-cd jax_profiling/imaging
-python mge.py
+cd autolens_workspace_developer
+python jax_profiling/imaging/mge.py
 ```
 
 ## Raw Array Extraction via `.array`
