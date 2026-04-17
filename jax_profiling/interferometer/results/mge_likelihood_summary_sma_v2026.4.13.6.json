@@ -1,0 +1,28 @@
+{
+  "autolens_version": "2026.4.13.6",
+  "instrument": "sma",
+  "model": "mge",
+  "configuration": {
+    "pixel_scale_arcsec": 0.1,
+    "mask_radius_arcsec": 3.0,
+    "real_space_shape": [
+      256,
+      256
+    ],
+    "visibilities": 190,
+    "linear_gaussians": 20
+  },
+  "log_likelihood_eager": -3154.8053501947784,
+  "log_likelihood_jit": -3154.8053574023816,
+  "full_pipeline_single_jit": 0.04582274000022153,
+  "vmap": {
+    "batch_size": 3,
+    "batch_time": 0.06364862000009452,
+    "per_call": 0.021216206666698174,
+    "speedup_vs_single_jit": 2.2
+  },
+  "memory_mb": {
+    "output": 2.288818359375e-05,
+    "temp": 16.98328399658203
+  }
+}
