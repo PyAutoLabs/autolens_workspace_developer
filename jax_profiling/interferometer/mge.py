@@ -129,7 +129,7 @@ print(f"\n--- Dataset loading [{instrument}] ---")
 _script_dir = Path(__file__).resolve().parent
 pixel_scale = INSTRUMENTS[instrument]["pixel_scale"]
 real_space_shape = INSTRUMENTS[instrument]["real_space_shape"]
-dataset_path = Path("dataset") / "interferometer" / instrument
+dataset_path = Path("jax_profiling") / "interferometer" / "dataset" / "interferometer" / instrument
 
 if al.util.dataset.should_simulate(str(dataset_path)):
     print(f"  Simulating {instrument} dataset...")
