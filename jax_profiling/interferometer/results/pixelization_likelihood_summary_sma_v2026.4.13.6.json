@@ -1,0 +1,34 @@
+{
+  "autolens_version": "2026.4.13.6",
+  "instrument": "sma",
+  "model": "pixelization",
+  "configuration": {
+    "pixel_scale_arcsec": 0.1,
+    "mask_radius_arcsec": 3.0,
+    "real_space_shape": [
+      256,
+      256
+    ],
+    "visibilities": 190,
+    "mesh_shape": [
+      28,
+      28
+    ],
+    "source_pixels": 784,
+    "regularization_coefficient": 1.0
+  },
+  "log_likelihood_eager": -3154.2171245701475,
+  "figure_of_merit_eager": -3168.3465633040255,
+  "log_evidence_jit": -3168.346563304238,
+  "full_pipeline_single_jit": 0.3036474300000009,
+  "vmap": {
+    "batch_size": 3,
+    "batch_time": 0.9878211100000044,
+    "per_call": 0.3292737033333348,
+    "speedup_vs_single_jit": 0.9
+  },
+  "memory_mb": {
+    "output": 2.288818359375e-05,
+    "temp": 170.78638458251953
+  }
+}
