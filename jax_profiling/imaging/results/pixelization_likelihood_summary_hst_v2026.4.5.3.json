@@ -1,0 +1,34 @@
+{
+  "autolens_version": "2026.4.5.3",
+  "instrument": "hst",
+  "configuration": {
+    "pixel_scale_arcsec": 0.05,
+    "mask_radius_arcsec": 3.5,
+    "image_pixels_masked": 15361,
+    "over_sampled_pixels": 17980,
+    "mesh_shape": [
+      28,
+      28
+    ],
+    "source_pixels": 784
+  },
+  "steps": {
+    "Ray-trace grids": 0.002127959999779705,
+    "Lens light images (pre-PSF)": 2.3690000307396986e-05,
+    "Profile-subtracted image": 0.00017914999989443459,
+    "Overlay grid (source pixel centres)": 0.00029895000006945337,
+    "Data vector (D)": 0.008902210000087507,
+    "Curvature matrix (F)": 0.8931066799999826,
+    "Regularization matrix (H)": 0.00044046000002708754,
+    "Regularized reconstruction": 0.01933865000028163,
+    "Mapped recon + log evidence": 0.03912017000002379
+  },
+  "total_step_by_step": 0.9635379200004536,
+  "full_pipeline_single_jit": 2.014458640000157,
+  "vmap": {
+    "batch_size": 3,
+    "batch_time": 7.93855693000005,
+    "per_call": 2.6461856433333497,
+    "speedup_vs_single_jit": 0.8
+  }
+}
