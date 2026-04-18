@@ -7,19 +7,19 @@
     "positions_noise_sigma": 0.2,
     "free_parameters": 8
   },
-  "eager_per_call": 0.0028598109999802544,
-  "eager_log_likelihood": -4496.798984131583,
+  "eager_per_call": 0.007736787000030745,
+  "eager_log_likelihood": -4491.83220547254,
   "full_pipeline_jits": true,
   "full_pipeline_blocker": null,
-  "full_pipeline_single_jit": 0.00038716000017302576,
+  "full_pipeline_single_jit": 0.0005248499997833278,
   "jit_able_prefix": {
     "name": "ray-trace observed positions to source plane",
-    "per_call": 0.00034986999999091494
+    "per_call": 0.0004281299996364396
   },
   "vmap_prefix": {
     "batch_size": 3,
-    "batch_time": 0.0002824099999997998,
-    "per_call": 9.413666666659993e-05,
-    "speedup_vs_single_jit_prefix": 3.7
+    "batch_time": 0.0004249800003890414,
+    "per_call": 0.00014166000012968047,
+    "speedup_vs_single_jit_prefix": 3.0
   }
 }

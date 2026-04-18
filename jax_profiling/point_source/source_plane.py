@@ -11,23 +11,6 @@ source plane via the lens model, then computes a chi-squared between the
 ray-traced positions and the model source position.  No image-plane solver
 is required.
 
-LIBRARY-LEVEL NUMERICAL DRIFT (np vs jnp magnifications)
----------------------------------------------------------
-
-The earlier ``TracerArrayConversionError`` JIT blocker (``Grid2DIrregular.
-grid_2d_via_deflection_grid_from`` not propagating ``xp``) has been fixed
-upstream — the full source-plane likelihood now JIT-traces end-to-end.
-
-A separate numerical issue remains: the eager-np and eager-jnp paths of
-``LensCalc.magnification_2d_via_hessian_from`` disagree at ~5e-4 relative,
-which amplifies into a ~0.1% drift in the final log-likelihood.  See the
-follow-up prompt ``admin_jammy/prompt/autolens/lens_calc_magnification_xp_divergence.md``
-for the full analysis and plan.
-
-Until that lands, the JIT regression assertion below is loosened from
-``rtol=1e-4`` to ``rtol=2e-3`` so the script stays green.  The eager-only
-assertion remains tight.
-
 Pytree-native parameter inputs
 ------------------------------
 
@@ -496,14 +479,15 @@ print(f"  Bar chart saved to:    {chart_path}")
 
 
 # ===================================================================
-# Regression assertions (eager-only — see BLOCKER above)
+# Regression assertions (eager and full-pipeline JIT)
 # ===================================================================
 #
 # Seeded simulator (noise_seed=1 in simulators/point_source.py) + prior-median
-# parameter vector make the eager source-plane log-likelihood deterministic.
-# The full-JIT regression assertion is gated on full_pipeline_jits — once the
-# library blocker is fixed, both branches will fire.
-EXPECTED_LOG_LIKELIHOOD_SOURCE_PLANE = -4496.798984131583
+# parameter vector make the source-plane log-likelihood deterministic. Both
+# the eager numpy and the full-pipeline JIT paths now agree to float64
+# precision, following the Richardson-extrapolation fix to
+# LensCalc.hessian_from in PyAutoGalaxy (PR #358).
+EXPECTED_LOG_LIKELIHOOD_SOURCE_PLANE = -4491.83220547254
 
 np.testing.assert_allclose(
     log_likelihood_ref,
@@ -520,13 +504,10 @@ print(
 )
 
 if full_pipeline_jits:
-    # rtol loosened pending the np/jnp parity fix in
-    # LensCalc.magnification_2d_via_hessian_from — see
-    # admin_jammy/prompt/autolens/lens_calc_magnification_xp_divergence.md
     np.testing.assert_allclose(
         float(full_result),
         EXPECTED_LOG_LIKELIHOOD_SOURCE_PLANE,
-        rtol=2e-3,
+        rtol=1e-4,
         err_msg=(
             f"point_source/source_plane: regression — JIT log_likelihood drifted "
             f"(got {float(full_result)}, expected {EXPECTED_LOG_LIKELIHOOD_SOURCE_PLANE})"
