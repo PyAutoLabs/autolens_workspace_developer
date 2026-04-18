@@ -192,3 +192,25 @@
 2026-04-02 18:35:37,119 - jax_plugins.xla_cuda12 - WARNING - cuda_plugin_extension is not found.
 2026-04-02 18:36:11,164 - autofit.non_linear.fitness - INFO - JAX: Applying vmap and jit to likelihood function -- may take a few seconds.
 2026-04-02 18:36:11,165 - autofit.non_linear.fitness - INFO - JAX: vmap and jit applied in 0.000978231430053711 seconds.
+2026-04-17 10:28:15,753 - autoarray.dataset.imaging.dataset - INFO - IMAGING - Data masked, contains a total of 15361 image-pixels
+2026-04-17 10:28:16,548 - jax_plugins.xla_cuda12 - WARNING - cuda_plugin_extension is not found.
+2026-04-17 10:47:58,335 - autoarray.dataset.imaging.dataset - INFO - IMAGING - Data masked, contains a total of 15361 image-pixels
+2026-04-17 10:47:59,420 - jax_plugins.xla_cuda12 - WARNING - cuda_plugin_extension is not found.
+2026-04-17 12:19:30,711 - autoarray.dataset.imaging.dataset - INFO - IMAGING - Data masked, contains a total of 15361 image-pixels
+2026-04-17 12:19:31,566 - jax_plugins.xla_cuda12 - WARNING - cuda_plugin_extension is not found.
+2026-04-17 12:21:53,197 - jax_plugins.xla_cuda12 - WARNING - cuda_plugin_extension is not found.
+2026-04-17 13:35:21,585 - autoarray.dataset.imaging.dataset - INFO - IMAGING - Data masked, contains a total of 15361 image-pixels
+2026-04-17 13:35:22,379 - jax_plugins.xla_cuda12 - WARNING - cuda_plugin_extension is not found.
+2026-04-17 13:38:34,689 - autoarray.dataset.imaging.dataset - INFO - IMAGING - Data masked, contains a total of 15361 image-pixels
+2026-04-17 13:38:35,529 - jax_plugins.xla_cuda12 - WARNING - cuda_plugin_extension is not found.
+2026-04-17 13:47:17,401 - autoarray.dataset.imaging.dataset - INFO - IMAGING - Data masked, contains a total of 15361 image-pixels
+2026-04-17 13:47:18,217 - jax_plugins.xla_cuda12 - WARNING - cuda_plugin_extension is not found.
+2026-04-17 14:08:55,742 - autoarray.dataset.imaging.dataset - INFO - IMAGING - Data masked, contains a total of 15361 image-pixels
+2026-04-17 14:08:56,694 - jax_plugins.xla_cuda12 - WARNING - cuda_plugin_extension is not found.
+2026-04-17 14:31:23,625 - autoarray.dataset.imaging.dataset - INFO - IMAGING - Data masked, contains a total of 15361 image-pixels
+2026-04-17 14:31:24,430 - jax_plugins.xla_cuda12 - WARNING - cuda_plugin_extension is not found.
+2026-04-17 14:34:01,330 - autoarray.dataset.imaging.dataset - INFO - IMAGING - Data masked, contains a total of 15361 image-pixels
+2026-04-17 14:34:02,270 - jax_plugins.xla_cuda12 - WARNING - cuda_plugin_extension is not found.
+2026-04-17 14:36:30,810 - autoarray.dataset.imaging.dataset - INFO - IMAGING - Data masked, contains a total of 15361 image-pixels
+2026-04-17 14:36:31,711 - jax_plugins.xla_cuda12 - WARNING - cuda_plugin_extension is not found.
+2026-04-17 22:06:05,656 - jax_plugins.xla_cuda12 - WARNING - cuda_plugin_extension is not found.

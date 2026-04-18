@@ -13,24 +13,24 @@
     "source_pixels": 784
   },
   "steps": {
-    "Ray-trace grids": 0.0015377100000023348,
-    "Lens light images (pre-PSF)": 1.1920000002874075e-05,
-    "Blurred image (PSF convolution)": 0.002592010000000755,
-    "Profile-subtracted image": 0.000127330000003667,
-    "Overlay grid (source pixel centres)": 0.00020206000000371204,
-    "Inversion setup (steps 4-8 combined)": 0.5582707800000037,
-    "Data vector (D)": 0.0064621499999987005,
-    "Curvature matrix (F)": 0.6720524699999999,
-    "Regularization matrix (H)": 0.0003272600000002512,
-    "Regularized reconstruction": 0.1517236099999991,
-    "Mapped recon + log evidence": 0.021644540000005465
+    "Ray-trace grids": 0.001979650000021138,
+    "Lens light images (pre-PSF)": 1.98299999738083e-05,
+    "Blurred image (PSF convolution)": 0.0033411000000342027,
+    "Profile-subtracted image": 0.00019839000001411477,
+    "Overlay grid (source pixel centres)": 0.0005578400000104012,
+    "Inversion setup (steps 4-8 combined)": 0.6684246799999982,
+    "Data vector (D)": 0.016262139999980718,
+    "Curvature matrix (F)": 0.902575539999998,
+    "Regularization matrix (H)": 0.0005788400000255933,
+    "Regularized reconstruction": 0.1999095500000294,
+    "Mapped recon + log evidence": 0.032499180000013436
   },
-  "total_step_by_step": 1.4149518400000203,
-  "full_pipeline_single_jit": 1.405020460000003,
+  "total_step_by_step": 1.8263467400000988,
+  "full_pipeline_single_jit": 1.7259940499999629,
   "vmap": {
     "batch_size": 3,
-    "batch_time": 5.207835359999995,
-    "per_call": 1.7359451199999985,
-    "speedup_vs_single_jit": 0.8
+    "batch_time": 5.548824710000008,
+    "per_call": 1.8496082366666693,
+    "speedup_vs_single_jit": 0.9
   }
 }
