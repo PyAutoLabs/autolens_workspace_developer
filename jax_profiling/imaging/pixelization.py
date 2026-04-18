@@ -950,3 +950,28 @@ chart_path = results_dir / f"pixelization_likelihood_summary_{instrument}_v{al_v
 fig.savefig(chart_path, dpi=150)
 plt.close(fig)
 print(f"  Bar chart saved to:    {chart_path}")
+
+
+# ===================================================================
+# Regression assertion — realistic-scale deterministic log-evidence
+# ===================================================================
+#
+# Seeded simulator (noise_seed=1 in simulators/imaging.py) + fixed model
+# parameters make the full-pipeline log-evidence deterministic at this
+# HST-scale rectangular-pixelization dataset. Guards against regressions
+# in the mapper / curvature / NNLS / regularization stack.
+EXPECTED_LOG_EVIDENCE_HST = -1338521802.3596945
+
+np.testing.assert_allclose(
+    float(full_result),
+    EXPECTED_LOG_EVIDENCE_HST,
+    rtol=1e-4,
+    err_msg=f"imaging/pixelization[{instrument}]: regression — full log_evidence drifted",
+)
+np.testing.assert_allclose(
+    np.array(result_vmap),
+    EXPECTED_LOG_EVIDENCE_HST,
+    rtol=1e-4,
+    err_msg=f"imaging/pixelization[{instrument}]: regression — vmap log_evidence drifted",
+)
+print(f"  Regression assertion PASSED: log_evidence matches {EXPECTED_LOG_EVIDENCE_HST:.6f}")
