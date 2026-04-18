@@ -1,0 +1,20 @@
+{
+  "autolens_version": "2026.4.13.6",
+  "dataset": "simple",
+  "fit_positions_cls": "FitPositionsImagePairAll",
+  "configuration": {
+    "observed_image_positions": 2,
+    "positions_noise_sigma": 0.2,
+    "free_parameters": 8
+  },
+  "eager_per_call": 1.4605535200000304,
+  "eager_log_likelihood": 0.3936326580483207,
+  "full_pipeline_single_jit": 0.029288589999850956,
+  "full_pipeline_log_likelihood": 0.39363265804832137,
+  "vmap": {
+    "batch_size": 3,
+    "batch_time": 0.041269269999975225,
+    "per_call": 0.013756423333325074,
+    "speedup_vs_single_jit": 2.1
+  }
+}

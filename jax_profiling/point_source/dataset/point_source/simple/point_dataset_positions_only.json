@@ -1,0 +1,45 @@
+{
+    "type": "instance",
+    "class_path": "autolens.point.dataset.PointDataset",
+    "arguments": {
+        "time_delays_noise_map": null,
+        "positions_noise_map": {
+            "type": "instance",
+            "class_path": "autoarray.structures.arrays.irregular.ArrayIrregular",
+            "arguments": {
+                "values": {
+                    "type": "ndarray",
+                    "array": [
+                        0.2,
+                        0.2
+                    ],
+                    "dtype": "float64"
+                }
+            }
+        },
+        "name": "point_0",
+        "fluxes_noise_map": null,
+        "fluxes": null,
+        "positions": {
+            "type": "instance",
+            "class_path": "autoarray.structures.grids.irregular_2d.Grid2DIrregular",
+            "arguments": {
+                "values": {
+                    "type": "ndarray",
+                    "array": [
+                        [
+                            1.4417730884129574,
+                            1.157997568563314
+                        ],
+                        [
+                            -0.8800063347633227,
+                            -1.4184893689847544
+                        ]
+                    ],
+                    "dtype": "float64"
+                }
+            }
+        },
+        "time_delays": null
+    }
+}
