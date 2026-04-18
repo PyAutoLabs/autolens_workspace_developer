@@ -7,19 +7,19 @@
     "positions_noise_sigma": 0.2,
     "free_parameters": 8
   },
-  "eager_per_call": 0.0024318960000164224,
+  "eager_per_call": 0.0028598109999802544,
   "eager_log_likelihood": -4496.798984131583,
-  "full_pipeline_jits": false,
-  "full_pipeline_blocker": "Grid2DIrregular.grid_2d_via_deflection_grid_from does not propagate xp; model_data ends up with _xp=np while holding JAX tracers, so squared_distances_to_coordinate_from calls np.square on a tracer.",
-  "full_pipeline_single_jit": null,
+  "full_pipeline_jits": true,
+  "full_pipeline_blocker": null,
+  "full_pipeline_single_jit": 0.00038716000017302576,
   "jit_able_prefix": {
     "name": "ray-trace observed positions to source plane",
-    "per_call": 0.0002742299999226816
+    "per_call": 0.00034986999999091494
   },
   "vmap_prefix": {
     "batch_size": 3,
-    "batch_time": 0.00026554999967629553,
-    "per_call": 8.851666655876518e-05,
-    "speedup_vs_single_jit_prefix": 3.1
+    "batch_time": 0.0002824099999997998,
+    "per_call": 9.413666666659993e-05,
+    "speedup_vs_single_jit_prefix": 3.7
   }
 }
