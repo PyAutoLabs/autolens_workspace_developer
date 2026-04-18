@@ -462,3 +462,28 @@ chart_path = results_dir / f"pixelization_likelihood_summary_{instrument}_v{al_v
 fig.savefig(chart_path, dpi=150)
 plt.close(fig)
 print(f"  Bar chart saved to:    {chart_path}")
+
+
+# ===================================================================
+# Regression assertion — realistic-scale deterministic log-evidence
+# ===================================================================
+#
+# Seeded simulator (noise_seed=1 in simulators/interferometer.py) + fixed
+# SMA uv-coverage + fixed model parameters make the full-pipeline
+# log-evidence deterministic. Guards against regressions in the visibility
+# transform / pixelization mapping / NNLS / regularization stack.
+EXPECTED_LOG_EVIDENCE_SMA = -3168.346563304238
+
+np.testing.assert_allclose(
+    float(full_result),
+    EXPECTED_LOG_EVIDENCE_SMA,
+    rtol=1e-4,
+    err_msg=f"interferometer/pixelization[{instrument}]: regression — full log_evidence drifted",
+)
+np.testing.assert_allclose(
+    np.array(result_vmap),
+    EXPECTED_LOG_EVIDENCE_SMA,
+    rtol=1e-4,
+    err_msg=f"interferometer/pixelization[{instrument}]: regression — vmap log_evidence drifted",
+)
+print(f"  Regression assertion PASSED: log_evidence matches {EXPECTED_LOG_EVIDENCE_SMA:.6f}")

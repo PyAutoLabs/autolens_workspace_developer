@@ -445,3 +445,28 @@ chart_path = results_dir / f"mge_likelihood_summary_{instrument}_v{al_version}.p
 fig.savefig(chart_path, dpi=150)
 plt.close(fig)
 print(f"  Bar chart saved to:    {chart_path}")
+
+
+# ===================================================================
+# Regression assertion — realistic-scale deterministic log-likelihood
+# ===================================================================
+#
+# Seeded simulator (noise_seed=1 in simulators/interferometer.py) + fixed
+# SMA uv-coverage + fixed model parameters make the full-pipeline
+# log-likelihood deterministic. Guards against regressions in the
+# visibility transform / MGE inversion / chi-squared stack.
+EXPECTED_LOG_LIKELIHOOD_SMA = -3154.8053574023816
+
+np.testing.assert_allclose(
+    float(full_result),
+    EXPECTED_LOG_LIKELIHOOD_SMA,
+    rtol=1e-4,
+    err_msg=f"interferometer/mge[{instrument}]: regression — full log_likelihood drifted",
+)
+np.testing.assert_allclose(
+    np.array(result_vmap),
+    EXPECTED_LOG_LIKELIHOOD_SMA,
+    rtol=1e-4,
+    err_msg=f"interferometer/mge[{instrument}]: regression — vmap log_likelihood drifted",
+)
+print(f"  Regression assertion PASSED: log_likelihood matches {EXPECTED_LOG_LIKELIHOOD_SMA:.6f}")

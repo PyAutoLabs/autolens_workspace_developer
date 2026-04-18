@@ -785,3 +785,18 @@ n_error = sum(1 for _, s, _ in results if s == "ERROR")
 print("-" * 70)
 print(f"  {n_pass} passed, {n_fail} failed, {n_error} errors out of {len(results)} tests")
 print("=" * 70)
+
+assert n_error == 0, (
+    f"Regression: {n_error} gradient step(s) errored on stock library defaults "
+    f"(nnls_target_kappa=1e-11, no_regularization_add_to_curvature_diag_value=1e-3)."
+)
+assert n_fail == 0, (
+    f"Regression: {n_fail} gradient step(s) produced non-finite values on stock "
+    f"library defaults (nnls_target_kappa=1e-11, "
+    f"no_regularization_add_to_curvature_diag_value=1e-3)."
+)
+assert n_pass == len(results), (
+    f"Regression: expected all {len(results)} gradient steps to PASS on stock "
+    f"library defaults, got {n_pass}."
+)
+print(f"  Regression assertion PASSED: all {n_pass}/{len(results)} gradient steps finite")

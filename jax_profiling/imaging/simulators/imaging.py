@@ -94,12 +94,13 @@ def simulate(instrument: str, mask_radius: float = 3.5):
         pixel_scales=grid.pixel_scales,
     )
 
-    # Simulator
+    # Simulator — seeded so likelihood assertions downstream are deterministic
     simulator = al.SimulatorImaging(
         exposure_time=300.0,
         psf=psf,
         background_sky_level=0.1,
         add_poisson_noise_to_data=True,
+        noise_seed=1,
     )
 
     # Galaxies — lens with Sersic light + Isothermal mass, source with cored Sersic

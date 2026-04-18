@@ -786,3 +786,27 @@ fig.savefig(chart_path, dpi=150)
 plt.close(fig)
 print(f"  Bar chart saved to:    {chart_path}")
 
+
+# ===================================================================
+# Regression assertion — realistic-scale deterministic likelihood
+# ===================================================================
+#
+# Seeded simulator (noise_seed=1 in simulators/imaging.py) + fixed model
+# parameters make the full-pipeline log-likelihood deterministic at this
+# HST-scale dataset. Hardcoded value guards against silent regressions in
+# the light-profile / blurring / chi-squared stack.
+EXPECTED_LOG_LIKELIHOOD_HST = -159736.35504220804
+
+np.testing.assert_allclose(
+    float(full_result),
+    EXPECTED_LOG_LIKELIHOOD_HST,
+    rtol=1e-4,
+    err_msg=f"imaging/mge[{instrument}]: regression — full log_likelihood drifted",
+)
+np.testing.assert_allclose(
+    np.array(result_vmap),
+    EXPECTED_LOG_LIKELIHOOD_HST,
+    rtol=1e-4,
+    err_msg=f"imaging/mge[{instrument}]: regression — vmap log_likelihood drifted",
+)
+print(f"  Regression assertion PASSED: log_likelihood matches {EXPECTED_LOG_LIKELIHOOD_HST:.6f}")
