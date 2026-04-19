@@ -437,6 +437,19 @@ print(f"  Bar chart saved to:    {chart_path}")
 EXPECTED_LOG_LIKELIHOOD_IMAGE_PLANE = 0.3936326580483207
 
 np.testing.assert_allclose(
+    log_likelihood_ref,
+    EXPECTED_LOG_LIKELIHOOD_IMAGE_PLANE,
+    rtol=1e-4,
+    err_msg=(
+        f"point_source/image_plane: regression — eager log_likelihood drifted "
+        f"(got {log_likelihood_ref}, expected {EXPECTED_LOG_LIKELIHOOD_IMAGE_PLANE})"
+    ),
+)
+print(
+    f"  Eager regression assertion PASSED: log_likelihood matches "
+    f"{EXPECTED_LOG_LIKELIHOOD_IMAGE_PLANE:.6f}"
+)
+np.testing.assert_allclose(
     float(full_result),
     EXPECTED_LOG_LIKELIHOOD_IMAGE_PLANE,
     rtol=1e-4,

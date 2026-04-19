@@ -283,6 +283,7 @@ with timer.section("fit_imaging_eager"):
         dataset=dataset,
         tracer=tracer,
         settings=al.Settings(use_border_relocator=True),
+        xp=np,
     )
     log_evidence_ref = fit.figure_of_merit
     log_likelihood_ref = fit.log_likelihood
@@ -797,6 +798,19 @@ print(f"  Bar chart saved to:    {chart_path}")
 # the light-profile / blurring / chi-squared stack.
 EXPECTED_LOG_LIKELIHOOD_HST = -159736.35504220804
 
+np.testing.assert_allclose(
+    log_likelihood_ref,
+    EXPECTED_LOG_LIKELIHOOD_HST,
+    rtol=1e-4,
+    err_msg=(
+        f"imaging/mge[{instrument}]: regression — eager log_likelihood drifted "
+        f"(got {log_likelihood_ref}, expected {EXPECTED_LOG_LIKELIHOOD_HST})"
+    ),
+)
+print(
+    f"  Eager regression assertion PASSED: log_likelihood matches "
+    f"{EXPECTED_LOG_LIKELIHOOD_HST:.6f}"
+)
 np.testing.assert_allclose(
     float(full_result),
     EXPECTED_LOG_LIKELIHOOD_HST,

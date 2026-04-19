@@ -14,12 +14,12 @@
   },
   "log_likelihood_eager": -3154.8053501947784,
   "log_likelihood_jit": -3154.8053574023816,
-  "full_pipeline_single_jit": 0.04582274000022153,
+  "full_pipeline_single_jit": 0.06444055000001754,
   "vmap": {
     "batch_size": 3,
-    "batch_time": 0.06364862000009452,
-    "per_call": 0.021216206666698174,
-    "speedup_vs_single_jit": 2.2
+    "batch_time": 0.09109579999994821,
+    "per_call": 0.030365266666649404,
+    "speedup_vs_single_jit": 2.1
   },
   "memory_mb": {
     "output": 2.288818359375e-05,

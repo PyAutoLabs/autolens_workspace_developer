@@ -242,9 +242,27 @@ fit = al.FitImaging(
     dataset=dataset,
     tracer=tracer,
     settings=al.Settings(use_border_relocator=True),
+    xp=np,
 )
+log_likelihood_ref = fit.log_likelihood
 
-print(f"  log_likelihood = {fit.log_likelihood}")
+print(f"  log_likelihood = {log_likelihood_ref}")
+
+EXPECTED_LOG_LIKELIHOOD_HST = -167199.38792401162
+
+np.testing.assert_allclose(
+    log_likelihood_ref,
+    EXPECTED_LOG_LIKELIHOOD_HST,
+    rtol=1e-4,
+    err_msg=(
+        f"imaging/mge_gradients[{instrument}]: regression — eager log_likelihood "
+        f"drifted (got {log_likelihood_ref}, expected {EXPECTED_LOG_LIKELIHOOD_HST})"
+    ),
+)
+print(
+    f"  Eager regression assertion PASSED: log_likelihood matches "
+    f"{EXPECTED_LOG_LIKELIHOOD_HST:.6f}"
+)
 
 # Extract raw arrays for intermediate-step tests.
 grid_lp = dataset.grids.lp

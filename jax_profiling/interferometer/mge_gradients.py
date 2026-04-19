@@ -207,10 +207,30 @@ print("\n--- Eager baseline ---")
 fit = al.FitInterferometer(
     dataset=dataset,
     tracer=tracer,
+    xp=np,
 )
+figure_of_merit_ref = fit.figure_of_merit
+log_likelihood_ref = fit.log_likelihood
 
-print(f"  figure_of_merit = {fit.figure_of_merit}")
-print(f"  log_likelihood  = {fit.log_likelihood}")
+print(f"  figure_of_merit = {figure_of_merit_ref}")
+print(f"  log_likelihood  = {log_likelihood_ref}")
+
+EXPECTED_LOG_LIKELIHOOD_SMA = -3154.8053574023816
+
+np.testing.assert_allclose(
+    log_likelihood_ref,
+    EXPECTED_LOG_LIKELIHOOD_SMA,
+    rtol=1e-4,
+    err_msg=(
+        f"interferometer/mge_gradients[{instrument}]: regression — eager "
+        f"log_likelihood drifted (got {log_likelihood_ref}, expected "
+        f"{EXPECTED_LOG_LIKELIHOOD_SMA})"
+    ),
+)
+print(
+    f"  Eager regression assertion PASSED: log_likelihood matches "
+    f"{EXPECTED_LOG_LIKELIHOOD_SMA:.6f}"
+)
 
 # Raw arrays for intermediate-step tests.
 grid_lp = dataset.grids.lp
