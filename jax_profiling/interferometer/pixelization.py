@@ -243,6 +243,7 @@ with timer.section("fit_interferometer_eager"):
     fit = al.FitInterferometer(
         dataset=dataset,
         tracer=tracer,
+        xp=np,
     )
     figure_of_merit_ref = fit.figure_of_merit
     log_likelihood_ref = fit.log_likelihood
@@ -474,6 +475,19 @@ print(f"  Bar chart saved to:    {chart_path}")
 # transform / pixelization mapping / NNLS / regularization stack.
 EXPECTED_LOG_EVIDENCE_SMA = -3168.346563304238
 
+np.testing.assert_allclose(
+    figure_of_merit_ref,
+    EXPECTED_LOG_EVIDENCE_SMA,
+    rtol=1e-4,
+    err_msg=(
+        f"interferometer/pixelization[{instrument}]: regression — eager log_evidence "
+        f"drifted (got {figure_of_merit_ref}, expected {EXPECTED_LOG_EVIDENCE_SMA})"
+    ),
+)
+print(
+    f"  Eager regression assertion PASSED: log_evidence matches "
+    f"{EXPECTED_LOG_EVIDENCE_SMA:.6f}"
+)
 np.testing.assert_allclose(
     float(full_result),
     EXPECTED_LOG_EVIDENCE_SMA,

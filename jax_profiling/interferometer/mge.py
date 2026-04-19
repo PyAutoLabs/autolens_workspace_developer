@@ -233,6 +233,7 @@ with timer.section("fit_interferometer_eager"):
     fit = al.FitInterferometer(
         dataset=dataset,
         tracer=tracer,
+        xp=np,
     )
     figure_of_merit_ref = fit.figure_of_merit
     log_likelihood_ref = fit.log_likelihood
@@ -457,6 +458,19 @@ print(f"  Bar chart saved to:    {chart_path}")
 # visibility transform / MGE inversion / chi-squared stack.
 EXPECTED_LOG_LIKELIHOOD_SMA = -3154.8053574023816
 
+np.testing.assert_allclose(
+    log_likelihood_ref,
+    EXPECTED_LOG_LIKELIHOOD_SMA,
+    rtol=1e-4,
+    err_msg=(
+        f"interferometer/mge[{instrument}]: regression — eager log_likelihood drifted "
+        f"(got {log_likelihood_ref}, expected {EXPECTED_LOG_LIKELIHOOD_SMA})"
+    ),
+)
+print(
+    f"  Eager regression assertion PASSED: log_likelihood matches "
+    f"{EXPECTED_LOG_LIKELIHOOD_SMA:.6f}"
+)
 np.testing.assert_allclose(
     float(full_result),
     EXPECTED_LOG_LIKELIHOOD_SMA,

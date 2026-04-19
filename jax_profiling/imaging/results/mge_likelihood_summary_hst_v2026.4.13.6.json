@@ -9,21 +9,21 @@
     "linear_gaussians": 0
   },
   "steps": {
-    "Ray-trace grids": 0.001338680000117165,
-    "Mapping matrix": 0.04922050999994099,
-    "Blurred mapping matrix": 0.07085284999993746,
-    "Data vector (D)": 0.0002802900000460795,
-    "Curvature matrix (F)": 0.00256031000008079,
-    "Reconstruction (NNLS)": 0.00042940000003000023,
-    "Mapped reconstructed image": 0.00024036999984673458,
-    "Chi-squared & log likelihood": 0.0002442200000587036
+    "Ray-trace grids": 0.0018642699999873002,
+    "Mapping matrix": 0.05914738000001307,
+    "Blurred mapping matrix": 0.09338003999991998,
+    "Data vector (D)": 0.00032315999997081237,
+    "Curvature matrix (F)": 0.003277539999999135,
+    "Reconstruction (NNLS)": 0.0005496400000083668,
+    "Mapped reconstructed image": 0.0003185099999427621,
+    "Chi-squared & log likelihood": 0.0002554400000008172
   },
-  "total_step_by_step": 0.12516663000005793,
-  "full_pipeline_single_jit": 0.07730021999996098,
+  "total_step_by_step": 0.15911597999984228,
+  "full_pipeline_single_jit": 0.10090815000003203,
   "vmap": {
     "batch_size": 3,
-    "batch_time": 0.24937948999995568,
-    "per_call": 0.0831264966666519,
-    "speedup_vs_single_jit": 0.9
+    "batch_time": 0.301882360000036,
+    "per_call": 0.10062745333334533,
+    "speedup_vs_single_jit": 1.0
   }
 }

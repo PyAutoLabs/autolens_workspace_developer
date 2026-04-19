@@ -237,10 +237,30 @@ fit = al.FitImaging(
     dataset=dataset,
     tracer=tracer,
     settings=al.Settings(use_border_relocator=True),
+    xp=np,
 )
+log_evidence_ref = fit.figure_of_merit
+log_likelihood_ref = fit.log_likelihood
 
-print(f"  log_evidence   = {fit.figure_of_merit}")
-print(f"  log_likelihood = {fit.log_likelihood}")
+print(f"  log_evidence   = {log_evidence_ref}")
+print(f"  log_likelihood = {log_likelihood_ref}")
+
+EXPECTED_LOG_EVIDENCE_HST = -1991615333.9038641
+
+np.testing.assert_allclose(
+    log_evidence_ref,
+    EXPECTED_LOG_EVIDENCE_HST,
+    rtol=1e-4,
+    err_msg=(
+        f"imaging/pixelization_gradients[{instrument}]: regression — eager "
+        f"log_evidence drifted (got {log_evidence_ref}, expected "
+        f"{EXPECTED_LOG_EVIDENCE_HST})"
+    ),
+)
+print(
+    f"  Eager regression assertion PASSED: log_evidence matches "
+    f"{EXPECTED_LOG_EVIDENCE_HST:.6f}"
+)
 
 grid_lp = dataset.grids.lp
 grid_blurring = dataset.grids.blurring

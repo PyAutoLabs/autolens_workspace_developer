@@ -309,6 +309,7 @@ with timer.section("fit_imaging_eager"):
         tracer=tracer,
         adapt_images=adapt_images,
         settings=al.Settings(use_border_relocator=True),
+        xp=np,
     )
     log_evidence_ref = fit.figure_of_merit
     log_likelihood_ref = fit.log_likelihood
@@ -1042,6 +1043,19 @@ print(f"  Bar chart saved to:    {chart_path}")
 # DELAUNAY_VMAP=1 (vmap compile takes 20+ min otherwise).
 EXPECTED_LOG_EVIDENCE_HST = -1802826962.700122
 
+np.testing.assert_allclose(
+    log_evidence_ref,
+    EXPECTED_LOG_EVIDENCE_HST,
+    rtol=1e-4,
+    err_msg=(
+        f"imaging/delaunay[{instrument}]: regression — eager log_evidence drifted "
+        f"(got {log_evidence_ref}, expected {EXPECTED_LOG_EVIDENCE_HST})"
+    ),
+)
+print(
+    f"  Eager regression assertion PASSED: log_evidence matches "
+    f"{EXPECTED_LOG_EVIDENCE_HST:.6f}"
+)
 np.testing.assert_allclose(
     float(full_result),
     EXPECTED_LOG_EVIDENCE_HST,
