@@ -1,0 +1,77 @@
+"""
+Minimal L-BFGS-B Example (HST MGE lens likelihood)
+--------------------------------------------------
+
+Drives scipy's L-BFGS-B optimiser directly against the HST MGE imaging
+likelihood. The model is parameterised in **unit space** (each dimension in
+[0, 1]); the optimiser gets simple box bounds and the likelihood function
+internally maps unit vectors to physical values via the model's priors.
+
+This side-steps the need to derive finite bounds from unbounded priors like
+``GaussianPrior`` and matches the ``prior_transform`` pattern used by the
+nested-sampling scripts in this folder.
+
+Requirements:
+    scipy (included with autofit)
+"""
+import time
+import numpy as np
+
+from searches_minimal._setup import (
+    build_analysis,
+    build_dataset,
+    build_model,
+    format_best_fit,
+)
+
+dataset = build_dataset()
+model = build_model()
+analysis = build_analysis(dataset, use_jax=False)
+
+print(f"Model free parameters: {model.total_free_parameters}")
+
+from scipy import optimize
+
+
+n_likelihood_calls = 0
+
+
+def chi_squared_from_unit(unit_vector):
+    """Return -2 log L for a unit-cube vector (scipy minimises this)."""
+    global n_likelihood_calls
+    n_likelihood_calls += 1
+    physical = model.vector_from_unit_vector(list(unit_vector))
+    instance = model.instance_from_vector(vector=physical)
+    log_like = float(analysis.log_likelihood_function(instance=instance))
+    return -2.0 * log_like
+
+
+ndim = model.prior_count
+bounds = [(0.0, 1.0)] * ndim
+
+# Start at the centre of the unit cube (prior median).
+x0 = np.full(ndim, 0.5)
+
+t_start = time.time()
+result = optimize.minimize(
+    fun=chi_squared_from_unit,
+    x0=x0,
+    method="L-BFGS-B",
+    bounds=bounds,
+    options={"maxiter": 5, "disp": True},
+)
+t_elapsed = time.time() - t_start
+
+best_physical = model.vector_from_unit_vector(list(result.x))
+best_instance = model.instance_from_vector(vector=best_physical)
+
+print("\n--- L-BFGS-B Results ---")
+print(format_best_fit(best_instance))
+print(f"Chi-squared:   {result.fun:.2f}")
+print(f"Converged:     {result.success}")
+print(f"\n--- Performance ---")
+print(f"Wall time:          {t_elapsed:.2f} s")
+print(f"Function evals:     {result.nfev}")
+print(f"Gradient evals:     {result.njev}")
+print(f"Iterations:         {result.nit}")
+print(f"Time per eval:      {t_elapsed / max(result.nfev, 1) * 1e3:.3f} ms")
