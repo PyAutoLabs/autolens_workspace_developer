@@ -261,12 +261,19 @@ def build_model(mesh_factory, adapt_image_array=None):
     )
     adapt_images = None
     if adapt_image_array is not None:
-        # Wire the adapt image into an AdaptImages keyed on the source galaxy.
+        # Path-keyed so Analysis.adapt_images_via_instance_from rebuilds the
+        # instance-keyed dict for every JIT evaluation via
+        # AdaptImages.updated_via_instance_from.  Instance-keying here would
+        # survive eager but lose the lookup under JIT (new traced galaxy
+        # identity).
         from autogalaxy.analysis.adapt_images.adapt_images import AdaptImages
 
         adapt_arr = al.Array2D(values=adapt_image_array, mask=dataset.mask)
+        # Key format matches str(path) as produced by
+        # path_instance_tuples_for_class inside
+        # AdaptImages.updated_via_instance_from.
         adapt_images = AdaptImages(
-            galaxy_image_dict={instance.galaxies.source: adapt_arr}
+            galaxy_name_image_dict={str(("galaxies", "source")): adapt_arr}
         )
     analysis = al.AnalysisImaging(
         dataset=dataset,
@@ -319,14 +326,15 @@ def bench_mesh(name: str, mesh_factory, adapt_image):
         mesh_factory, adapt_image_array=adapt_image
     )
 
-    # For AdaptImage meshes, eager FitImaging needs adapt_images too.
+    # For AdaptImage meshes, eager FitImaging reads
+    # adapt_images.galaxy_image_dict[galaxy] directly (see
+    # PyAutoGalaxy/autogalaxy/galaxy/to_inversion.py:555), so resolve the
+    # path-keyed analysis.adapt_images against the current instance to
+    # produce an instance-keyed dict for the eager call.
     eager_adapt_images = None
-    if adapt_image is not None:
-        from autogalaxy.analysis.adapt_images.adapt_images import AdaptImages
-
-        adapt_arr = al.Array2D(values=adapt_image, mask=dataset.mask)
-        eager_adapt_images = AdaptImages(
-            galaxy_image_dict={instance.galaxies.source: adapt_arr}
+    if analysis.adapt_images is not None:
+        eager_adapt_images = analysis.adapt_images.updated_via_instance_from(
+            instance=instance
         )
 
     # --- Eager FitImaging reference ---------------------------------------
@@ -419,19 +427,28 @@ def bench_mesh(name: str, mesh_factory, adapt_image):
     # difference. The spline should give a smoother curve of both.
     fd1 = (ll_sweep[2:] - ll_sweep[:-2]) / (2 * dtheta)
     fd2 = (ll_sweep[2:] - 2 * ll_sweep[1:-1] + ll_sweep[:-2]) / (dtheta ** 2)
-    # Detrend fd1 by subtracting a linear fit — only the noise/kinkiness
-    # matters for the smoothness comparison.
+    # Some meshes (notably AdaptImage at large θ perturbations) produce an
+    # isolated NaN log_L where the weighted inversion degenerates. Use
+    # nan-safe reductions so a single bad sweep point doesn't collapse the
+    # whole row to NaN — and detrend fd1 using only the finite entries.
+    n_nan_sweep = int((~np.isfinite(ll_sweep)).sum())
     theta_mid = sweep_thetas[1:-1]
-    p = np.polyfit(theta_mid, fd1, 1)
-    fd1_detrended = fd1 - np.polyval(p, theta_mid)
-    fd1_roughness = float(np.std(fd1_detrended))
-    fd2_sup = float(np.max(np.abs(fd2)))
-    fd2_std = float(np.std(fd2))
+    fd1_valid = np.isfinite(fd1)
+    if fd1_valid.sum() > 2:
+        p = np.polyfit(theta_mid[fd1_valid], fd1[fd1_valid], 1)
+        fd1_detrended = fd1 - np.polyval(p, theta_mid)
+        fd1_roughness = float(np.nanstd(fd1_detrended))
+    else:
+        fd1_roughness = float("nan")
+    fd2_sup = float(np.nanmax(np.abs(fd2))) if np.isfinite(fd2).any() else float("nan")
+    fd2_std = float(np.nanstd(fd2))
 
     _print(
         f"  likelihood-smoothness ({SWEEP_N} pts ±{SWEEP_REL*100:.0f}%, "
         f"ein_base={einstein_base:.4f}):"
     )
+    if n_nan_sweep:
+        _print(f"    sweep NaN count            = {n_nan_sweep}/{SWEEP_N}")
     _print(f"    std(first-diff, detrended) = {fd1_roughness:.4e}")
     _print(f"    sup|second-diff|           = {fd2_sup:.4e}")
     _print(f"    std(second-diff)           = {fd2_std:.4e}")
