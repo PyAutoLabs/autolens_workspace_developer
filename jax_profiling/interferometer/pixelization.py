@@ -178,8 +178,20 @@ print(f"  Total visibilities: {n_visibilities}")
 print("\n--- Model construction ---")
 
 with timer.section("model_build"):
+    # GaussianPrior(mean=truth, sigma=small) centres prior-median at the
+    # simulator truth while keeping params free so gradient diagnostics
+    # have dimensionality.
     mass = af.Model(al.mp.Isothermal)
+    mass.centre.centre_0 = af.GaussianPrior(mean=0.0, sigma=0.005)
+    mass.centre.centre_1 = af.GaussianPrior(mean=0.0, sigma=0.005)
+    mass.einstein_radius = af.GaussianPrior(mean=1.6, sigma=0.05)
+    _lens_mass_ell = al.convert.ell_comps_from(axis_ratio=0.9, angle=45.0)
+    mass.ell_comps.ell_comps_0 = af.GaussianPrior(mean=_lens_mass_ell[0], sigma=0.01)
+    mass.ell_comps.ell_comps_1 = af.GaussianPrior(mean=_lens_mass_ell[1], sigma=0.01)
+
     shear = af.Model(al.mp.ExternalShear)
+    shear.gamma_1 = af.GaussianPrior(mean=0.05, sigma=0.005)
+    shear.gamma_2 = af.GaussianPrior(mean=0.05, sigma=0.005)
 
     lens = af.Model(al.Galaxy, redshift=0.5, mass=mass, shear=shear)
 
@@ -279,59 +291,72 @@ print(f"  full log_likelihood = {full_result}")
 # ===================================================================
 # PART C — vmap + correctness
 # ===================================================================
+#
+# NOTE: vmap requires at least one JAX array leaf in the params_tree.
+# When model.total_free_parameters == 0 (all params fixed to truth), the
+# pytree has no array leaves and vmap cannot batch over it. Skip in that case.
 
 print("\n--- vmap batched evaluation ---")
 
 batch_size = 3
+vmap_batch_time = None
+vmap_per_call = None
+vmap_speedup = None
+result_vmap = None
 
-parameters = jax.tree_util.tree_map(
-    lambda leaf: jnp.broadcast_to(leaf, (batch_size, *leaf.shape)),
-    params_tree,
-)
+_n_leaves = len(jax.tree_util.tree_leaves(params_tree))
+if _n_leaves == 0:
+    print(f"  SKIPPED: model has 0 free parameters (all fixed to truth); "
+          f"vmap requires at least one array leaf.")
+else:
+    parameters = jax.tree_util.tree_map(
+        lambda leaf: jnp.broadcast_to(leaf, (batch_size, *leaf.shape)),
+        params_tree,
+    )
 
-vmapped_full = jax.jit(jax.vmap(full_pipeline_from_params))
+    vmapped_full = jax.jit(jax.vmap(full_pipeline_from_params))
 
-with timer.section("vmap_first_call"):
-    result_vmap = vmapped_full(parameters)
-    block(result_vmap)
-
-n_vmap_repeats = 10
-with timer.section(f"vmap_steady_x{n_vmap_repeats}"):
-    for _ in range(n_vmap_repeats):
+    with timer.section("vmap_first_call"):
         result_vmap = vmapped_full(parameters)
         block(result_vmap)
 
-vmap_batch_time = timer.records[-1][1] / n_vmap_repeats
-vmap_per_call = vmap_batch_time / batch_size
-vmap_speedup = full_pipeline_per_call / vmap_per_call
+    n_vmap_repeats = 10
+    with timer.section(f"vmap_steady_x{n_vmap_repeats}"):
+        for _ in range(n_vmap_repeats):
+            result_vmap = vmapped_full(parameters)
+            block(result_vmap)
 
-print(f"  batch results = {result_vmap}")
-print(f"  vmap batch of {batch_size}:   {vmap_batch_time:.6f} s")
-print(f"  vmap per call:         {vmap_per_call:.6f} s")
-print(f"  single JIT per call:   {full_pipeline_per_call:.6f} s")
-print(f"  vmap speedup:          {vmap_speedup:.1f}x faster per likelihood")
+    vmap_batch_time = timer.records[-1][1] / n_vmap_repeats
+    vmap_per_call = vmap_batch_time / batch_size
+    vmap_speedup = full_pipeline_per_call / vmap_per_call
 
-# Correctness: for inversion models (pixelization + regularization), the
-# analysis "log_likelihood_function" actually returns the log-evidence
-# (= figure_of_merit), which includes the regularization/determinant terms.
-# Match against figure_of_merit_ref, not log_likelihood_ref. For the MGE case
-# in Phase 1 the two were numerically equal because there was no regularized
-# inversion; here they differ by the regularization + log-determinant terms.
-np.testing.assert_allclose(
-    float(full_result),
-    float(figure_of_merit_ref),
-    rtol=1e-4,
-    err_msg="interferometer/pixelization: JIT log-evidence does not match eager figure_of_merit",
-)
-print("  Eager-vs-JIT correctness PASSED")
+    print(f"  batch results = {result_vmap}")
+    print(f"  vmap batch of {batch_size}:   {vmap_batch_time:.6f} s")
+    print(f"  vmap per call:         {vmap_per_call:.6f} s")
+    print(f"  single JIT per call:   {full_pipeline_per_call:.6f} s")
+    print(f"  vmap speedup:          {vmap_speedup:.1f}x faster per likelihood")
 
-np.testing.assert_allclose(
-    np.array(result_vmap),
-    float(full_result),
-    rtol=1e-4,
-    err_msg="interferometer/pixelization: JAX vmap likelihood mismatch",
-)
-print("  vmap-vs-single-JIT correctness PASSED")
+    # Correctness: for inversion models (pixelization + regularization), the
+    # analysis "log_likelihood_function" actually returns the log-evidence
+    # (= figure_of_merit), which includes the regularization/determinant terms.
+    # Match against figure_of_merit_ref, not log_likelihood_ref. For the MGE case
+    # in Phase 1 the two were numerically equal because there was no regularized
+    # inversion; here they differ by the regularization + log-determinant terms.
+    np.testing.assert_allclose(
+        float(full_result),
+        float(figure_of_merit_ref),
+        rtol=1e-4,
+        err_msg="interferometer/pixelization: JIT log-evidence does not match eager figure_of_merit",
+    )
+    print("  Eager-vs-JIT correctness PASSED")
+
+    np.testing.assert_allclose(
+        np.array(result_vmap),
+        float(full_result),
+        rtol=1e-4,
+        err_msg="interferometer/pixelization: JAX vmap likelihood mismatch",
+    )
+    print("  vmap-vs-single-JIT correctness PASSED")
 
 # ===================================================================
 # PART D — Static memory analysis
@@ -339,16 +364,20 @@ print("  vmap-vs-single-JIT correctness PASSED")
 
 print("\n--- Static memory analysis ---")
 
-lowered_batched = vmapped_full.lower(parameters)
-compiled_batched = lowered_batched.compile()
+if _n_leaves == 0:
+    print("  SKIPPED: no array leaves in params_tree (all params fixed to truth).")
+    memory_analysis = None
+else:
+    lowered_batched = vmapped_full.lower(parameters)
+    compiled_batched = lowered_batched.compile()
 
-memory_analysis = compiled_batched.memory_analysis()
-print(f"  Output size:  {memory_analysis.output_size_in_bytes / 1024**2:.3f} MB")
-print(f"  Temp size:    {memory_analysis.temp_size_in_bytes / 1024**2:.3f} MB")
-print(
-    f"  Total:        "
-    f"{(memory_analysis.output_size_in_bytes + memory_analysis.temp_size_in_bytes) / 1024**2:.3f} MB"
-)
+    memory_analysis = compiled_batched.memory_analysis()
+    print(f"  Output size:  {memory_analysis.output_size_in_bytes / 1024**2:.3f} MB")
+    print(f"  Temp size:    {memory_analysis.temp_size_in_bytes / 1024**2:.3f} MB")
+    print(
+        f"  Total:        "
+        f"{(memory_analysis.output_size_in_bytes + memory_analysis.temp_size_in_bytes) / 1024**2:.3f} MB"
+    )
 
 # ===================================================================
 # JAX Likelihood Function Summary + artefacts
@@ -377,8 +406,11 @@ print(f"  Eager figure_of_merit:   {figure_of_merit_ref}  (log-evidence)")
 print(f"  JIT  log-evidence:       {float(full_result)}")
 print("-" * 70)
 print(f"  Full pipeline per call:  {full_pipeline_per_call:.6f} s")
-print(f"  vmap batch={batch_size} per call:   {vmap_per_call:.6f} s")
-print(f"  vmap speedup:            {vmap_speedup:.1f}x")
+if vmap_per_call is not None:
+    print(f"  vmap batch={batch_size} per call:   {vmap_per_call:.6f} s")
+    print(f"  vmap speedup:            {vmap_speedup:.1f}x")
+else:
+    print(f"  vmap:                    SKIPPED (0 free params)")
 print("=" * 70)
 
 # --- Save results dictionary ---
@@ -400,13 +432,13 @@ likelihood_summary = {
     "figure_of_merit_eager": float(figure_of_merit_ref),
     "log_evidence_jit": float(full_result),
     "full_pipeline_single_jit": full_pipeline_per_call,
-    "vmap": {
+    "vmap": "SKIPPED — model has 0 free parameters (all fixed to truth)" if vmap_per_call is None else {
         "batch_size": batch_size,
         "batch_time": vmap_batch_time,
         "per_call": vmap_per_call,
         "speedup_vs_single_jit": round(vmap_speedup, 1),
     },
-    "memory_mb": {
+    "memory_mb": None if memory_analysis is None else {
         "output": memory_analysis.output_size_in_bytes / 1024**2,
         "temp": memory_analysis.temp_size_in_bytes / 1024**2,
     },
@@ -421,15 +453,17 @@ print(f"\n  Results dict saved to: {dict_path}")
 
 # --- Save bar chart ---
 
-labels = [
-    f"Full pipeline (single JIT)",
-    f"vmap batch={batch_size} (per call)",
-]
-times = [full_pipeline_per_call, vmap_per_call]
+labels = [f"Full pipeline (single JIT)"]
+times = [full_pipeline_per_call]
+bar_colors = ["#4C72B0"]
+if vmap_per_call is not None:
+    labels.append(f"vmap batch={batch_size} (per call)")
+    times.append(vmap_per_call)
+    bar_colors.append("#55A868")
 
 fig, ax = plt.subplots(figsize=(10, 3.5))
 y_pos = range(len(labels))
-bars = ax.barh(y_pos, times, color=["#4C72B0", "#55A868"], edgecolor="white", height=0.55)
+bars = ax.barh(y_pos, times, color=bar_colors, edgecolor="white", height=0.55)
 
 for bar, t in zip(bars, times):
     ax.text(
@@ -449,11 +483,12 @@ fig.suptitle(
     fontsize=12,
     fontweight="bold",
 )
+_vmap_title = f"vmap speedup: {vmap_speedup:.1f}x" if vmap_speedup is not None else "vmap: SKIPPED"
 ax.set_title(
     f"AutoLens v{al_version}  |  {pixel_scale}\"/px  |  "
     f"{real_space_shape[0]}x{real_space_shape[1]} real-space  |  "
     f"{n_visibilities} visibilities  |  {mesh_shape[0]}x{mesh_shape[1]} mesh  |  "
-    f"vmap speedup: {vmap_speedup:.1f}x",
+    f"{_vmap_title}",
     fontsize=9,
 )
 ax.margins(x=0.2)
@@ -469,11 +504,9 @@ print(f"  Bar chart saved to:    {chart_path}")
 # Regression assertion — realistic-scale deterministic log-evidence
 # ===================================================================
 #
-# Seeded simulator (noise_seed=1 in simulators/interferometer.py) + fixed
-# SMA uv-coverage + fixed model parameters make the full-pipeline
-# log-evidence deterministic. Guards against regressions in the visibility
-# transform / pixelization mapping / NNLS / regularization stack.
-EXPECTED_LOG_EVIDENCE_SMA = -3168.346563304238
+# Simulator truth parameters via GaussianPrior(mean=truth, sigma=small)
+# make the full-pipeline log-evidence deterministic at the prior median.
+EXPECTED_LOG_EVIDENCE_SMA = -3165.251161569041
 
 np.testing.assert_allclose(
     figure_of_merit_ref,

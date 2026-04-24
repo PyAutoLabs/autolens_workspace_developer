@@ -17,15 +17,15 @@
     "source_pixels": 784,
     "regularization_coefficient": 1.0
   },
-  "log_likelihood_eager": -3154.2171245701475,
-  "figure_of_merit_eager": -3168.3465633040255,
-  "log_evidence_jit": -3168.346563304238,
-  "full_pipeline_single_jit": 0.4271518100000321,
+  "log_likelihood_eager": -3153.6149372324658,
+  "figure_of_merit_eager": -3165.251161569041,
+  "log_evidence_jit": -3165.251161569041,
+  "full_pipeline_single_jit": 0.3676104600001054,
   "vmap": {
     "batch_size": 3,
-    "batch_time": 1.0699249899999814,
-    "per_call": 0.35664166333332714,
-    "speedup_vs_single_jit": 1.2
+    "batch_time": 1.0121201800000563,
+    "per_call": 0.3373733933333521,
+    "speedup_vs_single_jit": 1.1
   },
   "memory_mb": {
     "output": 2.288818359375e-05,

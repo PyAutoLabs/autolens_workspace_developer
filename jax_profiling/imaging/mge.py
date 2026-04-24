@@ -209,12 +209,29 @@ with timer.section("mask_and_oversample"):
 print("\n--- Model construction ---")
 
 with timer.section("model_build"):
+    # GaussianPrior(mean=truth, sigma=small) centres prior-median at the
+    # simulator truth while keeping params free so gradient diagnostics
+    # have dimensionality.
     lens_bulge = al.model_util.mge_model_from(
         mask_radius=mask_radius, total_gaussians=20, centre_prior_is_uniform=True
     )
 
+    # Mass and shear fixed to simulator truth (not GaussianPrior) because
+    # tracing GaussianPrior-backed mass params through this script's
+    # ``mapping_matrix_from_params`` JIT trigger a pre-existing xp=np/jnp
+    # propagation bug in autogalaxy/profiles/mass/total/isothermal.py:108
+    # (Isothermal.deflections_yx_2d_from called with xp=np on traced inputs).
+    # The bug is specific to this script's MGE-lens-light + over-sampled-LP
+    # combination; the likelihood-only imaging/mge_gradients.py uses the
+    # same pattern without the failing JIT and works under Option A.
     mass = af.Model(al.mp.Isothermal)
+    mass.centre = (0.0, 0.0)
+    mass.einstein_radius = 1.6
+    mass.ell_comps = al.convert.ell_comps_from(axis_ratio=0.9, angle=45.0)
+
     shear = af.Model(al.mp.ExternalShear)
+    shear.gamma_1 = 0.05
+    shear.gamma_2 = 0.05
 
     lens = af.Model(
         al.Galaxy, redshift=0.5, bulge=lens_bulge, mass=mass, shear=shear
@@ -792,11 +809,11 @@ print(f"  Bar chart saved to:    {chart_path}")
 # Regression assertion — realistic-scale deterministic likelihood
 # ===================================================================
 #
-# Seeded simulator (noise_seed=1 in simulators/imaging.py) + fixed model
-# parameters make the full-pipeline log-likelihood deterministic at this
-# HST-scale dataset. Hardcoded value guards against silent regressions in
-# the light-profile / blurring / chi-squared stack.
-EXPECTED_LOG_LIKELIHOOD_HST = -159736.35504220804
+# Simulator truth parameters (mass + shear fixed; MGE bulges free around
+# default centre/ell_comps priors) put the evaluation point at the
+# physically-meaningful truth operating point. Eager, JIT, and vmap all
+# agree to ~1e-11 precision.
+EXPECTED_LOG_LIKELIHOOD_HST = 27379.38890685539
 
 np.testing.assert_allclose(
     log_likelihood_ref,

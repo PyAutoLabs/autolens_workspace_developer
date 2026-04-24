@@ -63,16 +63,31 @@ over_sample_size = al.util.over_sample.over_sample_size_via_radial_bins_from(
 )
 dataset = dataset.apply_over_sampling(over_sample_size_lp=over_sample_size)
 
+# GaussianPrior(mean=truth, sigma=small) centres prior-median at the
+# simulator truth while keeping params free so gradient diagnostics
+# have dimensionality.
 lens_bulge = al.model_util.mge_model_from(
     mask_radius=mask_radius, total_gaussians=20, centre_prior_is_uniform=True
 )
+
 mass = af.Model(al.mp.Isothermal)
+mass.centre.centre_0 = af.GaussianPrior(mean=0.0, sigma=0.005)
+mass.centre.centre_1 = af.GaussianPrior(mean=0.0, sigma=0.005)
+mass.einstein_radius = af.GaussianPrior(mean=1.6, sigma=0.05)
+_lens_mass_ell = al.convert.ell_comps_from(axis_ratio=0.9, angle=45.0)
+mass.ell_comps.ell_comps_0 = af.GaussianPrior(mean=_lens_mass_ell[0], sigma=0.01)
+mass.ell_comps.ell_comps_1 = af.GaussianPrior(mean=_lens_mass_ell[1], sigma=0.01)
+
 shear = af.Model(al.mp.ExternalShear)
+shear.gamma_1 = af.GaussianPrior(mean=0.05, sigma=0.005)
+shear.gamma_2 = af.GaussianPrior(mean=0.05, sigma=0.005)
+
 lens = af.Model(al.Galaxy, redshift=0.5, bulge=lens_bulge, mass=mass, shear=shear)
 
 source_bulge = al.model_util.mge_model_from(
     mask_radius=mask_radius, total_gaussians=20, centre_prior_is_uniform=False
 )
+
 source = af.Model(al.Galaxy, redshift=1.0, bulge=source_bulge)
 model = af.Collection(galaxies=af.Collection(lens=lens, source=source))
 

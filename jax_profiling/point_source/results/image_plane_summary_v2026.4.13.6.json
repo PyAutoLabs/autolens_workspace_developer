@@ -5,16 +5,16 @@
   "configuration": {
     "observed_image_positions": 2,
     "positions_noise_sigma": 0.2,
-    "free_parameters": 8
+    "free_parameters": 1
   },
-  "eager_per_call": 2.092262800000026,
-  "eager_log_likelihood": 0.3936326580483207,
-  "full_pipeline_single_jit": 0.04656301000004533,
-  "full_pipeline_log_likelihood": 0.39363265804832137,
+  "eager_per_call": 0.19437511000005542,
+  "eager_log_likelihood": 0.07475703623045682,
+  "full_pipeline_single_jit": 0.04374364999994214,
+  "full_pipeline_log_likelihood": 0.07475703623045526,
   "vmap": {
     "batch_size": 3,
-    "batch_time": 0.06407559999997829,
-    "per_call": 0.0213585333333261,
-    "speedup_vs_single_jit": 2.2
+    "batch_time": 0.04184287999996741,
+    "per_call": 0.013947626666655803,
+    "speedup_vs_single_jit": 3.1
   }
 }

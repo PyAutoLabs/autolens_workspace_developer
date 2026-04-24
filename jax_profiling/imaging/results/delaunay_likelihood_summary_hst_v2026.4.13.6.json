@@ -10,19 +10,19 @@
     "edge_zeroed_pixels": 30
   },
   "steps": {
-    "Ray-trace data grid": 0.0021746499999608206,
-    "Ray-trace mesh grid": 0.000337039999976696,
-    "Lens light images (pre-PSF)": 1.6150000010384247e-05,
-    "Blurred image (PSF convolution)": 0.0035833500000080677,
-    "Profile-subtracted image": 0.00017707000006339513,
-    "Inversion setup (steps 5-8 combined)": 0.5404864099999941,
-    "Data vector (D)": 0.006792399999994814,
-    "Curvature matrix (F)": 0.5742050400000153,
-    "Regularization matrix (H)": 5.742050400000153,
-    "Regularized reconstruction": 0.007276590000037686,
-    "Mapped recon + log evidence": 0.027876179999930174
+    "Ray-trace data grid": 0.0019454499999483233,
+    "Ray-trace mesh grid": 0.0003476399999271962,
+    "Lens light images (pre-PSF)": 1.7949999892152847e-05,
+    "Blurred image (PSF convolution)": 0.003285850000065693,
+    "Profile-subtracted image": 0.00013513000012608246,
+    "Inversion setup (steps 5-8 combined)": 0.5005794599999718,
+    "Data vector (D)": 0.005242539999926521,
+    "Curvature matrix (F)": 0.49799258999992163,
+    "Regularization matrix (H)": 4.979925899999216,
+    "Regularized reconstruction": 0.006354800000008254,
+    "Mapped recon + log evidence": 0.014510169999994105
   },
-  "total_step_by_step": 6.904975280000144,
-  "full_pipeline_single_jit": 1.0094127299999855,
+  "total_step_by_step": 6.010337479998998,
+  "full_pipeline_single_jit": 0.9340782200000831,
   "vmap": "SKIPPED \u2014 compilation takes 20+ minutes (set DELAUNAY_VMAP=1)"
 }
