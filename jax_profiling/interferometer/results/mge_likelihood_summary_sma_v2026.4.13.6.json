@@ -12,13 +12,13 @@
     "visibilities": 190,
     "linear_gaussians": 20
   },
-  "log_likelihood_eager": -3154.8053501947784,
-  "log_likelihood_jit": -3154.8053574023816,
-  "full_pipeline_single_jit": 0.06444055000001754,
+  "log_likelihood_eager": -3153.8939746810656,
+  "log_likelihood_jit": -3153.902008418832,
+  "full_pipeline_single_jit": 0.051202899999952936,
   "vmap": {
     "batch_size": 3,
-    "batch_time": 0.09109579999994821,
-    "per_call": 0.030365266666649404,
+    "batch_time": 0.07237798000005569,
+    "per_call": 0.024125993333351897,
     "speedup_vs_single_jit": 2.1
   },
   "memory_mb": {

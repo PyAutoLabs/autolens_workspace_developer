@@ -150,12 +150,34 @@ adapt_pix = al.Pixelization(
     mesh=aa.mesh.RectangularAdaptDensity(shape=mesh_shape),
     regularization=al.reg.Constant(coefficient=1.0),
 )
+# GaussianPrior(mean=truth, sigma=small) centres prior-median at the
+# simulator truth while keeping params free so gradient diagnostics
+# have dimensionality.
+_adapt_lens_bulge = af.Model(al.lp.Sersic)
+_adapt_lens_bulge.centre.centre_0 = af.GaussianPrior(mean=0.0, sigma=0.005)
+_adapt_lens_bulge.centre.centre_1 = af.GaussianPrior(mean=0.0, sigma=0.005)
+_adapt_lens_bulge_ell = al.convert.ell_comps_from(axis_ratio=0.9, angle=45.0)
+_adapt_lens_bulge.ell_comps.ell_comps_0 = af.GaussianPrior(mean=_adapt_lens_bulge_ell[0], sigma=0.01)
+_adapt_lens_bulge.ell_comps.ell_comps_1 = af.GaussianPrior(mean=_adapt_lens_bulge_ell[1], sigma=0.01)
+_adapt_lens_bulge.intensity = af.GaussianPrior(mean=2.0, sigma=0.1)
+_adapt_lens_bulge.effective_radius = af.GaussianPrior(mean=0.6, sigma=0.05)
+_adapt_lens_bulge.sersic_index = af.GaussianPrior(mean=3.0, sigma=0.2)
+_adapt_mass = af.Model(al.mp.Isothermal)
+_adapt_mass.centre.centre_0 = af.GaussianPrior(mean=0.0, sigma=0.005)
+_adapt_mass.centre.centre_1 = af.GaussianPrior(mean=0.0, sigma=0.005)
+_adapt_mass.einstein_radius = af.GaussianPrior(mean=1.6, sigma=0.05)
+_adapt_mass_ell = al.convert.ell_comps_from(axis_ratio=0.9, angle=45.0)
+_adapt_mass.ell_comps.ell_comps_0 = af.GaussianPrior(mean=_adapt_mass_ell[0], sigma=0.01)
+_adapt_mass.ell_comps.ell_comps_1 = af.GaussianPrior(mean=_adapt_mass_ell[1], sigma=0.01)
+_adapt_shear = af.Model(al.mp.ExternalShear)
+_adapt_shear.gamma_1 = af.GaussianPrior(mean=0.05, sigma=0.005)
+_adapt_shear.gamma_2 = af.GaussianPrior(mean=0.05, sigma=0.005)
 _adapt_lens = af.Model(
     al.Galaxy,
     redshift=0.5,
-    bulge=af.Model(al.lp.Sersic),
-    mass=af.Model(al.mp.Isothermal),
-    shear=af.Model(al.mp.ExternalShear),
+    bulge=_adapt_lens_bulge,
+    mass=_adapt_mass,
+    shear=_adapt_shear,
 )
 _adapt_source = af.Model(al.Galaxy, redshift=1.0, pixelization=adapt_pix)
 _adapt_model = af.Collection(galaxies=af.Collection(lens=_adapt_lens, source=_adapt_source))
@@ -182,12 +204,37 @@ _print(
 
 
 def build_model(mesh_factory, adapt_image_array=None):
+    # GaussianPrior(mean=truth, sigma=small) centres prior-median at the
+    # simulator truth while keeping params free so gradient diagnostics
+    # have dimensionality.
+    lens_bulge = af.Model(al.lp.Sersic)
+    lens_bulge.centre.centre_0 = af.GaussianPrior(mean=0.0, sigma=0.005)
+    lens_bulge.centre.centre_1 = af.GaussianPrior(mean=0.0, sigma=0.005)
+    _lens_bulge_ell = al.convert.ell_comps_from(axis_ratio=0.9, angle=45.0)
+    lens_bulge.ell_comps.ell_comps_0 = af.GaussianPrior(mean=_lens_bulge_ell[0], sigma=0.01)
+    lens_bulge.ell_comps.ell_comps_1 = af.GaussianPrior(mean=_lens_bulge_ell[1], sigma=0.01)
+    lens_bulge.intensity = af.GaussianPrior(mean=2.0, sigma=0.1)
+    lens_bulge.effective_radius = af.GaussianPrior(mean=0.6, sigma=0.05)
+    lens_bulge.sersic_index = af.GaussianPrior(mean=3.0, sigma=0.2)
+
+    mass = af.Model(al.mp.Isothermal)
+    mass.centre.centre_0 = af.GaussianPrior(mean=0.0, sigma=0.005)
+    mass.centre.centre_1 = af.GaussianPrior(mean=0.0, sigma=0.005)
+    mass.einstein_radius = af.GaussianPrior(mean=1.6, sigma=0.05)
+    _lens_mass_ell = al.convert.ell_comps_from(axis_ratio=0.9, angle=45.0)
+    mass.ell_comps.ell_comps_0 = af.GaussianPrior(mean=_lens_mass_ell[0], sigma=0.01)
+    mass.ell_comps.ell_comps_1 = af.GaussianPrior(mean=_lens_mass_ell[1], sigma=0.01)
+
+    shear = af.Model(al.mp.ExternalShear)
+    shear.gamma_1 = af.GaussianPrior(mean=0.05, sigma=0.005)
+    shear.gamma_2 = af.GaussianPrior(mean=0.05, sigma=0.005)
+
     lens = af.Model(
         al.Galaxy,
         redshift=0.5,
-        bulge=af.Model(al.lp.Sersic),
-        mass=af.Model(al.mp.Isothermal),
-        shear=af.Model(al.mp.ExternalShear),
+        bulge=lens_bulge,
+        mass=mass,
+        shear=shear,
     )
     pixelization = al.Pixelization(
         mesh=mesh_factory(),

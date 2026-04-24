@@ -166,17 +166,20 @@ with timer.section("solver_build"):
 print("\n--- Model construction ---")
 
 with timer.section("model_build"):
+    # GaussianPrior(mean=truth, sigma=small) centres prior-median at the
+    # simulator truth while keeping params free so gradient diagnostics
+    # have dimensionality.
     mass = af.Model(al.mp.Isothermal)
-    mass.centre.centre_0 = af.UniformPrior(lower_limit=0.0, upper_limit=0.02)
-    mass.centre.centre_1 = af.UniformPrior(lower_limit=0.0, upper_limit=0.02)
-    mass.ell_comps.ell_comps_0 = af.UniformPrior(lower_limit=0.0, upper_limit=0.02)
-    mass.ell_comps.ell_comps_1 = af.UniformPrior(lower_limit=0.0, upper_limit=0.02)
-    mass.einstein_radius = af.UniformPrior(lower_limit=1.5, upper_limit=1.8)
+    mass.centre.centre_0 = af.GaussianPrior(mean=0.01, sigma=0.005)
+    mass.centre.centre_1 = af.GaussianPrior(mean=0.01, sigma=0.005)
+    mass.einstein_radius = af.GaussianPrior(mean=1.6, sigma=0.05)
+    mass.ell_comps.ell_comps_0 = af.GaussianPrior(mean=0.01, sigma=0.01)
+    mass.ell_comps.ell_comps_1 = af.GaussianPrior(mean=0.01, sigma=0.01)
     lens = af.Model(al.Galaxy, redshift=0.5, mass=mass)
 
     point_0 = af.Model(al.ps.PointFlux)
-    point_0.centre.centre_0 = af.UniformPrior(lower_limit=0.06, upper_limit=0.08)
-    point_0.centre.centre_1 = af.UniformPrior(lower_limit=0.06, upper_limit=0.08)
+    point_0.centre.centre_0 = af.GaussianPrior(mean=0.07, sigma=0.005)
+    point_0.centre.centre_1 = af.GaussianPrior(mean=0.07, sigma=0.005)
     source = af.Model(al.Galaxy, redshift=1.0, point_0=point_0)
 
     model = af.Collection(galaxies=af.Collection(lens=lens, source=source))
@@ -430,10 +433,10 @@ print(f"  Bar chart saved to:    {chart_path}")
 # Tier 3: regression assertion — deterministic via seeded simulator
 # ===================================================================
 #
-# Seeded simulator (noise_seed=1 in simulators/point_source.py) + prior-median
-# parameter vector make the image-plane log-likelihood deterministic. Hardcoded
-# value guards against silent regressions in the PointSolver / chi-squared stack.
-EXPECTED_LOG_LIKELIHOOD_IMAGE_PLANE = 0.3936326580483207
+# Simulator truth parameters + seeded noise (noise_seed=1 in
+# simulators/point_source.py) make the image-plane log-likelihood
+# deterministic. Eager, JIT, and vmap all agree to float64.
+EXPECTED_LOG_LIKELIHOOD_IMAGE_PLANE = 0.07475703623045682
 
 np.testing.assert_allclose(
     log_likelihood_ref,

@@ -193,9 +193,30 @@ print(f"  Image pixels (masked): {dataset.data.shape[0]}")
 
 print("\n--- Model construction ---")
 
+# GaussianPrior(mean=truth, sigma=small) centres prior-median at the
+# simulator truth while keeping params free so gradient diagnostics
+# have dimensionality.
 lens_bulge = af.Model(al.lp.Sersic)
+lens_bulge.centre.centre_0 = af.GaussianPrior(mean=0.0, sigma=0.005)
+lens_bulge.centre.centre_1 = af.GaussianPrior(mean=0.0, sigma=0.005)
+_lens_bulge_ell = al.convert.ell_comps_from(axis_ratio=0.9, angle=45.0)
+lens_bulge.ell_comps.ell_comps_0 = af.GaussianPrior(mean=_lens_bulge_ell[0], sigma=0.01)
+lens_bulge.ell_comps.ell_comps_1 = af.GaussianPrior(mean=_lens_bulge_ell[1], sigma=0.01)
+lens_bulge.intensity = af.GaussianPrior(mean=2.0, sigma=0.1)
+lens_bulge.effective_radius = af.GaussianPrior(mean=0.6, sigma=0.05)
+lens_bulge.sersic_index = af.GaussianPrior(mean=3.0, sigma=0.2)
+
 mass = af.Model(al.mp.Isothermal)
+mass.centre.centre_0 = af.GaussianPrior(mean=0.0, sigma=0.005)
+mass.centre.centre_1 = af.GaussianPrior(mean=0.0, sigma=0.005)
+mass.einstein_radius = af.GaussianPrior(mean=1.6, sigma=0.05)
+_lens_mass_ell = al.convert.ell_comps_from(axis_ratio=0.9, angle=45.0)
+mass.ell_comps.ell_comps_0 = af.GaussianPrior(mean=_lens_mass_ell[0], sigma=0.01)
+mass.ell_comps.ell_comps_1 = af.GaussianPrior(mean=_lens_mass_ell[1], sigma=0.01)
+
 shear = af.Model(al.mp.ExternalShear)
+shear.gamma_1 = af.GaussianPrior(mean=0.05, sigma=0.005)
+shear.gamma_2 = af.GaussianPrior(mean=0.05, sigma=0.005)
 
 lens = af.Model(
     al.Galaxy, redshift=0.5, bulge=lens_bulge, mass=mass, shear=shear,
@@ -245,7 +266,7 @@ log_likelihood_ref = fit.log_likelihood
 print(f"  log_evidence   = {log_evidence_ref}")
 print(f"  log_likelihood = {log_likelihood_ref}")
 
-EXPECTED_LOG_EVIDENCE_HST = -1991615333.9038641
+EXPECTED_LOG_EVIDENCE_HST = -66270.78281169113
 
 np.testing.assert_allclose(
     log_evidence_ref,

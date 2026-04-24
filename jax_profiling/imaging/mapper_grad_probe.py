@@ -50,8 +50,13 @@ dataset = dataset.apply_over_sampling(
     over_sample_size_lp=4, over_sample_size_pixelization=1,
 )
 
-mass = al.mp.Isothermal(centre=(0.0, 0.0), einstein_radius=1.0)
-lens = al.Galaxy(redshift=0.5, mass=mass)
+mass = al.mp.Isothermal(
+    centre=(0.0, 0.0),
+    einstein_radius=1.6,
+    ell_comps=al.convert.ell_comps_from(axis_ratio=0.9, angle=45.0),
+)
+shear = al.mp.ExternalShear(gamma_1=0.05, gamma_2=0.05)
+lens = al.Galaxy(redshift=0.5, mass=mass, shear=shear)
 source = al.Galaxy(redshift=1.0)
 tracer = al.Tracer(galaxies=[lens, source])
 
