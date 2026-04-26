@@ -52,6 +52,7 @@ from contextlib import contextmanager
 import autofit as af
 import autolens as al
 import autoarray as aa
+from autofit.jax import register_model as _register_model_pytrees
 
 # ---------------------------------------------------------------------------
 # Instrument configuration
@@ -287,6 +288,14 @@ with timer.section("instance_from_vector"):
     param_vector = model.physical_values_from_prior_medians
     instance = model.instance_from_vector(vector=param_vector)
 
+with timer.section("register_pytrees"):
+    _register_model_pytrees(model)
+
+params_tree = jax.tree_util.tree_map(jnp.asarray, instance)
+
+n_pytree_leaves = len(jax.tree_util.tree_leaves(params_tree))
+print(f"  Pytree JAX leaves: {n_pytree_leaves}")
+
 tracer = al.Tracer(galaxies=list(instance.galaxies))
 
 # AdaptImages tells FitImaging where mesh vertices live in image-plane
@@ -452,19 +461,16 @@ with timer.section("blurred_image_eager"):
 
 print(f"  blurred_image shape: {blurred_image.array.shape}")
 
-jnp_params = jnp.array(param_vector)
-
-def blurred_image_from_params(params):
-    """Reconstruct tracer from params, compute blurred image — fully JIT-traceable."""
-    inst = model.instance_from_vector(vector=params, xp=jnp)
-    t = al.Tracer(galaxies=list(inst.galaxies))
+def blurred_image_from_params(params_tree):
+    """Compute blurred image directly from a pytree ModelInstance — fully JIT-traceable."""
+    t = al.Tracer(galaxies=list(params_tree.galaxies))
     result = t.blurred_image_2d_from(
         grid=grid_lp, psf=dataset.psf, blurring_grid=grid_blurring, xp=jnp,
     )
     return result.array
 
 _, blurred_img_jit = jit_profile(
-    blurred_image_from_params, "blurred_image_jit", jnp_params
+    blurred_image_from_params, "blurred_image_jit", params_tree
 )
 likelihood_steps.append(("Blurred image (PSF convolution)", timer.records[-1][1] / 10))
 
@@ -594,14 +600,13 @@ with timer.section("blurred_mapping_matrix"):
 # border relocation → Delaunay triangulation → interpolation → mapper → mapping matrix → PSF convolution.
 # These steps are tightly sequential; the full pipeline JIT-compiles them all together.
 
-def blurred_mm_from_params(params):
-    """Reconstruct tracer from params, compute blurred mapping matrix via full inversion setup."""
-    inst = model.instance_from_vector(vector=params, xp=jnp)
-    t = al.Tracer(galaxies=list(inst.galaxies))
+def blurred_mm_from_params(params_tree):
+    """Compute blurred mapping matrix via full inversion setup from a pytree ModelInstance."""
+    t = al.Tracer(galaxies=list(params_tree.galaxies))
     # Recreate adapt_images with new galaxy instance so dict lookup by object identity works.
     adapt_images_jax = al.AdaptImages(
         galaxy_image_plane_mesh_grid_dict={
-            inst.galaxies.source: image_plane_mesh_grid,
+            params_tree.galaxies.source: image_plane_mesh_grid,
         },
         galaxy_name_image_plane_mesh_grid_dict={
             "('galaxies', 'source')": image_plane_mesh_grid,
@@ -613,7 +618,7 @@ def blurred_mm_from_params(params):
     )
     return jnp.array(fit_jax.inversion.operated_mapping_matrix)
 
-_, bmm_jit = jit_profile(blurred_mm_from_params, "inversion_setup_jit", jnp_params)
+_, bmm_jit = jit_profile(blurred_mm_from_params, "inversion_setup_jit", params_tree)
 likelihood_steps.append(("Inversion setup (steps 5-8 combined)", timer.records[-1][1] / 10))
 
 print(f"  blurred_mapping_matrix (JIT) shape: {bmm_jit.shape}")
@@ -691,7 +696,7 @@ with timer.section("regularization_matrix_eager"):
     regularization_matrix = jnp.array(inversion.regularization_matrix)
     block(regularization_matrix)
 
-likelihood_steps.append(("Regularization matrix (H)", timer.records[-2][1]))
+likelihood_steps.append(("Regularization matrix (H)", timer.records[-1][1]))
 
 print(f"  regularization_matrix shape: {regularization_matrix.shape}")
 
@@ -828,20 +833,12 @@ print("\n" + "=" * 70)
 print("FULL-PIPELINE JIT (for comparison)")
 print("=" * 70)
 
-from autofit.non_linear.fitness import Fitness
+analysis = al.AnalysisImaging(dataset=dataset, adapt_images=adapt_images, use_jax=True)
 
-analysis = al.AnalysisImaging(dataset=dataset, adapt_images=adapt_images)
+def full_pipeline_from_params(params_tree):
+    return analysis.log_likelihood_function(instance=params_tree)
 
-fitness = Fitness(
-    model=model,
-    analysis=analysis,
-    fom_is_log_likelihood=True,
-    resample_figure_of_merit=-1.0e99,
-)
-
-jnp_params = jnp.array(model.physical_values_from_prior_medians)
-
-_, full_result = jit_profile(fitness.call, "full_pipeline", jnp_params)
+_, full_result = jit_profile(full_pipeline_from_params, "full_pipeline", params_tree)
 full_pipeline_per_call = timer.records[-1][1] / 10
 
 print(f"  full log_likelihood = {full_result}")
@@ -875,16 +872,21 @@ if not run_vmap:
 else:
 
     batch_size = 3
-    parameters = jnp.tile(jnp_params, (batch_size, 1))
+    parameters = jax.tree_util.tree_map(
+        lambda leaf: jnp.broadcast_to(leaf, (batch_size, *leaf.shape)),
+        params_tree,
+    )
+
+    vmapped_full = jax.jit(jax.vmap(full_pipeline_from_params))
 
     with timer.section("vmap_first_call"):
-        result_vmap = fitness._vmap(parameters)
+        result_vmap = vmapped_full(parameters)
         block(result_vmap)
 
     n_vmap_repeats = 10
     with timer.section(f"vmap_steady_x{n_vmap_repeats}"):
         for _ in range(n_vmap_repeats):
-            result_vmap = fitness._vmap(parameters)
+            result_vmap = vmapped_full(parameters)
             block(result_vmap)
 
     vmap_batch_time = timer.records[-1][1] / n_vmap_repeats
@@ -909,8 +911,7 @@ else:
 
     print("\n--- Static memory analysis ---")
 
-    batched_call = jax.jit(jax.vmap(fitness.call))
-    lowered_batched = batched_call.lower(parameters)
+    lowered_batched = vmapped_full.lower(parameters)
     compiled_batched = lowered_batched.compile()
 
     memory_analysis = compiled_batched.memory_analysis()
