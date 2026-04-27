@@ -1004,7 +1004,7 @@ print(f"  Bar chart saved to:    {chart_path}")
 # put the evaluation point at the physically-meaningful operating point.
 # Eager, JIT, and vmap all agree to ~1e-10 at truth (the earlier
 # eager-vs-JIT ~292k divergence was a prior-median artifact that vanishes
-# at truth — see admin_jammy/prompt/autolens/pixelization_eager_vs_jit_divergence.md).
+# at truth — see PyAutoPrompt/autolens/pixelization_eager_vs_jit_divergence.md).
 EXPECTED_LOG_EVIDENCE_HST = 14310.719914474797
 
 np.testing.assert_allclose(
