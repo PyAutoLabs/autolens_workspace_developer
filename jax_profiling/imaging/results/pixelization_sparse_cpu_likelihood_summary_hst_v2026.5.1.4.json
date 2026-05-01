@@ -1,0 +1,34 @@
+{
+  "autolens_version": "2026.5.1.4",
+  "instrument": "hst",
+  "configuration": {
+    "pixel_scale_arcsec": 0.05,
+    "mask_radius_arcsec": 3.5,
+    "image_pixels_masked": 15361,
+    "over_sampled_pixels": 17980,
+    "mesh_shape": [
+      28,
+      28
+    ],
+    "source_pixels": 784
+  },
+  "steps": {
+    "Ray-trace grids": 0.009614410000358476,
+    "Lens light images (pre-PSF)": 0.005136900000070455,
+    "Blurred image (PSF convolution)": 0.018002610000257845,
+    "Profile-subtracted image": 1.1989999620709568e-05,
+    "Inversion setup (steps 4-7 combined)": 2.220000169472769e-06,
+    "Data vector (D)": 0.06326820000031148,
+    "Curvature matrix (F)": 0.39055464999983086,
+    "Regularization matrix (H)": 0.06727241999979014,
+    "Regularized reconstruction": 0.47180796999964514,
+    "Mapped recon + log evidence": 0.5951701600002707
+  },
+  "total_step_by_step": 1.6208415300003254,
+  "log_evidence_no_sparse": 26232.068573757562,
+  "log_evidence_sparse": NaN,
+  "log_evidence_jax_expected": 26232.068573757562,
+  "delta_sparse_minus_no_sparse": NaN,
+  "delta_sparse_minus_jax_expected": NaN,
+  "sparse_matches_non_sparse_rtol_1em4": false
+}
