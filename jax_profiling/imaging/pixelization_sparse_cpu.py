@@ -14,8 +14,10 @@ Two reference fits are built at the same evaluation point:
   ``pixelization.py`` to within ``rtol=1e-4`` (asserted at the bottom).
 * ``fit_sparse``    — ``FitImaging(xp=np)`` on a dataset with an attached
   CPU sparse operator (``apply_sparse_operator_cpu()``). Its ``log_evidence``
-  is reported next to the gold reference but *not* asserted — the script's
-  job is to surface any divergence, not hide it.
+  is also asserted to match ``fit_no_sparse`` (within ``rtol=1e-4``) so this
+  script doubles as a CPU-sparse regression test. (PyAutoArray PR #296 fixed
+  an out-of-bounds read in ``psf_precision_value_from`` that previously made
+  the sparse path return ``NaN`` for masks touching the noise-map boundary.)
 
 Per-step timings are eager-only: numba functions are compiled on first call
 and reused on subsequent calls, so each section reports a first-call cost
@@ -668,10 +670,11 @@ print(f"  Bar chart saved to:    {chart_path}")
 # point — they share the same mathematical formulation and only differ in
 # their array backend. Asserting parity catches drift on either side.
 #
-# The sparse path is intentionally NOT asserted: this script is a diagnostic
-# for surfacing any divergence between sparse and non-sparse, so failing on
-# divergence would defeat its purpose. The numbers above + the JSON output
-# are the evidence the user needs to debug the sparse path.
+# Both paths are asserted post-fix (PyAutoArray PR #296 fixed the OOB read in
+# psf_precision_value_from). Keeping the sparse-path assertion here means the
+# script doubles as a regression test: if the sparse-CPU bug recurs, this
+# script will fail loudly instead of silently writing a "false" flag into the
+# JSON.
 
 np.testing.assert_allclose(
     log_evidence_no_sparse,
@@ -688,16 +691,20 @@ print(
     f"log_evidence matches JAX reference {EXPECTED_LOG_EVIDENCE_HST:.6f}"
 )
 
-if sparse_matches_non_sparse:
-    print(
-        f"  Sparse path also agrees with non-sparse to rtol=1e-4 "
-        f"(observed rtol = {sparse_vs_non_sparse_rtol:.3e})."
-    )
-else:
-    print(
-        f"  *** SPARSE PATH DIVERGES from non-sparse: observed rtol = "
-        f"{sparse_vs_non_sparse_rtol:.3e} (>= 1e-4). "
-        f"This script's purpose is to surface this divergence; investigate "
-        f"the sparse-CPU path in PyAutoArray/autoarray/inversion/inversion/"
-        f"imaging_numba/."
-    )
+np.testing.assert_allclose(
+    log_evidence_sparse,
+    log_evidence_no_sparse,
+    rtol=1e-4,
+    err_msg=(
+        f"imaging/pixelization_sparse_cpu[{instrument}]: regression — CPU "
+        f"sparse-operator log_evidence diverges from non-sparse "
+        f"(sparse={log_evidence_sparse}, non_sparse={log_evidence_no_sparse}, "
+        f"observed rtol={sparse_vs_non_sparse_rtol:.3e}). Likely regression "
+        f"in PyAutoArray/autoarray/inversion/inversion/imaging_numba/."
+    ),
+)
+print(
+    f"  Sparse regression assertion PASSED: "
+    f"sparse log_evidence matches non-sparse (rtol = "
+    f"{sparse_vs_non_sparse_rtol:.3e})."
+)

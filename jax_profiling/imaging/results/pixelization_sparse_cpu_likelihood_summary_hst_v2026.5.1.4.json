@@ -13,23 +13,23 @@
     "source_pixels": 784
   },
   "steps": {
-    "Ray-trace grids": 0.007880670000304235,
-    "Lens light images (pre-PSF)": 0.004302589999861084,
-    "Blurred image (PSF convolution)": 0.01615301999991061,
-    "Profile-subtracted image": 1.0900000052060933e-05,
-    "Inversion setup (steps 4-7 combined)": 1.9999999494757505e-06,
-    "Data vector (D)": 0.05178085000006831,
-    "Curvature matrix (F)": 0.3827769700001227,
-    "Regularization matrix (H)": 0.04594268000000738,
-    "Regularized reconstruction": 0.456709669999691,
-    "Mapped recon + log evidence": 0.422671039999841
+    "Ray-trace grids": 0.010212379999575204,
+    "Lens light images (pre-PSF)": 0.005444229999557138,
+    "Blurred image (PSF convolution)": 0.024003369999991264,
+    "Profile-subtracted image": 1.8070000078296288e-05,
+    "Inversion setup (steps 4-7 combined)": 2.540000423323363e-06,
+    "Data vector (D)": 0.06494419000009657,
+    "Curvature matrix (F)": 0.37986498000027497,
+    "Regularization matrix (H)": 0.049308830000518354,
+    "Regularized reconstruction": 0.43148055000056046,
+    "Mapped recon + log evidence": 0.5270483899999817
   },
-  "total_step_by_step": 1.3882303899998079,
-  "fit_no_sparse_full_likelihood_per_call": 3.598550679999607,
+  "total_step_by_step": 1.4923275300010572,
+  "fit_no_sparse_full_likelihood_per_call": 3.6985298600004173,
   "log_evidence_no_sparse": 26232.068573757562,
-  "log_evidence_sparse": NaN,
+  "log_evidence_sparse": 26232.06854278734,
   "log_evidence_jax_expected": 26232.068573757562,
-  "delta_sparse_minus_no_sparse": NaN,
-  "delta_sparse_minus_jax_expected": NaN,
-  "sparse_matches_non_sparse_rtol_1em4": false
+  "delta_sparse_minus_no_sparse": -3.0970222724135965e-05,
+  "delta_sparse_minus_jax_expected": -3.0970222724135965e-05,
+  "sparse_matches_non_sparse_rtol_1em4": true
 }
