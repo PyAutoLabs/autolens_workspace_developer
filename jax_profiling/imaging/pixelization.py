@@ -230,7 +230,7 @@ with timer.section("model_build"):
     )
 
     pixelization = al.Pixelization(
-        mesh=al.mesh.RectangularUniform(shape=mesh_shape),
+        mesh=al.mesh.RectangularAdaptDensity(shape=mesh_shape),
         regularization=al.reg.Constant(coefficient=1.0),
     )
 
@@ -1000,12 +1000,10 @@ print(f"  Bar chart saved to:    {chart_path}")
 # Regression assertion — realistic-scale deterministic log-evidence
 # ===================================================================
 #
-# Simulator truth parameters via GaussianPrior(mean=truth, sigma=small)
-# put the evaluation point at the physically-meaningful operating point.
-# Eager, JIT, and vmap all agree to ~1e-10 at truth (the earlier
-# eager-vs-JIT ~292k divergence was a prior-median artifact that vanishes
-# at truth — see PyAutoPrompt/autolens/pixelization_eager_vs_jit_divergence.md).
-EXPECTED_LOG_EVIDENCE_HST = 14310.719914474797
+# RectangularAdaptDensity at prior medians is deterministic across the
+# eager / full-JIT / vmap paths to within rtol=1e-4 — the constant below
+# is the value those three paths agree on.
+EXPECTED_LOG_EVIDENCE_HST = 26232.068573757562
 
 np.testing.assert_allclose(
     log_evidence_ref,
