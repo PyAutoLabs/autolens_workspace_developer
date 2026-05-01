@@ -278,6 +278,25 @@ with timer.section("fit_no_sparse_build_and_eval"):
     log_evidence_no_sparse = fit_no_sparse.figure_of_merit
     log_likelihood_no_sparse = fit_no_sparse.log_likelihood
 
+# Steady-state per-call timing for fit_no_sparse — the apples-to-apples
+# counterpart to the JAX script's "Full pipeline (single JIT)" number.
+# By the time this runs, every numba kernel touched by FitImaging is already
+# compiled (the build_and_eval block above is each kernel's first call), so
+# the steady-state timing is pure compute, not JIT overhead.
+
+def _build_fit_no_sparse_full():
+    fit = al.FitImaging(
+        dataset=dataset, tracer=tracer, settings=settings, xp=np,
+    )
+    return fit.figure_of_merit
+
+eager_profile("fit_no_sparse_full_likelihood", _build_fit_no_sparse_full)
+fit_no_sparse_per_call = timer.records[-1][1] / 10
+print(
+    f"  -> Numba CPU non-sparse full-likelihood per call: "
+    f"{fit_no_sparse_per_call:.6f} s"
+)
+
 print(f"  log_evidence   = {log_evidence_no_sparse}")
 print(f"  log_likelihood = {log_likelihood_no_sparse}")
 
@@ -544,6 +563,10 @@ for i, (label, per_call) in enumerate(likelihood_steps, 1):
 
 print("-" * 70)
 print(f"      {'TOTAL (step-by-step, sparse)':<{max_label}}  {step_total:>12.6f} s")
+print(
+    f"      {'Full likelihood, non-sparse (steady)':<{max_label}}  "
+    f"{fit_no_sparse_per_call:>12.6f} s"
+)
 print("=" * 70)
 
 print("\n--- Three-way log_evidence ---")
@@ -569,6 +592,7 @@ likelihood_summary = {
     },
     "steps": {label: per_call for label, per_call in likelihood_steps},
     "total_step_by_step": step_total,
+    "fit_no_sparse_full_likelihood_per_call": fit_no_sparse_per_call,
     "log_evidence_no_sparse": float(log_evidence_no_sparse),
     "log_evidence_sparse": float(log_evidence_sparse),
     "log_evidence_jax_expected": EXPECTED_LOG_EVIDENCE_HST,
