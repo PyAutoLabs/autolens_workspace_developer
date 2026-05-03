@@ -1,6 +1,30 @@
-# autolens_workspace_developer
+# CLAUDE.md
 
-Developer workspace for profiling and optimising PyAutoLens JAX pipelines.
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+## What This Repo Is
+
+**autolens_workspace_developer** is the developer workspace for profiling and optimising PyAutoLens JAX pipelines and prototyping minimal-search experiments. It is not a user-facing workspace — see `../autolens_workspace` for example scripts and tutorials, and `../autolens_workspace_test` for the integration test suite.
+
+Dependencies: `autolens`, `autogalaxy`, `autofit`, `autoarray`, `jax`, `numba`. Python version: 3.11.
+
+## Workspace Structure
+
+```
+jax_profiling/               JAX JIT profiling scripts for the imaging /
+                             interferometer / point-source likelihood paths.
+searches_minimal/            Minimal direct-sampler examples (NSS, Nautilus,
+                             Dynesty, Emcee, LBFGS) that bypass the
+                             NonLinearSearch wrapper, run on a real lens model.
+slam_pipeline/               SLaM pipeline prototypes.
+source_science/              Source-plane reconstruction experiments.
+los/                         Line-of-sight modelling experiments.
+plotting_alignment/          Plotting / visualisation alignment work.
+scaling_relation_agg/        Scaling-relation aggregator prototypes.
+visualization_profiling/     Visualisation-pipeline profiling.
+dataset/                     Input data files.
+output/                      Model-fit results written here at runtime.
+```
 
 ## Running Scripts
 
@@ -10,6 +34,14 @@ Scripts run from the workspace root (`autolens_workspace_developer/`). All relat
 cd autolens_workspace_developer
 python jax_profiling/imaging/mge.py
 ```
+
+**Codex / sandboxed runs**: when running from Codex or any restricted environment, set writable cache directories so `numba` and `matplotlib` do not fail on unwritable home or source-tree paths:
+
+```bash
+NUMBA_CACHE_DIR=/tmp/numba_cache MPLCONFIGDIR=/tmp/matplotlib python jax_profiling/imaging/mge.py
+```
+
+This workspace is often imported from `/mnt/c/...` and Codex may not be able to write to module `__pycache__` directories or `/home/jammy/.cache`, which can cause import-time `numba` caching failures without this override.
 
 ## Raw Array Extraction via `.array`
 
