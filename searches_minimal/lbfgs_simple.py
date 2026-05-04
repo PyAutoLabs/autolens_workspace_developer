@@ -15,6 +15,8 @@ Requirements:
     scipy (included with autofit)
 """
 import time
+from pathlib import Path
+
 import numpy as np
 
 from searches_minimal._setup import (
@@ -64,14 +66,29 @@ t_elapsed = time.time() - t_start
 
 best_physical = model.vector_from_unit_vector(list(result.x))
 best_instance = model.instance_from_vector(vector=best_physical)
+max_logl = -0.5 * float(result.fun)
 
-print("\n--- L-BFGS-B Results ---")
-print(format_best_fit(best_instance))
-print(f"Chi-squared:   {result.fun:.2f}")
-print(f"Converged:     {result.success}")
-print(f"\n--- Performance ---")
-print(f"Wall time:          {t_elapsed:.2f} s")
-print(f"Function evals:     {result.nfev}")
-print(f"Gradient evals:     {result.njev}")
-print(f"Iterations:         {result.nit}")
-print(f"Time per eval:      {t_elapsed / max(result.nfev, 1) * 1e3:.3f} ms")
+summary = f"""\
+--- L-BFGS-B Results ---
+Best fit:        {format_best_fit(best_instance)}
+Max log L:       {max_logl:.4f}     (chi-squared = {float(result.fun):.4f}, converged = {bool(result.success)})
+Log evidence:    n/a (L-BFGS-B is a point optimiser, not nested sampling)
+
+--- Performance ---
+Wall time:           {t_elapsed:.2f} s
+Sampling time:       n/a
+Likelihood evals:    {int(result.nfev)}     (gradient evals: {int(result.njev)}, iterations: {int(result.nit)})
+Time per eval:       {t_elapsed / max(int(result.nfev), 1) * 1e3:.3f} ms
+ESS:                 n/a (point optimiser)
+Posterior samples:   n/a (point optimiser)
+Sampler config:      maxiter=5, bounds=[(0, 1)] * ndim (smoke test)
+"""
+
+print()
+print(summary)
+
+output_dir = Path(__file__).parent / "output"
+output_dir.mkdir(parents=True, exist_ok=True)
+summary_path = output_dir / f"{Path(__file__).stem}_summary.txt"
+summary_path.write_text(summary)
+print(f"Summary written to: {summary_path}")

@@ -13,6 +13,8 @@ Requirements:
     pip install nautilus-sampler
 """
 import time
+from pathlib import Path
+
 import numpy as np
 
 from searches_minimal._setup import (
@@ -62,12 +64,29 @@ t_elapsed = time.time() - t_start
 points, log_w, log_l = sampler.posterior()
 best_idx = np.argmax(log_l)
 best_instance = model.instance_from_vector(vector=list(points[best_idx]))
+max_logl = float(np.max(log_l))
 
-print("\n--- Nautilus Results ---")
-print(format_best_fit(best_instance))
-print(f"Log evidence:  {sampler.log_z:.2f}")
-print(f"\n--- Performance ---")
-print(f"Wall time:          {t_elapsed:.2f} s")
-print(f"Likelihood calls:   {n_likelihood_calls}")
-print(f"Time per call:      {t_elapsed / max(n_likelihood_calls, 1) * 1e3:.3f} ms")
-print(f"Posterior samples:  {len(points)}")
+summary = f"""\
+--- Nautilus (NumPy) Results ---
+Best fit:        {format_best_fit(best_instance)}
+Max log L:       {max_logl:.4f}
+Log evidence:    {float(sampler.log_z):.4f}
+
+--- Performance ---
+Wall time:           {t_elapsed:.2f} s
+Sampling time:       n/a (Nautilus does not split warmup)
+Likelihood evals:    {n_likelihood_calls}
+Time per eval:       {t_elapsed / max(n_likelihood_calls, 1) * 1e3:.3f} ms
+ESS:                 {float(sampler.n_eff):.1f}
+Posterior samples:   {len(points)}
+Sampler config:      n_live=50, n_eff=30, n_like_max=100 (smoke test)
+"""
+
+print()
+print(summary)
+
+output_dir = Path(__file__).parent / "output"
+output_dir.mkdir(parents=True, exist_ok=True)
+summary_path = output_dir / f"{Path(__file__).stem}_summary.txt"
+summary_path.write_text(summary)
+print(f"Summary written to: {summary_path}")

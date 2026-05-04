@@ -1,0 +1,13 @@
+--- Nautilus (NumPy) Results ---
+Best fit:        lens.mass.einstein_radius=5.3293  lens.mass.centre=(-0.126, 0.031)  shear=(-0.0772, 0.1215)
+Max log L:       -182783.7762
+Log evidence:    -182788.3814
+
+--- Performance ---
+Wall time:           201.78 s
+Sampling time:       n/a (Nautilus does not split warmup)
+Likelihood evals:    100
+Time per eval:       2017.763 ms
+ESS:                 1.0
+Posterior samples:   100
+Sampler config:      n_live=50, n_eff=30, n_like_max=100 (smoke test)

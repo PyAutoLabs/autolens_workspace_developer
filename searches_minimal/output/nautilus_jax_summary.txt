@@ -1,0 +1,14 @@
+--- Nautilus (JAX JIT) Results ---
+Best fit:        lens.mass.einstein_radius=0.1531  lens.mass.centre=(-0.059, -0.126)  shear=(0.0409, -0.2191)
+Max log L:       -169420.2719
+Log evidence:    -169424.8770
+
+--- Performance ---
+Wall time:           18.77 s     (excludes JIT compile, run ahead of time)
+Sampling time:       n/a (Nautilus does not split warmup)
+JIT compile time:    54.10 s     (one-shot warm-up before sampling)
+Likelihood evals:    100
+Time per eval:       187.714 ms
+ESS:                 1.0
+Posterior samples:   100
+Sampler config:      n_live=50, n_eff=30, n_like_max=100 (smoke test)

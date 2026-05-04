@@ -1,0 +1,13 @@
+--- Dynesty Results ---
+Best fit:        lens.mass.einstein_radius=6.5305  lens.mass.centre=(0.240, 0.047)  shear=(-0.2440, -0.1551)
+Max log L:       -178364.8512
+Log evidence:    -178369.9948
+
+--- Performance ---
+Wall time:           104.89 s
+Sampling time:       n/a
+Likelihood evals:    76
+Time per eval:       1380.185 ms
+ESS:                 1.0
+Posterior samples:   61
+Sampler config:      nlive=30, maxiter=30 (smoke test)

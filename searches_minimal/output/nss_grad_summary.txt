@@ -1,0 +1,13 @@
+--- NSS (HMC + jax.grad) Results ---
+Best fit:        lens.mass.einstein_radius=1.9806  lens.mass.centre=(0.799, 4.928)  shear=(0.4555, 5.3773)
+Max log L:       n/a (SMC tracks weights, not raw log L per particle)
+Log evidence:    -31.4728
+
+--- Performance ---
+Wall time:           1308.14 s     (includes JIT compile + warmup)
+Sampling time:       16.50 s
+Likelihood evals:    20     (each = likelihood + gradient via jax.grad)
+Time per eval:       824.786 ms
+ESS:                 4.5
+Posterior samples:   8
+Sampler config:      n_live=8, num_mcmc_steps=1, hmc_trajectory_length=2, warmup_steps=2, max_steps=1 (smoke test)

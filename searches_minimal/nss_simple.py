@@ -16,6 +16,8 @@ Requirements:
     (pulls handley-lab/blackjax fork with nested sampling support)
 """
 import time
+from pathlib import Path
+
 import numpy as np
 import jax
 import jax.numpy as jnp
@@ -142,13 +144,29 @@ log_likelihoods = final_state.particles.loglikelihood
 
 best_idx = int(jnp.argmax(log_likelihoods))
 best_instance = model.instance_from_vector(vector=np.asarray(positions[best_idx]).tolist())
+max_logl = float(jnp.max(log_likelihoods))
 
-print("\n--- NSS (pure_callback) Results ---")
-print(format_best_fit(best_instance))
-print(f"Log evidence:  {float(results.logZs.mean()):.2f}")
-print(f"\n--- Performance ---")
-print(f"Wall time:          {t_elapsed:.2f} s (includes JIT compile)")
-print(f"Sampling time:      {float(results.time):.2f} s")
-print(f"Likelihood calls:   {n_likelihood_calls}")
-print(f"Time per call:      {t_elapsed / max(n_likelihood_calls, 1) * 1e3:.3f} ms")
-print(f"Total samples:      {len(positions)}")
+summary = f"""\
+--- NSS (pure_callback) Results ---
+Best fit:        {format_best_fit(best_instance)}
+Max log L:       {max_logl:.4f}
+Log evidence:    {float(results.logZs.mean()):.4f}
+
+--- Performance ---
+Wall time:           {t_elapsed:.2f} s     (includes JIT compile)
+Sampling time:       {float(results.time):.2f} s
+Likelihood evals:    {n_likelihood_calls}
+Time per eval:       {t_elapsed / max(n_likelihood_calls, 1) * 1e3:.3f} ms
+ESS:                 {int(results.ess)}
+Posterior samples:   {len(positions)}
+Sampler config:      n_live={n_live}, num_mcmc_steps={num_mcmc_steps}, num_delete={num_delete}, max_steps={max_steps} (smoke test)
+"""
+
+print()
+print(summary)
+
+output_dir = Path(__file__).parent / "output"
+output_dir.mkdir(parents=True, exist_ok=True)
+summary_path = output_dir / f"{Path(__file__).stem}_summary.txt"
+summary_path.write_text(summary)
+print(f"Summary written to: {summary_path}")

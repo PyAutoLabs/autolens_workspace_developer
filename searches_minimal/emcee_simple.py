@@ -15,6 +15,8 @@ Requirements:
     pip install emcee
 """
 import time
+from pathlib import Path
+
 import numpy as np
 
 from searches_minimal._setup import (
@@ -72,13 +74,29 @@ flat_log_prob = sampler.get_log_prob(flat=True)
 
 best_idx = np.argmax(flat_log_prob)
 best_instance = model.instance_from_vector(vector=list(flat_samples[best_idx]))
+best_log_post = float(flat_log_prob[best_idx])
 
-print("\n--- Emcee Results ---")
-print(format_best_fit(best_instance))
-print(f"Best log posterior:  {flat_log_prob[best_idx]:.2f}")
-print(f"\n--- Performance ---")
-print(f"Wall time:          {t_elapsed:.2f} s")
-print(f"Likelihood calls:   {n_likelihood_calls}")
-print(f"Time per call:      {t_elapsed / max(n_likelihood_calls, 1) * 1e3:.3f} ms")
-print(f"Walkers:            {nwalkers}")
-print(f"Steps per walker:   {nsteps}")
+summary = f"""\
+--- Emcee Results ---
+Best fit:        {format_best_fit(best_instance)}
+Max log L:       n/a (only log posterior tracked; best log posterior = {best_log_post:.4f})
+Log evidence:    n/a (Emcee is MCMC, not nested sampling)
+
+--- Performance ---
+Wall time:           {t_elapsed:.2f} s
+Sampling time:       n/a
+Likelihood evals:    {n_likelihood_calls}
+Time per eval:       {t_elapsed / max(n_likelihood_calls, 1) * 1e3:.3f} ms
+ESS:                 n/a (autocorr undefined with nsteps={nsteps})
+Posterior samples:   {len(flat_samples)}
+Sampler config:      nwalkers={nwalkers}, nsteps={nsteps} (smoke test)
+"""
+
+print()
+print(summary)
+
+output_dir = Path(__file__).parent / "output"
+output_dir.mkdir(parents=True, exist_ok=True)
+summary_path = output_dir / f"{Path(__file__).stem}_summary.txt"
+summary_path.write_text(summary)
+print(f"Summary written to: {summary_path}")

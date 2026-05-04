@@ -1,0 +1,13 @@
+--- NSS (pure JAX) Results ---
+Best fit:        lens.mass.einstein_radius=1.3730  lens.mass.centre=(0.161, -0.083)  shear=(0.1698, -0.2317)
+Max log L:       -163354.5406
+Log evidence:    -163359.7312
+
+--- Performance ---
+Wall time:           267.78 s     (includes JIT compile)
+Sampling time:       127.73 s
+Likelihood evals:    617
+Time per eval:       207.024 ms
+ESS:                 1.0
+Posterior samples:   75
+Sampler config:      n_live=30, num_mcmc_steps=2, num_delete=5, termination=1e5 (smoke test)

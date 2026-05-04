@@ -1,0 +1,81 @@
+Sampler comparison (autolens_workspace_developer/searches_minimal)
+===================================================================
+
+Problem: HST MGE imaging likelihood from `_setup.py` (mirrors
+`jax_profiling/imaging/mge.py`). Lens = MGE bulge + Isothermal mass +
+ExternalShear, source = MGE bulge, 20 Gaussians per MGE.
+
+WARNING -- THESE ARE SMOKE-TEST CONFIGURATIONS, NOT CONVERGED RUNS
+
+Every script caps iterations / live points / eval budget so it finishes
+in minutes instead of hours (see `Sampler config:` line in each summary).
+The `Best fit`, `Max log L`, and `Log evidence` columns therefore reflect
+where each sampler's *initial* exploration happens to land, not the true
+maximum-likelihood region. Do **not** read these as scientific results.
+
+The `Wall time`, `Sampling time`, `Likelihood evals`, and `Time per eval`
+columns *are* meaningful -- they reveal the per-call cost of the MGE
+likelihood under each backend (NumPy vs JAX) and the JIT compile penalty
+that JAX paths pay up front.
+
+| Sampler                | Wall (s) | JIT/Compile (s) | Evals | ms/eval | ESS  | Log Z      | Posterior |
+|------------------------|---------:|----------------:|------:|--------:|-----:|-----------:|----------:|
+| lbfgs_simple   (NumPy) |   203.96 |             n/a |   144 |  1416.4 |  n/a |        n/a |       n/a |
+| dynesty_simple (NumPy) |   104.89 |             n/a |    76 |  1380.2 |  1.0 | -178369.99 |        61 |
+| emcee_simple   (NumPy) |   215.50 |             n/a |    90 |  2394.5 |  n/a |        n/a |        60 |
+| nautilus_simple(NumPy) |   201.78 |             n/a |   100 |  2017.8 |  1.0 | -182788.38 |       100 |
+| nautilus_jax   (JAX)   |    18.77 |           54.10 |   100 |   187.7 |  1.0 | -169424.88 |       100 |
+| nss_simple     (cb)    |  1112.38 |           ~0.94 |   824 |  1350.0 |  1.0 | -256210.95 |        12 |
+| nss_jit        (JAX)   |   267.78 |          140.05 |   617 |   207.0 |  1.0 | -163359.73 |        75 |
+| nss_grad       (JAX)   |  1308.14 |         1291.64 |    20 |   824.8 |  4.5 |     -31.47 |         8 |
+
+Per-call cost (the meaningful comparison)
+-----------------------------------------
+
+NumPy MGE likelihood:    ~1.4-2.4 seconds per evaluation
+  - dynesty_simple:    1380 ms/eval
+  - lbfgs_simple:      1416 ms/eval
+  - nss_simple (cb):   1350 ms/eval
+  - nautilus_simple:   2018 ms/eval
+  - emcee_simple:      2394 ms/eval (also evaluates log_prior per walker)
+
+JAX MGE likelihood (JIT-compiled):  ~0.2-0.8 seconds per evaluation
+  - nautilus_jax:       188 ms/eval (Python <-> JAX boundary per call)
+  - nss_jit:            207 ms/eval (no Python boundary)
+  - nss_grad:           825 ms/eval (each = likelihood + jax.grad)
+
+Headline: the JAX path is roughly **7-10x faster per likelihood call** for
+the MGE imaging likelihood -- but JAX paths pay a one-shot JIT compile
+cost of 54-1300 s before the first sample. That cost amortises over
+thousands of evals in a real run; in these smoke tests it dominates.
+
+JIT compile penalty
+-------------------
+
+  - nautilus_jax:    54 s compile  +  19 s sampling
+  - nss_jit:        140 s compile  + 128 s sampling
+  - nss_grad:      1292 s compile  +  17 s sampling   (grad path is biggest)
+  - nss_simple:       <1 s compile + 1111 s sampling  (callback path; almost
+                                                       no JAX work to compile)
+
+The takeaway for a real production run: pick the JAX path, accept the
+one-shot warmup, and you'll do tens-of-thousands of likelihood evaluations
+~10x cheaper than NumPy. For smoke tests / quick smoke checks that only
+need a handful of evals, NumPy paths win because they skip the compile.
+
+Why the log Z values don't agree
+--------------------------------
+
+Each sampler explores a different point in the ~50-D MGE parameter space
+at these tiny configurations:
+  - dynesty:    starts from 30 unit-cube draws + 30 iterations
+  - emcee:      starts from 30 walkers in [0.4, 0.6] of unit cube, 2 steps
+  - nautilus:   starts from 50 unit-cube draws, capped at 100 evals
+  - nss_simple: starts from 8 unit-cube draws, 1 NSS step
+  - nss_jit:    starts from 30 unit-cube draws, 1 NSS step under JIT
+  - nss_grad:   starts from 8 narrow-band draws, 1 SMC step with HMC
+
+None of them gets past the initial exploration phase. Best-fit
+parameters and log Z therefore measure "where did the random init land",
+not "what is the MGE likelihood maximum". Crank `n_live`, `maxiter`,
+`max_steps`, `n_like_max`, etc. for converged numbers.
