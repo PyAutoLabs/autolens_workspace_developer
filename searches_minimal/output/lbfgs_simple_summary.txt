@@ -1,0 +1,13 @@
+--- L-BFGS-B Results ---
+Best fit:        lens.mass.einstein_radius=4.0974  lens.mass.centre=(0.000, -0.000)  shear=(0.0071, -0.0071)
+Max log L:       -158028.2257     (chi-squared = 316056.4515, converged = False)
+Log evidence:    n/a (L-BFGS-B is a point optimiser, not nested sampling)
+
+--- Performance ---
+Wall time:           203.96 s
+Sampling time:       n/a
+Likelihood evals:    144     (gradient evals: 9, iterations: 5)
+Time per eval:       1416.389 ms
+ESS:                 n/a (point optimiser)
+Posterior samples:   n/a (point optimiser)
+Sampler config:      maxiter=5, bounds=[(0, 1)] * ndim (smoke test)

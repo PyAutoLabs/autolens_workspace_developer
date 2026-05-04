@@ -1,0 +1,13 @@
+--- NSS (pure_callback) Results ---
+Best fit:        lens.mass.einstein_radius=3.1160  lens.mass.centre=(0.115, -0.009)  shear=(0.2857, 0.2162)
+Max log L:       -256208.8203
+Log evidence:    -256210.9461
+
+--- Performance ---
+Wall time:           1112.38 s     (includes JIT compile)
+Sampling time:       1111.44 s
+Likelihood evals:    824
+Time per eval:       1349.978 ms
+ESS:                 1
+Posterior samples:   12
+Sampler config:      n_live=8, num_mcmc_steps=1, num_delete=4, max_steps=1 (smoke test)

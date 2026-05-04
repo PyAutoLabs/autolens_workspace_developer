@@ -1,0 +1,13 @@
+--- Emcee Results ---
+Best fit:        lens.mass.einstein_radius=4.2095  lens.mass.centre=(0.019, 0.016)  shear=(-0.0017, -0.0179)
+Max log L:       n/a (only log posterior tracked; best log posterior = -158672.6187)
+Log evidence:    n/a (Emcee is MCMC, not nested sampling)
+
+--- Performance ---
+Wall time:           215.50 s
+Sampling time:       n/a
+Likelihood evals:    90
+Time per eval:       2394.474 ms
+ESS:                 n/a (autocorr undefined with nsteps=2)
+Posterior samples:   60
+Sampler config:      nwalkers=30, nsteps=2 (smoke test)

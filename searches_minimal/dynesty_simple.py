@@ -13,6 +13,8 @@ Requirements:
     pip install dynesty
 """
 import time
+from pathlib import Path
+
 import numpy as np
 
 from searches_minimal._setup import (
@@ -59,13 +61,35 @@ t_elapsed = time.time() - t_start
 results = sampler.results
 best_idx = np.argmax(results.logl)
 best_instance = model.instance_from_vector(vector=list(results.samples[best_idx]))
+max_logl = float(results.logl[best_idx])
+log_z = float(results.logz[-1])
 
-print("\n--- Dynesty Results ---")
-print(format_best_fit(best_instance))
-print(f"Log evidence:  {results.logz[-1]:.2f}")
-print(f"\n--- Performance ---")
-print(f"Wall time:          {t_elapsed:.2f} s")
-print(f"Likelihood calls:   {n_likelihood_calls}")
-print(f"Time per call:      {t_elapsed / max(n_likelihood_calls, 1) * 1e3:.3f} ms")
-print(f"Iterations:         {results.niter}")
-print(f"Samples:            {len(results.samples)}")
+# ESS for weighted nested-sampling samples: 1 / sum(w^2).
+weights = np.exp(results.logwt - log_z)
+weights_sum_sq = float(np.sum(weights**2))
+ess = 1.0 / weights_sum_sq if weights_sum_sq > 0 else 0.0
+
+summary = f"""\
+--- Dynesty Results ---
+Best fit:        {format_best_fit(best_instance)}
+Max log L:       {max_logl:.4f}
+Log evidence:    {log_z:.4f}
+
+--- Performance ---
+Wall time:           {t_elapsed:.2f} s
+Sampling time:       n/a
+Likelihood evals:    {n_likelihood_calls}
+Time per eval:       {t_elapsed / max(n_likelihood_calls, 1) * 1e3:.3f} ms
+ESS:                 {ess:.1f}
+Posterior samples:   {len(results.samples)}
+Sampler config:      nlive=30, maxiter=30 (smoke test)
+"""
+
+print()
+print(summary)
+
+output_dir = Path(__file__).parent / "output"
+output_dir.mkdir(parents=True, exist_ok=True)
+summary_path = output_dir / f"{Path(__file__).stem}_summary.txt"
+summary_path.write_text(summary)
+print(f"Summary written to: {summary_path}")

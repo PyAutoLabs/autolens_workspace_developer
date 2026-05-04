@@ -15,6 +15,8 @@ Requirements:
     pip install git+https://github.com/yallup/nss.git
 """
 import time
+from pathlib import Path
+
 import numpy as np
 import jax
 import jax.numpy as jnp
@@ -81,12 +83,30 @@ log_likelihoods = final_state.particles.loglikelihood
 best_idx = int(jnp.argmax(log_likelihoods))
 best_params = np.asarray(positions[best_idx]).tolist()
 best_instance = model.instance_from_vector(vector=best_params)
+max_logl = float(jnp.max(log_likelihoods))
+n_evals = int(results.evals)
 
-print("\n--- NSS (pure JAX) Results ---")
-print(format_best_fit(best_instance))
-print(f"Log evidence:  {float(results.logZs.mean()):.2f}")
-print(f"\n--- Performance ---")
-print(f"Wall time:          {t_elapsed:.2f} s (includes JIT compile)")
-print(f"Sampling time:      {float(results.time):.2f} s")
-print(f"Likelihood evals:   {int(results.evals)}")
-print(f"Time per eval:      {float(results.time) / max(int(results.evals), 1) * 1e3:.3f} ms")
+summary = f"""\
+--- NSS (pure JAX) Results ---
+Best fit:        {format_best_fit(best_instance)}
+Max log L:       {max_logl:.4f}
+Log evidence:    {float(results.logZs.mean()):.4f}
+
+--- Performance ---
+Wall time:           {t_elapsed:.2f} s     (includes JIT compile)
+Sampling time:       {float(results.time):.2f} s
+Likelihood evals:    {n_evals}
+Time per eval:       {float(results.time) / max(n_evals, 1) * 1e3:.3f} ms
+ESS:                 {float(results.ess):.1f}
+Posterior samples:   {len(positions)}
+Sampler config:      n_live={n_live}, num_mcmc_steps=2, num_delete=5, termination=1e5 (smoke test)
+"""
+
+print()
+print(summary)
+
+output_dir = Path(__file__).parent / "output"
+output_dir.mkdir(parents=True, exist_ok=True)
+summary_path = output_dir / f"{Path(__file__).stem}_summary.txt"
+summary_path.write_text(summary)
+print(f"Summary written to: {summary_path}")
