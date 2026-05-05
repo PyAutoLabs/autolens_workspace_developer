@@ -8,7 +8,7 @@ lens model and a per-channel pixelized source reconstruction.
 
 The walkthrough mirrors the single-channel
 ``jax_profiling/interferometer/pixelization.py`` script — same lens model,
-same ``RectangularUniform`` mesh + ``Constant`` regularization, same JAX
+same ``RectangularAdaptDensity`` mesh + ``Constant`` regularization, same JAX
 JIT pattern — but the analysis is now an ``af.FactorGraphModel`` over
 N independent ``AnalysisInterferometer``s.
 
@@ -198,7 +198,7 @@ with timer.section("model_build"):
 
     pixelization = af.Model(
         al.Pixelization,
-        mesh=al.mesh.RectangularUniform(shape=MESH_SHAPE),
+        mesh=al.mesh.RectangularAdaptDensity(shape=MESH_SHAPE),
         regularization=al.reg.Constant(coefficient=REGULARIZATION_COEFFICIENT),
     )
 
