@@ -1,0 +1,38 @@
+{
+  "autolens_version": "2026.5.1.4",
+  "type": "imaging",
+  "configuration": {
+    "grid_shape": [
+      100,
+      100
+    ],
+    "pixel_scales": 0.1,
+    "psf_sigma": 0.1,
+    "over_sampling_sub_sizes": [
+      32,
+      8,
+      2
+    ]
+  },
+  "phases": {
+    "setup_grids": 0.07239449999997305,
+    "setup_psf_simulator": 0.0005392000000483677,
+    "setup_galaxies": 9.439999985261238e-05,
+    "setup_tracer": 2.2400000034394907e-05,
+    "image_2d_eager": 0.9222204000000147,
+    "image_2d_jit_lower": 0.5451528000000962,
+    "image_2d_jit_compile": 0.5628070999998727,
+    "image_2d_jit_first_call": 0.029734500000131447,
+    "image_2d_jit_steady_x10": 0.2907975999999053,
+    "via_tracer_from": 1.153091300000142,
+    "solver_build": 0.00010199999996984843,
+    "solver_solve_eager": 0.108650599999919,
+    "output_fits": 0.010881800000106523,
+    "output_json": 0.002647199999955774
+  },
+  "key_timings": {
+    "image_2d_eager_s": 0.9222204000000147,
+    "via_tracer_from_s": 1.153091300000142,
+    "solver_solve_eager_s": 0.108650599999919
+  }
+}

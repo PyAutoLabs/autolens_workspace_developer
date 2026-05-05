@@ -1,0 +1,35 @@
+{
+  "autolens_version": "2026.5.1.4",
+  "type": "interferometer",
+  "configuration": {
+    "grid_shape": [
+      256,
+      256
+    ],
+    "pixel_scales": 0.1,
+    "n_visibilities": 100,
+    "transformer": "TransformerDFT"
+  },
+  "phases": {
+    "setup_grids": 0.0040222000000085245,
+    "setup_uv_wavelengths": 5.140000007486378e-05,
+    "setup_simulator": 8.400000069741509e-06,
+    "setup_galaxies": 8.279999997284904e-05,
+    "setup_tracer": 1.1000000085914508e-05,
+    "image_2d_eager": 4.647089400000141,
+    "image_2d_jit_lower": 0.4346694999999272,
+    "image_2d_jit_compile": 1.789310500000056,
+    "image_2d_jit_first_call": 0.2479155000000901,
+    "image_2d_jit_steady_x10": 2.4967865999999503,
+    "via_tracer_from": 1.0121437000000242,
+    "solver_build": 0.0003450000001521403,
+    "solver_solve_eager": 0.6463670000000548,
+    "output_fits": 0.009096199999930832,
+    "output_json": 0.0016358000000309403
+  },
+  "key_timings": {
+    "image_2d_eager_s": 4.647089400000141,
+    "via_tracer_from_s": 1.0121437000000242,
+    "solver_solve_eager_s": 0.6463670000000548
+  }
+}

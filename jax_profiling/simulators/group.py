@@ -1,0 +1,340 @@
+"""
+Simulator Profiling: Group-Scale Imaging
+==========================================
+
+Profiles `autolens_workspace/scripts/group/simulator.py` to pinpoint where
+time goes during simulation. Times the following phases:
+
+- Grid setup (250×250 @ 0.1"/px) with adaptive over-sampling at 3 centres
+- Galaxy construction: 1 main lens + 2 extra galaxies + source
+- Tracer construction
+- `tracer.image_2d_from` (eager + JIT; group-scale grid is large)
+- `simulator.via_tracer_from` (numpy convolution over 250×250)
+- `solver.solve` on 500×500 grid (eager + JIT; group-scale point solving is large)
+- FITS + JSON output (centres, positions, tracer)
+
+Run from any path:
+    python jax_profiling/simulators/group.py
+"""
+
+from autoconf import jax_wrapper  # noqa: F401 — must be first
+
+import json
+import time
+from contextlib import contextmanager
+from pathlib import Path
+
+import numpy as np
+import jax
+import jax.numpy as jnp
+import matplotlib
+
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt
+
+import autolens as al
+import autolens.plot as aplt
+
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+
+class Timer:
+    def __init__(self):
+        self.records: list[tuple[str, float]] = []
+
+    @contextmanager
+    def section(self, label: str):
+        start = time.perf_counter()
+        yield
+        elapsed = time.perf_counter() - start
+        self.records.append((label, elapsed))
+        print(f"  [{label}] {elapsed:.4f} s")
+
+    def summary(self):
+        print("\n" + "=" * 70)
+        print("PROFILING SUMMARY")
+        print("=" * 70)
+        max_label = max(len(r[0]) for r in self.records)
+        total = 0.0
+        for label, elapsed in self.records:
+            print(f"  {label:<{max_label}}  {elapsed:>10.4f} s")
+            total += elapsed
+        print("-" * 70)
+        print(f"  {'TOTAL':<{max_label}}  {total:>10.4f} s")
+        print("=" * 70)
+
+
+def block(x):
+    if hasattr(x, "block_until_ready"):
+        x.block_until_ready()
+    return x
+
+
+def jit_profile(func, label, *args, n_repeats=10):
+    jitted = jax.jit(func)
+
+    with timer.section(f"{label}_lower"):
+        lowered = jitted.lower(*args)
+
+    with timer.section(f"{label}_compile"):
+        compiled = lowered.compile()
+
+    with timer.section(f"{label}_first_call"):
+        result = compiled(*args)
+        block(result)
+
+    with timer.section(f"{label}_steady_x{n_repeats}"):
+        for _ in range(n_repeats):
+            result = compiled(*args)
+            block(result)
+
+    per_call = timer.records[-1][1] / n_repeats
+    print(f"    -> per-call avg: {per_call:.6f} s")
+    return compiled, result
+
+
+timer = Timer()
+
+_script_dir = Path(__file__).resolve().parent
+_workspace_root = _script_dir.parents[1]
+
+dataset_name = "simple"
+dataset_path = _workspace_root / "jax_profiling" / "dataset" / "group" / dataset_name
+dataset_path.mkdir(parents=True, exist_ok=True)
+
+main_lens_centres = [(0.0, 0.0)]
+extra_galaxies_centres = [(3.5, 2.5), (-4.4, -5.0)]
+
+
+# === PART 1 — Setup ===
+
+print("\n--- PART 1: Setup ---")
+
+with timer.section("setup_grids"):
+    grid = al.Grid2D.uniform(shape_native=(250, 250), pixel_scales=0.1)
+    over_sample_size = al.util.over_sample.over_sample_size_via_radial_bins_from(
+        grid=grid,
+        sub_size_list=[32, 8, 2],
+        radial_list=[0.3, 0.6],
+        centre_list=main_lens_centres + extra_galaxies_centres,
+    )
+    grid = grid.apply_over_sampling(over_sample_size=over_sample_size)
+
+with timer.section("setup_psf_simulator"):
+    psf = al.Convolver.from_gaussian(
+        shape_native=(11, 11), sigma=0.1, pixel_scales=grid.pixel_scales
+    )
+    simulator = al.SimulatorImaging(
+        exposure_time=300.0,
+        psf=psf,
+        background_sky_level=0.1,
+        add_poisson_noise_to_data=True,
+    )
+
+with timer.section("setup_galaxies"):
+    lens_0 = al.Galaxy(
+        redshift=0.5,
+        bulge=al.lp.SersicSph(
+            centre=(0.0, 0.0), intensity=0.7, effective_radius=2.0, sersic_index=4.0
+        ),
+        mass=al.mp.IsothermalSph(centre=(0.0, 0.0), einstein_radius=4.0),
+    )
+    extra_galaxy_0 = al.Galaxy(
+        redshift=0.5,
+        bulge=al.lp.SersicSph(
+            centre=(3.5, 2.5), intensity=0.9, effective_radius=0.8, sersic_index=3.0
+        ),
+        mass=al.mp.IsothermalSph(centre=(3.5, 2.5), einstein_radius=0.8),
+    )
+    extra_galaxy_1 = al.Galaxy(
+        redshift=0.5,
+        bulge=al.lp.SersicSph(
+            centre=(-4.4, -5.0), intensity=0.9, effective_radius=0.8, sersic_index=3.0
+        ),
+        mass=al.mp.IsothermalSph(centre=(-4.4, -5.0), einstein_radius=1.0),
+    )
+    source_galaxy = al.Galaxy(
+        redshift=1.0,
+        bulge=al.lp.SersicCore(
+            centre=(0.0, 0.1),
+            ell_comps=al.convert.ell_comps_from(axis_ratio=0.8, angle=60.0),
+            intensity=3.0,
+            effective_radius=0.4,
+            sersic_index=1.0,
+        ),
+    )
+
+with timer.section("setup_tracer"):
+    tracer = al.Tracer(
+        galaxies=[lens_0, extra_galaxy_0, extra_galaxy_1, source_galaxy]
+    )
+
+
+# === PART 2 — image_2d_from: eager + JIT ===
+
+print("\n--- PART 2: tracer.image_2d_from (eager + JIT) ---")
+
+with timer.section("image_2d_eager"):
+    image_eager = tracer.image_2d_from(grid=grid)
+
+def _image_fn(grid_array):
+    return tracer.image_2d_from(grid=grid, xp=jnp).array
+
+jnp_grid = jnp.asarray(grid.array)
+_, image_jit = jit_profile(_image_fn, "image_2d_jit", jnp_grid)
+
+np.testing.assert_allclose(
+    np.asarray(image_eager.array), np.asarray(image_jit), rtol=1e-4,
+    err_msg="group: eager vs JIT image_2d_from mismatch",
+)
+print("  eager ≡ JIT assertion PASSED")
+
+
+# === PART 3 — via_tracer_from ===
+
+print("\n--- PART 3: simulator.via_tracer_from ---")
+
+np.random.seed(1)
+with timer.section("via_tracer_from"):
+    dataset = simulator.via_tracer_from(tracer=tracer, grid=grid)
+
+
+# === PART 4 — solver.solve on 500×500 grid ===
+
+print("\n--- PART 4: solver.solve on 500×500 grid (eager + JIT) ---")
+
+with timer.section("solver_build"):
+    solver_grid = al.Grid2D.uniform(shape_native=(500, 500), pixel_scales=0.1)
+    solver = al.PointSolver.for_grid(
+        grid=solver_grid, pixel_scale_precision=0.001, magnification_threshold=0.01
+    )
+
+with timer.section("solver_solve_eager"):
+    positions = solver.solve(
+        tracer=tracer, source_plane_coordinate=source_galaxy.bulge.centre
+    )
+
+print(f"  Found {len(positions)} image positions (eager)")
+
+# Close over `tracer` so it does not cross the JIT boundary — avoids needing
+# pytree registration for a one-tracer profiler.
+@jax.jit
+def jitted_solve(coord):
+    return solver.solve(
+        tracer=tracer,
+        source_plane_coordinate=coord,
+        xp=jnp,
+        remove_infinities=False,
+    ).array
+
+src_coord = jnp.asarray(source_galaxy.bulge.centre)
+_, raw_jit = jit_profile(jitted_solve, "solver_jit", src_coord, n_repeats=5)
+
+raw_np = np.asarray(raw_jit)
+finite_mask = ~(np.isinf(raw_np).any(axis=1) | np.isnan(raw_np).any(axis=1))
+positions_jit = al.Grid2DIrregular(raw_np[finite_mask])
+print(f"  Found {len(positions_jit)} image positions (JIT, after inf-strip)")
+
+np.testing.assert_allclose(
+    np.sort(np.asarray(positions), axis=0),
+    np.sort(np.asarray(positions_jit), axis=0),
+    rtol=1e-4,
+    err_msg="group: eager vs JIT solver.solve positions mismatch",
+)
+print("  eager ≡ JIT solver assertion PASSED")
+
+
+# === PART 5 — outputs ===
+
+print("\n--- PART 5: outputs ---")
+
+with timer.section("output_fits"):
+    aplt.fits_imaging(
+        dataset=dataset,
+        data_path=dataset_path / "data.fits",
+        psf_path=dataset_path / "psf.fits",
+        noise_map_path=dataset_path / "noise_map.fits",
+        overwrite=True,
+    )
+
+with timer.section("output_json"):
+    al.output_to_json(obj=tracer, file_path=dataset_path / "tracer.json")
+    al.output_to_json(
+        obj=al.Grid2DIrregular(main_lens_centres),
+        file_path=dataset_path / "main_lens_centres.json",
+    )
+    al.output_to_json(
+        obj=al.Grid2DIrregular(extra_galaxies_centres),
+        file_path=dataset_path / "extra_galaxies_centres.json",
+    )
+    al.output_to_json(obj=positions, file_path=dataset_path / "positions.json")
+
+
+# === Summary ===
+
+al_version = al.__version__
+results_dir = _workspace_root / "jax_profiling" / "results" / "simulators"
+results_dir.mkdir(parents=True, exist_ok=True)
+
+phases = dict(timer.records)
+
+results_summary = {
+    "autolens_version": al_version,
+    "type": "group",
+    "configuration": {
+        "imaging_grid_shape": [250, 250],
+        "solver_grid_shape": [500, 500],
+        "pixel_scales": 0.1,
+        "n_lens_galaxies": 1,
+        "n_extra_galaxies": 2,
+        "over_sample_centres": main_lens_centres + extra_galaxies_centres,
+    },
+    "phases": phases,
+    "key_timings": {
+        "image_2d_eager_s": phases.get("image_2d_eager"),
+        "via_tracer_from_s": phases.get("via_tracer_from"),
+        "solver_solve_eager_s": phases.get("solver_solve_eager"),
+        "n_positions_found": len(positions),
+    },
+}
+
+json_path = results_dir / f"group_summary_v{al_version}.json"
+json_path.write_text(json.dumps(results_summary, indent=2))
+print(f"\n  Results saved to: {json_path}")
+
+labels = [r[0] for r in timer.records]
+times = [r[1] for r in timer.records]
+colors = plt.cm.tab20.colors[: len(labels)]
+
+fig, ax = plt.subplots(figsize=(12, max(4.0, len(labels) * 0.45)))
+y_pos = range(len(labels))
+bars = ax.barh(y_pos, times, color=colors, edgecolor="white", height=0.6)
+for bar, t in zip(bars, times):
+    ax.text(
+        bar.get_width() + max(times) * 0.01,
+        bar.get_y() + bar.get_height() / 2,
+        f"{t:.4f} s",
+        va="center",
+        fontsize=8,
+    )
+ax.set_yticks(y_pos)
+ax.set_yticklabels(labels, fontsize=9)
+ax.invert_yaxis()
+ax.set_xlabel("Time (s)", fontsize=11)
+fig.suptitle("Simulator Profiling: Group Scale", fontsize=12, fontweight="bold")
+ax.set_title(
+    f"AutoLens v{al_version}  |  250×250 imaging / 500×500 solver  |  "
+    f"3 over-sample centres",
+    fontsize=9,
+)
+ax.margins(x=0.22)
+fig.tight_layout()
+chart_path = results_dir / f"group_summary_v{al_version}.png"
+fig.savefig(chart_path, dpi=150)
+plt.close(fig)
+print(f"  Bar chart saved to: {chart_path}")
+
+timer.summary()
