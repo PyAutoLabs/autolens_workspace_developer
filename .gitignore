@@ -11,3 +11,17 @@ scripts/scripts/
 output_path/
 *.log
 .codex/
+
+# Auto-simulated outputs from jax_profiling/simulators/<type>.py — regenerated
+# by running the profiler; not committed. The pre-existing datasets used by
+# jit/ and gradient/ profilers (e.g. imaging/hst, interferometer/sma) remain
+# tracked and are NOT covered by these rules.
+jax_profiling/dataset/cluster/
+jax_profiling/dataset/group/
+jax_profiling/dataset/multi/
+jax_profiling/dataset/imaging/simple/
+jax_profiling/dataset/interferometer/simple/
+jax_profiling/dataset/point_source/simple/data.fits
+jax_profiling/dataset/point_source/simple/noise_map.fits
+jax_profiling/dataset/point_source/simple/psf.fits
+jax_profiling/dataset/point_source/simple/point_dataset_positions_only.csv
