@@ -103,19 +103,21 @@ def simulate(name: str = "simple"):
         tracer=tracer, source_plane_coordinate=source_galaxy.point_0.centre
     )
 
-    # Seeded Gaussian noise injection — pixel-scale sigma matches the
-    # canonical workspace simulator at autolens_workspace/scripts/point_source/simulator.py
-    # but uses np.random.default_rng so reruns are bit-identical.
+    # Seeded Gaussian noise injection — sigma matches the canonical workspace simulator
+    # at autolens_workspace/scripts/point_source/simulator.py (5 mas, HST PSF-centroiding
+    # precision, *not* the imaging pixel scale). Uses np.random.default_rng so reruns
+    # are bit-identical.
+    position_noise = 0.005
     rng = np.random.default_rng(seed=config["noise_seed"])
     positions_with_noise = positions + rng.normal(
-        loc=0.0, scale=grid.pixel_scale, size=positions.shape
+        loc=0.0, scale=position_noise, size=positions.shape
     )
     positions_with_noise = al.Grid2DIrregular(values=positions_with_noise)
 
     dataset = al.PointDataset(
         name="point_0",
         positions=positions_with_noise,
-        positions_noise_map=grid.pixel_scale,
+        positions_noise_map=position_noise,
     )
 
     al.output_to_json(
