@@ -342,12 +342,14 @@ with timer.section("output_fits"):
     )
 
 with timer.section("output_point_datasets"):
+    # Position noise = 5 mas (HST PSF-centroiding precision), not the imaging pixel scale.
+    position_noise = 0.005
     dataset_list = []
     for i, positions in enumerate(positions_list):
         ds = al.PointDataset(
             name=f"point_{i}",
             positions=positions,
-            positions_noise_map=imaging_grid.pixel_scale,
+            positions_noise_map=position_noise,
             redshift=source_redshifts[i],
         )
         dataset_list.append(ds)

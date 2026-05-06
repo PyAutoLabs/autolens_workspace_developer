@@ -222,14 +222,16 @@ with timer.section("via_tracer_from"):
 print("\n--- PART 6: outputs ---")
 
 with timer.section("output_point_datasets"):
+    # Position noise = 5 mas (HST PSF-centroiding precision), not the imaging pixel scale.
+    position_noise = 0.005
     positions_with_noise = positions + np.random.normal(
-        loc=0.0, scale=grid.pixel_scale, size=positions.shape
+        loc=0.0, scale=position_noise, size=positions.shape
     )
     positions_with_noise = al.Grid2DIrregular(values=positions_with_noise)
     dataset = al.PointDataset(
         name="point_0",
         positions=positions_with_noise,
-        positions_noise_map=grid.pixel_scale,
+        positions_noise_map=position_noise,
     )
     al.output_to_json(
         obj=dataset,
