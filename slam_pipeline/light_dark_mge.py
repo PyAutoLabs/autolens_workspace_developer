@@ -35,7 +35,6 @@ def fit():
     # print(f"Working Directory has been set to `{workspace_path}`")
 
     import os
-    from os import path
     from pathlib import Path
 
     import autofit as af
@@ -49,12 +48,12 @@ def fit():
     Load the `Imaging` data, define the `Mask2D` and plot them.
     """
     dataset_name = "with_lens_light"
-    dataset_path = path.join("dataset", "imaging", dataset_name)
+    dataset_path = Path("dataset") / "imaging" / dataset_name
 
     dataset = al.Imaging.from_fits(
-        data_path=path.join(dataset_path, "data.fits"),
-        noise_map_path=path.join(dataset_path, "noise_map.fits"),
-        psf_path=path.join(dataset_path, "psf.fits"),
+        data_path=Path(dataset_path) / "data.fits",
+        noise_map_path=Path(dataset_path) / "noise_map.fits",
+        psf_path=Path(dataset_path) / "psf.fits",
         pixel_scales=0.2,
     )
 

@@ -15,10 +15,10 @@ If any code in this script is unclear, refer to the `plot/start_here.ipynb` note
 # %cd $workspace_path
 # print(f"Working Directory has been set to `{workspace_path}`")
 
-from os import path
 import numpy as np
 import autolens as al
 import autolens.plot as aplt
+from pathlib import Path
 
 """
 __Dataset__
@@ -27,16 +27,16 @@ First, lets load example interferometer of of a strong lens as an `Interferomete
 """
 dataset_type = "interferometer"
 dataset_name = "orientation"
-dataset_path = path.join("dataset", dataset_type, dataset_name)
+dataset_path = Path("dataset") / dataset_type / dataset_name
 
 real_space_mask = al.Mask2D.circular(
     shape_native=(800, 800), pixel_scales=0.05, radius=4.0, centre=(0.5, 0.5)
 )
 
 dataset = al.Interferometer.from_fits(
-    data_path=path.join(dataset_path, "data.fits"),
-    noise_map_path=path.join(dataset_path, "noise_map.fits"),
-    uv_wavelengths_path=path.join(dataset_path, "uv_wavelengths.fits"),
+    data_path=Path(dataset_path) / "data.fits",
+    noise_map_path=Path(dataset_path) / "noise_map.fits",
+    uv_wavelengths_path=Path(dataset_path) / "uv_wavelengths.fits",
     real_space_mask=real_space_mask,
     transformer_class=al.TransformerNUFFT,
 )
@@ -73,7 +73,7 @@ fit = al.FitInterferometer(dataset=dataset, tracer=tracer)
 __Output__
 """
 output = aplt.Output(
-    path=path.join("plot", "interferometer", "orientation", "plots", "pix_delaunay"),
+    path=Path("plot") / "interferometer" / "orientation" / "plots" / "pix_delaunay",
     format="png",
 )
 

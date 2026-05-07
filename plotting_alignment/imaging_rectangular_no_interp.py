@@ -34,7 +34,6 @@ from pathlib import Path
 import numpy as np
 import jax
 from jax import grad
-from os import path
 
 import autofit as af
 import autolens as al
@@ -78,9 +77,9 @@ Load the dataset for this instrument / resolution.
 dataset_path = Path("dataset", "imaging", dataset_type, dataset_name)
 
 dataset = al.Imaging.from_fits(
-    data_path=path.join(dataset_path, "data.fits"),
-    psf_path=path.join(dataset_path, "psf.fits"),
-    noise_map_path=path.join(dataset_path, "noise_map.fits"),
+    data_path=Path(dataset_path) / "data.fits",
+    psf_path=Path(dataset_path) / "psf.fits",
+    noise_map_path=Path(dataset_path) / "noise_map.fits",
     pixel_scales=pixel_scale,
     over_sample_size_lp=sub_size,
     over_sample_size_pixelization=sub_size,
@@ -244,7 +243,7 @@ Output an image of the fit, so that we can inspect that it fits the data as expe
 import autolens.plot as aplt
 import os
 
-file_path = os.path.join(al.__version__)
+file_path = Path(al.__version__)
 
 instance = model.instance_from_prior_medians()
 

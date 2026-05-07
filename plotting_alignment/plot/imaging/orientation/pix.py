@@ -15,9 +15,9 @@ If any code in this script is unclear, refer to the `plot/start_here.ipynb` note
 # %cd $workspace_path
 # print(f"Working Directory has been set to `{workspace_path}`")
 
-from os import path
 import autolens as al
 import autolens.plot as aplt
+from pathlib import Path
 
 """
 __Dataset__
@@ -26,12 +26,12 @@ First, lets load example imaging of of a strong lens as an `Imaging` object.
 """
 dataset_type = "imaging"
 dataset_name = "orientation"
-dataset_path = path.join("dataset", dataset_type, dataset_name)
+dataset_path = Path("dataset") / dataset_type / dataset_name
 
 dataset = al.Imaging.from_fits(
-    data_path=path.join(dataset_path, "data.fits"),
-    psf_path=path.join(dataset_path, "psf.fits"),
-    noise_map_path=path.join(dataset_path, "noise_map.fits"),
+    data_path=Path(dataset_path) / "data.fits",
+    psf_path=Path(dataset_path) / "psf.fits",
+    noise_map_path=Path(dataset_path) / "noise_map.fits",
     pixel_scales=0.1,
 )
 
@@ -76,7 +76,7 @@ fit = al.FitImaging(dataset=dataset, tracer=tracer)
 __Output__
 """
 output = aplt.Output(
-    path=path.join("plot", "imaging", "orientation", "plots", "pix_delaunay"),
+    path=Path("plot") / "imaging" / "orientation" / "plots" / "pix_delaunay",
     format="png",
 )
 
