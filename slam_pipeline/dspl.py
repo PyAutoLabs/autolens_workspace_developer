@@ -35,7 +35,6 @@ def fit():
     # print(f"Working Directory has been set to `{workspace_path}`")
 
     import os
-    from os import path
 
     import autofit as af
     import autolens as al
@@ -48,12 +47,12 @@ def fit():
     Load the `Imaging` data, define the `Mask2D` and plot them.
     """
     dataset_name = "with_lens_light"
-    dataset_path = path.join("dataset", "imaging", dataset_name)
+    dataset_path = Path("dataset") / "imaging" / dataset_name
 
     dataset = al.Imaging.from_fits(
-        data_path=path.join(dataset_path, "data.fits"),
-        noise_map_path=path.join(dataset_path, "noise_map.fits"),
-        psf_path=path.join(dataset_path, "psf.fits"),
+        data_path=Path(dataset_path) / "data.fits",
+        noise_map_path=Path(dataset_path) / "noise_map.fits",
+        psf_path=Path(dataset_path) / "psf.fits",
         pixel_scales=0.2,
     )
 
@@ -75,7 +74,7 @@ def fit():
     The settings of autofit, which controls the output paths, parallelization, database use, etc.
     """
     settings_search = af.SettingsSearch(
-        path_prefix=path.join("slam", "source_pix", "mass_total", "base"),
+        path_prefix=Path("slam") / "source_pix" / "mass_total" / "base",
         number_of_cores=1,
         session=None,
     )
@@ -85,6 +84,7 @@ def fit():
     
     The redshifts of the lens and source galaxies, which are used to perform unit converions of the model and data (e.g. 
     from arc-seconds to kiloparsecs, masses to solar masses, etc.).
+from pathlib import Path
     """
     redshift_lens = 0.5
     redshift_source = 1.0
