@@ -19,6 +19,7 @@ from pathlib import Path
 
 import numpy as np
 
+from searches_minimal._metrics import MLTracker
 from searches_minimal._setup import (
     build_analysis,
     build_dataset,
@@ -36,6 +37,7 @@ from scipy import optimize
 
 
 n_likelihood_calls = 0
+tracker = MLTracker()
 
 
 def chi_squared_from_unit(unit_vector):
@@ -45,6 +47,7 @@ def chi_squared_from_unit(unit_vector):
     physical = model.vector_from_unit_vector(list(unit_vector))
     instance = model.instance_from_vector(vector=physical)
     log_like = float(analysis.log_likelihood_function(instance=instance))
+    tracker.record(log_like)
     return -2.0 * log_like
 
 
@@ -60,13 +63,15 @@ result = optimize.minimize(
     x0=x0,
     method="L-BFGS-B",
     bounds=bounds,
-    options={"maxiter": 5, "disp": True},
+    options={"disp": True},
 )
 t_elapsed = time.time() - t_start
 
 best_physical = model.vector_from_unit_vector(list(result.x))
 best_instance = model.instance_from_vector(vector=best_physical)
 max_logl = -0.5 * float(result.fun)
+
+evals_to_ml, time_to_ml = tracker.finalise(max_log_l=max_logl, tolerance=1.0)
 
 summary = f"""\
 --- L-BFGS-B Results ---
@@ -81,7 +86,12 @@ Likelihood evals:    {int(result.nfev)}     (gradient evals: {int(result.njev)},
 Time per eval:       {t_elapsed / max(int(result.nfev), 1) * 1e3:.3f} ms
 ESS:                 n/a (point optimiser)
 Posterior samples:   n/a (point optimiser)
-Sampler config:      maxiter=5, bounds=[(0, 1)] * ndim (smoke test)
+Sampler config:      bounds=[(0, 1)] * ndim, scipy default tolerance
+
+--- Convergence ---
+Converged:           {bool(result.success)} ({result.message if hasattr(result, 'message') else 'see scipy output'})
+Evals to ML:         {evals_to_ml if evals_to_ml is not None else 'n/a'}     (first eval within 1 nat of max log L)
+Time to ML:          {f'{time_to_ml:.2f} s' if time_to_ml is not None else 'n/a'}
 """
 
 print()

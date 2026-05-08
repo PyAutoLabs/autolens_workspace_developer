@@ -48,7 +48,10 @@ def log_prior(params):
 
 
 ndim = model.prior_count
-n_live = 30
+n_live = 200
+num_mcmc_steps = 5
+num_delete = 10
+termination = -3
 rng_key = jax.random.PRNGKey(42)
 rng_key, init_key = jax.random.split(rng_key)
 
@@ -65,15 +68,17 @@ print(f"  n_live={n_live}, n_dim={ndim}")
 print("  JIT compilation will happen on first step (can take a while)\n")
 
 t_start = time.time()
-# ``termination`` is large so this is a smoke test — drop it for a real run.
+# Production-realistic: termination=-3 (delta-logZ ~< 1e-3). The pure-JAX
+# path runs ~10x faster per evaluation than the callback path, so a
+# converged run finishes in tens of minutes for this problem.
 final_state, results = run_nested_sampling(
     rng_key,
     loglikelihood_fn=log_likelihood,
     prior_logprob=log_prior,
-    num_mcmc_steps=2,
+    num_mcmc_steps=num_mcmc_steps,
     initial_samples=initial_samples,
-    num_delete=5,
-    termination=1e5,
+    num_delete=num_delete,
+    termination=termination,
 )
 t_elapsed = time.time() - t_start
 
@@ -99,7 +104,12 @@ Likelihood evals:    {n_evals}
 Time per eval:       {float(results.time) / max(n_evals, 1) * 1e3:.3f} ms
 ESS:                 {float(results.ess):.1f}
 Posterior samples:   {len(positions)}
-Sampler config:      n_live={n_live}, num_mcmc_steps=2, num_delete=5, termination=1e5 (smoke test)
+Sampler config:      n_live={n_live}, num_mcmc_steps={num_mcmc_steps}, num_delete={num_delete}, termination={termination}
+
+--- Convergence ---
+Converged:           yes (NSS termination={termination})
+Evals to ML:         n/a (pure JAX path; intermediate evals not exposed without host callback)
+Time to ML:          n/a
 """
 
 print()

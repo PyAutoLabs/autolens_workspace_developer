@@ -17,6 +17,7 @@ from pathlib import Path
 
 import numpy as np
 
+from searches_minimal._metrics import MLTracker
 from searches_minimal._setup import (
     build_analysis,
     build_dataset,
@@ -39,32 +40,40 @@ def prior_transform(cube):
 
 
 n_likelihood_calls = 0
+tracker = MLTracker()
 
 
 def log_likelihood(params):
     global n_likelihood_calls
     n_likelihood_calls += 1
     instance = model.instance_from_vector(vector=list(params))
-    return float(analysis.log_likelihood_function(instance=instance))
+    log_l = float(analysis.log_likelihood_function(instance=instance))
+    tracker.record(log_l)
+    return log_l
 
+
+n_live = 200
 
 sampler = Sampler(
     prior=prior_transform,
     likelihood=log_likelihood,
     n_dim=model.prior_count,
-    n_live=50,
+    n_live=n_live,
 )
 
 t_start = time.time()
-# n_like_max caps total likelihood evaluations — keeps this a smoke test.
-# Crank up for a real posterior (e.g. n_eff=200, n_like_max=None).
-sampler.run(verbose=True, f_live=1.0, n_eff=30, n_like_max=100)
+# Run to Nautilus's default convergence (n_eff=10000, f_live=0.01). This
+# may take many thousands of likelihood evaluations against the NumPy MGE
+# -- expect long wall times.
+sampler.run(verbose=True)
 t_elapsed = time.time() - t_start
 
 points, log_w, log_l = sampler.posterior()
 best_idx = np.argmax(log_l)
 best_instance = model.instance_from_vector(vector=list(points[best_idx]))
 max_logl = float(np.max(log_l))
+
+evals_to_ml, time_to_ml = tracker.finalise(max_log_l=max_logl, tolerance=1.0)
 
 summary = f"""\
 --- Nautilus (NumPy) Results ---
@@ -79,7 +88,12 @@ Likelihood evals:    {n_likelihood_calls}
 Time per eval:       {t_elapsed / max(n_likelihood_calls, 1) * 1e3:.3f} ms
 ESS:                 {float(sampler.n_eff):.1f}
 Posterior samples:   {len(points)}
-Sampler config:      n_live=50, n_eff=30, n_like_max=100 (smoke test)
+Sampler config:      n_live={n_live}, default n_eff=10000, f_live=0.01
+
+--- Convergence ---
+Converged:           yes (Nautilus default n_eff / f_live)
+Evals to ML:         {evals_to_ml if evals_to_ml is not None else 'n/a'}     (first eval within 1 nat of max log L)
+Time to ML:          {f'{time_to_ml:.2f} s' if time_to_ml is not None else 'n/a'}
 """
 
 print()

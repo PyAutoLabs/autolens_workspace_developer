@@ -17,6 +17,7 @@ from pathlib import Path
 
 import numpy as np
 
+from searches_minimal._metrics import MLTracker
 from searches_minimal._setup import (
     build_analysis,
     build_dataset,
@@ -38,24 +39,29 @@ def prior_transform(cube):
 
 
 n_likelihood_calls = 0
+tracker = MLTracker()
 
 
 def log_likelihood(params):
     global n_likelihood_calls
     n_likelihood_calls += 1
     instance = model.instance_from_vector(vector=list(params))
-    return float(analysis.log_likelihood_function(instance=instance))
+    log_l = float(analysis.log_likelihood_function(instance=instance))
+    tracker.record(log_l)
+    return log_l
 
+
+nlive = 200
 
 sampler = NestedSampler(
     loglikelihood=log_likelihood,
     prior_transform=prior_transform,
     ndim=model.prior_count,
-    nlive=30,
+    nlive=nlive,
 )
 
 t_start = time.time()
-sampler.run_nested(print_progress=True, maxiter=30)
+sampler.run_nested(print_progress=True)
 t_elapsed = time.time() - t_start
 
 results = sampler.results
@@ -68,6 +74,8 @@ log_z = float(results.logz[-1])
 weights = np.exp(results.logwt - log_z)
 weights_sum_sq = float(np.sum(weights**2))
 ess = 1.0 / weights_sum_sq if weights_sum_sq > 0 else 0.0
+
+evals_to_ml, time_to_ml = tracker.finalise(max_log_l=max_logl, tolerance=1.0)
 
 summary = f"""\
 --- Dynesty Results ---
@@ -82,7 +90,12 @@ Likelihood evals:    {n_likelihood_calls}
 Time per eval:       {t_elapsed / max(n_likelihood_calls, 1) * 1e3:.3f} ms
 ESS:                 {ess:.1f}
 Posterior samples:   {len(results.samples)}
-Sampler config:      nlive=30, maxiter=30 (smoke test)
+Sampler config:      nlive={nlive}, default dlogz termination
+
+--- Convergence ---
+Converged:           yes (Dynesty default dlogz)
+Evals to ML:         {evals_to_ml if evals_to_ml is not None else 'n/a'}     (first eval within 1 nat of max log L)
+Time to ML:          {f'{time_to_ml:.2f} s' if time_to_ml is not None else 'n/a'}
 """
 
 print()

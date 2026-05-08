@@ -26,8 +26,8 @@ import autofit as af
 import autolens as al
 
 _WORKSPACE_ROOT = Path(__file__).resolve().parent.parent
-_DATASET_SUBPATH = Path("jax_profiling") / "imaging" / "dataset" / "imaging" / "hst"
-_SIMULATOR = _WORKSPACE_ROOT / "jax_profiling" / "imaging" / "simulators" / "imaging.py"
+_DATASET_SUBPATH = Path("jax_profiling") / "dataset" / "imaging" / "hst"
+_SIMULATOR = _WORKSPACE_ROOT / "jax_profiling" / "simulators" / "imaging.py"
 
 PIXEL_SCALE = 0.05
 MASK_RADIUS = 3.5

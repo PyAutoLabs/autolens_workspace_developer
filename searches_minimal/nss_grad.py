@@ -47,10 +47,15 @@ def log_prior(params):
 
 
 ndim = model.prior_count
-# Small live count + max_steps=1 keeps this a smoke test; every SMC step
-# triggers n_live * hmc_trajectory_length gradient evaluations of the MGE
-# likelihood, which is expensive even after JIT.
-n_live = 8
+# Production-realistic: n_live=50 is at the upper end of what fits inside
+# a 2-hour wall-clock budget for the gradient path -- jax.grad through the
+# MGE inversion has a heavy JIT compile cost (>20 min) and each step
+# triggers n_live * hmc_trajectory_length gradient evaluations.
+n_live = 50
+num_mcmc_steps = 3
+hmc_trajectory_length = 5
+target_ess = 0.9
+warmup_steps = 100
 
 rng_key = jax.random.PRNGKey(42)
 rng_key, init_key = jax.random.split(rng_key)
@@ -70,19 +75,18 @@ print(f"  n_live={n_live}, n_dim={ndim}")
 print("  JIT compilation will happen on first step (can take a while)", flush=True)
 
 t_start = time.time()
-# ``max_steps=1`` stops after a single SMC annealing step so this is a
-# smoke test of the HMC + grad path, not a converged run. Drop ``max_steps``
-# and raise ``n_live`` / ``warmup_steps`` for a real posterior.
+# Run SMC to its native convergence (lambda=1.0 reached via target_ess
+# annealing schedule). Drop ``max_steps`` so the sampler decides when it
+# has annealed all the way to the target distribution.
 smc_state, results = run_hmc_sequential_mc(
     rng_key,
     loglikelihood_fn=log_likelihood,
     prior_logprob=log_prior,
-    num_mcmc_steps=1,
+    num_mcmc_steps=num_mcmc_steps,
     initial_samples=initial_samples,
-    hmc_trajectory_length=2,
-    target_ess=0.9,
-    warmup_steps=2,
-    max_steps=1,
+    hmc_trajectory_length=hmc_trajectory_length,
+    target_ess=target_ess,
+    warmup_steps=warmup_steps,
 )
 t_elapsed = time.time() - t_start
 
@@ -104,7 +108,12 @@ Likelihood evals:    {n_evals}     (each = likelihood + gradient via jax.grad)
 Time per eval:       {float(results.time) / max(n_evals, 1) * 1e3:.3f} ms
 ESS:                 {float(results.ess):.1f}
 Posterior samples:   {len(smc_state.particles)}
-Sampler config:      n_live={n_live}, num_mcmc_steps=1, hmc_trajectory_length=2, warmup_steps=2, max_steps=1 (smoke test)
+Sampler config:      n_live={n_live}, num_mcmc_steps={num_mcmc_steps}, hmc_trajectory_length={hmc_trajectory_length}, target_ess={target_ess}, warmup_steps={warmup_steps}
+
+--- Convergence ---
+Converged:           yes (HMC SMC reaches lambda=1.0 via target_ess={target_ess})
+Evals to ML:         n/a (pure JAX path; intermediate evals not exposed without host callback)
+Time to ML:          n/a
 """
 
 print()
