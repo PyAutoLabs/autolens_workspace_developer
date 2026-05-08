@@ -25,3 +25,6 @@ jax_profiling/dataset/point_source/simple/data.fits
 jax_profiling/dataset/point_source/simple/noise_map.fits
 jax_profiling/dataset/point_source/simple/psf.fits
 jax_profiling/dataset/point_source/simple/point_dataset_positions_only.csv
+
+# Auto-simulated datacube outputs from datacube simulator — regenerated each run
+dataset/datacube/sim_*/
