@@ -8,8 +8,10 @@ MGE likelihood by wrapping PyAutoLens's NumPy ``AnalysisImaging`` with
 Python once per callback — but it works with any existing NumPy likelihood
 without requiring JAX-traceable code.
 
-``n_live`` is kept small because every likelihood call round-trips through
-Python. See ``nss_jit.py`` for the fast, pure-JAX version.
+Per-call cost is dominated by the NumPy MGE evaluation (~1-2 s on this
+problem), so converged runs at production ``n_live`` may exceed an hour.
+See ``nss_jit.py`` for the fast, pure-JAX version that runs roughly an
+order of magnitude faster per evaluation.
 
 Requirements:
     pip install git+https://github.com/yallup/nss.git
@@ -21,9 +23,9 @@ from pathlib import Path
 import numpy as np
 import jax
 import jax.numpy as jnp
-import blackjax
-from nss.ns import Results, finalise, log_weights, safe_ess
+from nss.ns import run_nested_sampling
 
+from searches_minimal._metrics import MLTracker
 from searches_minimal._setup import (
     build_analysis,
     build_dataset,
@@ -38,13 +40,16 @@ analysis = build_analysis(dataset, use_jax=False)
 print(f"Model free parameters: {model.total_free_parameters}")
 
 n_likelihood_calls = 0
+tracker = MLTracker()
 
 
 def numpy_log_likelihood(params_np):
     global n_likelihood_calls
     n_likelihood_calls += 1
     instance = model.instance_from_vector(vector=params_np.tolist())
-    return np.float64(analysis.log_likelihood_function(instance=instance))
+    log_l = float(analysis.log_likelihood_function(instance=instance))
+    tracker.record(log_l)
+    return np.float64(log_l)
 
 
 def numpy_log_prior(params_np):
@@ -71,7 +76,10 @@ def log_prior(params):
 
 
 ndim = model.prior_count
-n_live = 8
+n_live = 200
+num_mcmc_steps = 5
+num_delete = 1
+termination = -3
 rng_key = jax.random.PRNGKey(42)
 rng_key, init_key = jax.random.split(rng_key)
 
@@ -90,52 +98,15 @@ print(f"Running NSS (autofit NumPy likelihood via pure_callback)...")
 print(f"  n_live={n_live}, n_dim={ndim}")
 print(f"  Using jax.pure_callback for NumPy likelihood", flush=True)
 
-# Mirror ``nss.ns.run_nested_sampling`` but with a ``max_steps`` guard so
-# this terminates in bounded time. Every NSS step has to round-trip through
-# Python once per slice-sample shrink, so even a single iteration takes a
-# while; a real run would use the upstream function without ``max_steps``.
-num_mcmc_steps = 1
-num_delete = 4
-max_steps = 1
-
 t_start = time.time()
-algo = blackjax.nss(
-    logprior_fn=log_prior,
+final_state, results = run_nested_sampling(
+    rng_key,
     loglikelihood_fn=log_likelihood,
+    prior_logprob=log_prior,
+    num_mcmc_steps=num_mcmc_steps,
+    initial_samples=initial_samples,
     num_delete=num_delete,
-    num_inner_steps=num_mcmc_steps,
-)
-state = algo.init(initial_samples)
-
-
-@jax.jit
-def one_step(carry, _):
-    state, k = carry
-    k, subk = jax.random.split(k, 2)
-    state, dead_point = algo.step(subk, state)
-    return (state, k), dead_point
-
-
-rng_key, sample_key = jax.random.split(rng_key)
-# Warmup JIT and block until compiled.
-(_, rng_key), _ = jax.block_until_ready(one_step((state, sample_key), None))
-
-dead = []
-for _ in range(max_steps):
-    (state, rng_key), dead_info = one_step((state, rng_key), None)
-    dead.append(dead_info)
-
-final_state = finalise(state, dead)
-logw = log_weights(rng_key, final_state)
-minimum = jnp.nan_to_num(logw).min()
-logzs = jax.scipy.special.logsumexp(jnp.nan_to_num(logw, nan=minimum), axis=0)
-results = Results(
-    name="NSS",
-    time=time.time() - t_start,
-    evals=int(final_state.update_info.num_steps.sum()
-              + final_state.update_info.num_shrink.sum()),
-    ess=int(safe_ess(logw.mean(axis=-1))),
-    logZs=logzs,
+    termination=termination,
 )
 t_elapsed = time.time() - t_start
 
@@ -145,6 +116,7 @@ log_likelihoods = final_state.particles.loglikelihood
 best_idx = int(jnp.argmax(log_likelihoods))
 best_instance = model.instance_from_vector(vector=np.asarray(positions[best_idx]).tolist())
 max_logl = float(jnp.max(log_likelihoods))
+evals_to_ml, time_to_ml = tracker.finalise(max_log_l=max_logl, tolerance=1.0)
 
 summary = f"""\
 --- NSS (pure_callback) Results ---
@@ -157,9 +129,14 @@ Wall time:           {t_elapsed:.2f} s     (includes JIT compile)
 Sampling time:       {float(results.time):.2f} s
 Likelihood evals:    {n_likelihood_calls}
 Time per eval:       {t_elapsed / max(n_likelihood_calls, 1) * 1e3:.3f} ms
-ESS:                 {int(results.ess)}
+ESS:                 {float(results.ess):.1f}
 Posterior samples:   {len(positions)}
-Sampler config:      n_live={n_live}, num_mcmc_steps={num_mcmc_steps}, num_delete={num_delete}, max_steps={max_steps} (smoke test)
+Sampler config:      n_live={n_live}, num_mcmc_steps={num_mcmc_steps}, num_delete={num_delete}, termination={termination}
+
+--- Convergence ---
+Converged:           yes (NSS termination={termination})
+Evals to ML:         {evals_to_ml if evals_to_ml is not None else 'n/a'}     (first eval within 1 nat of max log L)
+Time to ML:          {f'{time_to_ml:.2f} s' if time_to_ml is not None else 'n/a'}
 """
 
 print()
