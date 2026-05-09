@@ -1,0 +1,35 @@
+{
+  "config_name": "local_gpu_mp_pre_fix",
+  "use_mixed_precision": true,
+  "autolens_version": "unknown",
+  "instrument": "hst",
+  "configuration": {},
+  "device": {
+    "backend": "gpu",
+    "device": "gpu",
+    "note": "pre-fix"
+  },
+  "log_likelihood": {
+    "full_pipeline_jit": 27379.388786576535
+  },
+  "steps": {
+    "Ray-trace grids": 0.003323,
+    "Mapping matrix": 0.019839,
+    "Blurred mapping matrix": 0.030131,
+    "Data vector (D)": 0.000418,
+    "Curvature matrix (F)": 0.002084,
+    "Reconstruction (NNLS)": 0.035798,
+    "Mapped reconstructed image": 0.000405,
+    "Chi-squared & log likelihood": 0.000414
+  },
+  "total_step_by_step": 0.09241200000000001,
+  "full_pipeline_per_call": 0.046966,
+  "vmap": {
+    "batch_size": 3,
+    "per_call": 0.012153,
+    "speedup_vs_single_jit": 3.9,
+    "batch_time": null
+  },
+  "memory_mb": {},
+  "_provenance": "ingested from pre-FFT-fix /tmp profiling artifacts"
+}

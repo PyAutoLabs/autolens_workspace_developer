@@ -1,0 +1,41 @@
+{
+  "config_name": "local_gpu_fp64_pre_fix",
+  "use_mixed_precision": false,
+  "autolens_version": "2026.5.1.4",
+  "instrument": "hst",
+  "configuration": {
+    "pixel_scale_arcsec": 0.05,
+    "mask_radius_arcsec": 3.5,
+    "image_pixels_masked": 15361,
+    "over_sampled_pixels": 17980,
+    "linear_gaussians": 0
+  },
+  "device": {
+    "backend": "gpu",
+    "device": "gpu",
+    "note": "pre-fix"
+  },
+  "log_likelihood": {
+    "full_pipeline_jit": 27379.38890685539
+  },
+  "steps": {
+    "Ray-trace grids": 0.0031153899999935676,
+    "Mapping matrix": 0.022293959999979053,
+    "Blurred mapping matrix": 0.01880874000003132,
+    "Data vector (D)": 0.00037680999998883634,
+    "Curvature matrix (F)": 0.0015178300000115996,
+    "Reconstruction (NNLS)": 0.019577590000017152,
+    "Mapped reconstructed image": 0.00032828000003064516,
+    "Chi-squared & log likelihood": 0.000306780000028084
+  },
+  "total_step_by_step": 0.06632538000008026,
+  "full_pipeline_per_call": 0.03705118000002585,
+  "vmap": {
+    "batch_size": 3,
+    "per_call": 0.01763577000000017,
+    "speedup_vs_single_jit": 2.1,
+    "batch_time": 0.052907310000000506
+  },
+  "memory_mb": {},
+  "_provenance": "ingested from pre-FFT-fix /tmp profiling artifacts"
+}
