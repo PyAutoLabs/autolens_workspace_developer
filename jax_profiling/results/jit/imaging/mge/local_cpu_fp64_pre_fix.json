@@ -1,0 +1,35 @@
+{
+  "config_name": "local_cpu_fp64_pre_fix",
+  "use_mixed_precision": false,
+  "autolens_version": "unknown",
+  "instrument": "hst",
+  "configuration": {},
+  "device": {
+    "backend": "cpu",
+    "device": "cpu",
+    "note": "pre-fix"
+  },
+  "log_likelihood": {
+    "full_pipeline_jit": 27379.38890685523
+  },
+  "steps": {
+    "Ray-trace grids": 0.004253,
+    "Mapping matrix": 0.113323,
+    "Blurred mapping matrix": 0.200123,
+    "Data vector (D)": 0.000315,
+    "Curvature matrix (F)": 0.001596,
+    "Reconstruction (NNLS)": 0.00061,
+    "Mapped reconstructed image": 0.000272,
+    "Chi-squared & log likelihood": 0.000269
+  },
+  "total_step_by_step": 0.32076099999999996,
+  "full_pipeline_per_call": 0.208569,
+  "vmap": {
+    "batch_size": 3,
+    "per_call": 0.128317,
+    "speedup_vs_single_jit": 1.6,
+    "batch_time": null
+  },
+  "memory_mb": {},
+  "_provenance": "ingested from pre-FFT-fix /tmp profiling artifacts"
+}

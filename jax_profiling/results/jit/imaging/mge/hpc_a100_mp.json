@@ -1,0 +1,46 @@
+{
+  "config_name": "hpc_a100_mp",
+  "use_mixed_precision": true,
+  "autolens_version": "2026.5.1.4",
+  "instrument": "hst",
+  "configuration": {
+    "pixel_scale_arcsec": 0.05,
+    "mask_radius_arcsec": 3.5,
+    "image_pixels_masked": 15361,
+    "over_sampled_pixels": 17980,
+    "linear_gaussians": 0
+  },
+  "device": {
+    "backend": "gpu",
+    "device": "cuda:0",
+    "nvidia_smi": "NVIDIA A100 80GB PCIe, 19790 MiB, 81920 MiB"
+  },
+  "log_likelihood": {
+    "eager_numpy": -159736.35504220804,
+    "step_by_step_jit": -159734.65625,
+    "full_pipeline_jit": -159734.59375,
+    "vmap_first_element": -159737.8125
+  },
+  "steps": {
+    "Ray-trace grids": 0.0002060166996670887,
+    "Mapping matrix": 0.0012590978003572673,
+    "Blurred mapping matrix": 0.0036326707020634787,
+    "Data vector (D)": 0.00020699769956991076,
+    "Curvature matrix (F)": 0.0002976489980937913,
+    "Reconstruction (NNLS)": 0.0019418963987845928,
+    "Mapped reconstructed image": 0.00022419560118578375,
+    "Chi-squared & log likelihood": 0.0002323824999621138
+  },
+  "total_step_by_step": 0.008000906399684028,
+  "full_pipeline_per_call": 0.00544624489848502,
+  "vmap": {
+    "batch_size": 3,
+    "batch_time": 0.006934574301703833,
+    "per_call": 0.002311524767234611,
+    "speedup_vs_single_jit": 2.36
+  },
+  "memory_mb": {
+    "output": 1.1444091796875e-05,
+    "temp": 24.970977783203125
+  }
+}

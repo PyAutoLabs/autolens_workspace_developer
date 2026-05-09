@@ -1,0 +1,41 @@
+{
+  "config_name": "local_cpu_mp_pre_fix",
+  "use_mixed_precision": true,
+  "autolens_version": "2026.5.1.4",
+  "instrument": "hst",
+  "configuration": {
+    "pixel_scale_arcsec": 0.05,
+    "mask_radius_arcsec": 3.5,
+    "image_pixels_masked": 15361,
+    "over_sampled_pixels": 17980,
+    "linear_gaussians": 0
+  },
+  "device": {
+    "backend": "cpu",
+    "device": "cpu",
+    "note": "pre-fix"
+  },
+  "log_likelihood": {
+    "full_pipeline_jit": 27379.388781919046
+  },
+  "steps": {
+    "Ray-trace grids": 0.002722230000017589,
+    "Mapping matrix": 0.18460562999998728,
+    "Blurred mapping matrix": 0.189258239999981,
+    "Data vector (D)": 0.0002965399999993679,
+    "Curvature matrix (F)": 0.0015331399999922724,
+    "Reconstruction (NNLS)": 0.0007736699999441043,
+    "Mapped reconstructed image": 0.00019877000004271396,
+    "Chi-squared & log likelihood": 0.0002946099999462604
+  },
+  "total_step_by_step": 0.37968282999991054,
+  "full_pipeline_per_call": 0.19330503000001045,
+  "vmap": {
+    "batch_size": 3,
+    "per_call": 0.12038505666669153,
+    "speedup_vs_single_jit": 1.6,
+    "batch_time": 0.3611551700000746
+  },
+  "memory_mb": {},
+  "_provenance": "ingested from pre-FFT-fix /tmp profiling artifacts"
+}

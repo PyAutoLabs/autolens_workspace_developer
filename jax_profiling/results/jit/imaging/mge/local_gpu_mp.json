@@ -1,0 +1,46 @@
+{
+  "config_name": "local_gpu_mp",
+  "use_mixed_precision": true,
+  "autolens_version": "2026.5.8.2",
+  "instrument": "hst",
+  "configuration": {
+    "pixel_scale_arcsec": 0.05,
+    "mask_radius_arcsec": 3.5,
+    "image_pixels_masked": 15361,
+    "over_sampled_pixels": 17980,
+    "linear_gaussians": 0
+  },
+  "device": {
+    "backend": "gpu",
+    "device": "cuda:0",
+    "nvidia_smi": "NVIDIA GeForce RTX 2060 with Max-Q Design, 1184 MiB, 6144 MiB"
+  },
+  "log_likelihood": {
+    "eager_numpy": -159736.35504220804,
+    "step_by_step_jit": -159736.35504220804,
+    "full_pipeline_jit": -159736.29171991046,
+    "vmap_first_element": -159736.29099675274
+  },
+  "steps": {
+    "Ray-trace grids": 0.0031552299999930257,
+    "Mapping matrix": 0.020234140000002298,
+    "Blurred mapping matrix": 0.019237779999957638,
+    "Data vector (D)": 0.0003259800000250834,
+    "Curvature matrix (F)": 0.0018482500000118307,
+    "Reconstruction (NNLS)": 0.01289028999999573,
+    "Mapped reconstructed image": 0.00043343000002096235,
+    "Chi-squared & log likelihood": 0.00050573000003169
+  },
+  "total_step_by_step": 0.058630830000038256,
+  "full_pipeline_per_call": 0.043045410000013364,
+  "vmap": {
+    "batch_size": 3,
+    "batch_time": 0.045097170000008194,
+    "per_call": 0.015032390000002732,
+    "speedup_vs_single_jit": 2.86
+  },
+  "memory_mb": {
+    "output": 2.288818359375e-05,
+    "temp": 52.742042541503906
+  }
+}
