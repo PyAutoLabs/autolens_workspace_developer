@@ -1,0 +1,54 @@
+{
+  "config_name": "hpc_a100_fp64",
+  "use_mixed_precision": false,
+  "autolens_version": "2026.5.1.4",
+  "instrument": "hst",
+  "configuration": {
+    "pixel_scale_arcsec": 0.05,
+    "mask_radius_arcsec": 3.5,
+    "image_pixels_masked": 15361,
+    "over_sampled_pixels": 17980,
+    "mesh_shape": [
+      28,
+      28
+    ],
+    "source_pixels": 784
+  },
+  "device": {
+    "backend": "gpu",
+    "device": "cuda:0",
+    "nvidia_smi": "NVIDIA A100 80GB PCIe, 19758 MiB, 81920 MiB"
+  },
+  "log_likelihood": {
+    "eager_numpy": 28664.6227532406,
+    "eager_log_evidence": 26232.068573757562,
+    "step_by_step_jit_log_evidence": 26232.587890625,
+    "full_pipeline_jit": 26232.3515625,
+    "vmap_first_element": 26232.384765625
+  },
+  "steps": {
+    "Ray-trace grids": 0.00018991990364156664,
+    "Lens light images (pre-PSF)": 0.0001634241023566574,
+    "Blurred image (PSF convolution)": 0.00037926189834252,
+    "Profile-subtracted image": 0.00020586790051311255,
+    "Overlay grid (source pixel centres)": 0.0001891719992272556,
+    "Inversion setup (steps 4-8 combined)": 0.002865140902576968,
+    "Data vector (D)": 0.0002377475961111486,
+    "Curvature matrix (F)": 0.000531411002157256,
+    "Regularization matrix (H)": 0.00021590680116787553,
+    "Regularized reconstruction": 0.006783974799327552,
+    "Mapped recon + log evidence": 0.004158158705104142
+  },
+  "total_step_by_step": 0.015919985610526054,
+  "full_pipeline_per_call": 0.009729937301017344,
+  "vmap": {
+    "batch_size": 3,
+    "batch_time": 0.03691700249910355,
+    "per_call": 0.012305667499701183,
+    "speedup_vs_single_jit": 0.79
+  },
+  "memory_mb": {
+    "output": 1.1444091796875e-05,
+    "temp": 584.6328887939453
+  }
+}

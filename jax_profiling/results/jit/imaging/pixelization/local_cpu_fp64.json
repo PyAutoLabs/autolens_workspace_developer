@@ -1,0 +1,53 @@
+{
+  "config_name": "local_cpu_fp64",
+  "use_mixed_precision": false,
+  "autolens_version": "2026.5.8.2",
+  "instrument": "hst",
+  "configuration": {
+    "pixel_scale_arcsec": 0.05,
+    "mask_radius_arcsec": 3.5,
+    "image_pixels_masked": 15361,
+    "over_sampled_pixels": 17980,
+    "mesh_shape": [
+      28,
+      28
+    ],
+    "source_pixels": 784
+  },
+  "device": {
+    "backend": "cpu",
+    "device": "cpu"
+  },
+  "log_likelihood": {
+    "eager_numpy": 28664.6227532406,
+    "eager_log_evidence": 26232.068573757562,
+    "step_by_step_jit_log_evidence": 26232.068573757737,
+    "full_pipeline_jit": 26232.069168301598,
+    "vmap_first_element": 26232.06916830159
+  },
+  "steps": {
+    "Ray-trace grids": 0.002837180000005901,
+    "Lens light images (pre-PSF)": 1.6000000050553355e-05,
+    "Blurred image (PSF convolution)": 0.006893470000068192,
+    "Profile-subtracted image": 9.594000002834945e-05,
+    "Overlay grid (source pixel centres)": 0.0001938999999765656,
+    "Inversion setup (steps 4-8 combined)": 1.2275208399999429,
+    "Data vector (D)": 0.00980745000006209,
+    "Curvature matrix (F)": 1.3172429799999918,
+    "Regularization matrix (H)": 0.0013828000000103203,
+    "Regularized reconstruction": 0.22098525999999766,
+    "Mapped recon + log evidence": 0.057281110000076296
+  },
+  "total_step_by_step": 2.8442569300002107,
+  "full_pipeline_per_call": 2.379487970000082,
+  "vmap": {
+    "batch_size": 3,
+    "batch_time": 6.472814659999949,
+    "per_call": 2.15760488666665,
+    "speedup_vs_single_jit": 1.1
+  },
+  "memory_mb": {
+    "output": 2.288818359375e-05,
+    "temp": 1169.2542877197266
+  }
+}
