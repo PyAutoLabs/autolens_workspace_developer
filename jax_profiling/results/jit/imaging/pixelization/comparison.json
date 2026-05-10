@@ -1,0 +1,344 @@
+{
+  "configs": {
+    "local_cpu_fp64": {
+      "config_name": "local_cpu_fp64",
+      "use_mixed_precision": false,
+      "autolens_version": "2026.5.8.2",
+      "instrument": "hst",
+      "configuration": {
+        "pixel_scale_arcsec": 0.05,
+        "mask_radius_arcsec": 3.5,
+        "image_pixels_masked": 15361,
+        "over_sampled_pixels": 17980,
+        "mesh_shape": [
+          28,
+          28
+        ],
+        "source_pixels": 784
+      },
+      "device": {
+        "backend": "cpu",
+        "device": "cpu"
+      },
+      "log_likelihood": {
+        "eager_numpy": 28664.6227532406,
+        "eager_log_evidence": 26232.068573757562,
+        "step_by_step_jit_log_evidence": 26232.068573757737,
+        "full_pipeline_jit": 26232.069168301598,
+        "vmap_first_element": 26232.06916830159
+      },
+      "steps": {
+        "Ray-trace grids": 0.002837180000005901,
+        "Lens light images (pre-PSF)": 1.6000000050553355e-05,
+        "Blurred image (PSF convolution)": 0.006893470000068192,
+        "Profile-subtracted image": 9.594000002834945e-05,
+        "Overlay grid (source pixel centres)": 0.0001938999999765656,
+        "Inversion setup (steps 4-8 combined)": 1.2275208399999429,
+        "Data vector (D)": 0.00980745000006209,
+        "Curvature matrix (F)": 1.3172429799999918,
+        "Regularization matrix (H)": 0.0013828000000103203,
+        "Regularized reconstruction": 0.22098525999999766,
+        "Mapped recon + log evidence": 0.057281110000076296
+      },
+      "total_step_by_step": 2.8442569300002107,
+      "full_pipeline_per_call": 2.379487970000082,
+      "vmap": {
+        "batch_size": 3,
+        "batch_time": 6.472814659999949,
+        "per_call": 2.15760488666665,
+        "speedup_vs_single_jit": 1.1
+      },
+      "memory_mb": {
+        "output": 2.288818359375e-05,
+        "temp": 1169.2542877197266
+      }
+    },
+    "local_cpu_mp": {
+      "config_name": "local_cpu_mp",
+      "use_mixed_precision": true,
+      "autolens_version": "2026.5.8.2",
+      "instrument": "hst",
+      "configuration": {
+        "pixel_scale_arcsec": 0.05,
+        "mask_radius_arcsec": 3.5,
+        "image_pixels_masked": 15361,
+        "over_sampled_pixels": 17980,
+        "mesh_shape": [
+          28,
+          28
+        ],
+        "source_pixels": 784
+      },
+      "device": {
+        "backend": "cpu",
+        "device": "cpu"
+      },
+      "log_likelihood": {
+        "eager_numpy": 28664.622711734875,
+        "eager_log_evidence": 26232.068532040277,
+        "step_by_step_jit_log_evidence": 26232.068532040452,
+        "full_pipeline_jit": 26232.069163962962,
+        "vmap_first_element": 26232.069163962966
+      },
+      "steps": {
+        "Ray-trace grids": 0.0024183800000173506,
+        "Lens light images (pre-PSF)": 1.82699999641045e-05,
+        "Blurred image (PSF convolution)": 0.005808989999968617,
+        "Profile-subtracted image": 6.874000000607338e-05,
+        "Overlay grid (source pixel centres)": 0.00025221999994755605,
+        "Inversion setup (steps 4-8 combined)": 0.7302957199999582,
+        "Data vector (D)": 0.00483697999998185,
+        "Curvature matrix (F)": 0.8751346199999717,
+        "Regularization matrix (H)": 0.0008178300000508898,
+        "Regularized reconstruction": 0.1478098399999908,
+        "Mapped recon + log evidence": 0.03315960999998424
+      },
+      "total_step_by_step": 1.8006211999998414,
+      "full_pipeline_per_call": 1.670137539999996,
+      "vmap": {
+        "batch_size": 3,
+        "batch_time": 5.635489280000002,
+        "per_call": 1.8784964266666673,
+        "speedup_vs_single_jit": 0.89
+      },
+      "memory_mb": {
+        "output": 2.288818359375e-05,
+        "temp": 1169.2542877197266
+      }
+    },
+    "local_gpu_fp64": {
+      "config_name": "local_gpu_fp64",
+      "use_mixed_precision": false,
+      "autolens_version": "2026.5.8.2",
+      "instrument": "hst",
+      "configuration": {
+        "pixel_scale_arcsec": 0.05,
+        "mask_radius_arcsec": 3.5,
+        "image_pixels_masked": 15361,
+        "over_sampled_pixels": 17980,
+        "mesh_shape": [
+          28,
+          28
+        ],
+        "source_pixels": 784
+      },
+      "device": {
+        "backend": "gpu",
+        "device": "cuda:0",
+        "nvidia_smi": "NVIDIA GeForce RTX 2060 with Max-Q Design, 1164 MiB, 6144 MiB"
+      },
+      "log_likelihood": {
+        "eager_numpy": 28664.6227532406,
+        "eager_log_evidence": 26232.068573757562,
+        "step_by_step_jit_log_evidence": 26232.068573758566,
+        "full_pipeline_jit": 26232.06857375826,
+        "vmap_first_element": 26232.06857375826
+      },
+      "steps": {
+        "Ray-trace grids": 0.0036985200000344775,
+        "Lens light images (pre-PSF)": 0.0003360600000632985,
+        "Blurred image (PSF convolution)": 0.007075869999971474,
+        "Profile-subtracted image": 0.0019567800000004354,
+        "Overlay grid (source pixel centres)": 0.0030169999999998254,
+        "Inversion setup (steps 4-8 combined)": 0.06299231000002692,
+        "Data vector (D)": 0.0020023500000206696,
+        "Curvature matrix (F)": 0.10205438000002687,
+        "Regularization matrix (H)": 0.000367279999954917,
+        "Regularized reconstruction": 0.059871269999985086,
+        "Mapped recon + log evidence": 0.01450248000001011
+      },
+      "total_step_by_step": 0.25787430000009404,
+      "full_pipeline_per_call": 0.2121996400000171,
+      "vmap": {
+        "batch_size": 3,
+        "batch_time": 0.6993351899999652,
+        "per_call": 0.23311172999998842,
+        "speedup_vs_single_jit": 0.91
+      },
+      "memory_mb": {
+        "output": 2.288818359375e-05,
+        "temp": 1169.2608108520508
+      }
+    },
+    "local_gpu_mp": {
+      "config_name": "local_gpu_mp",
+      "use_mixed_precision": true,
+      "autolens_version": "2026.5.8.2",
+      "instrument": "hst",
+      "configuration": {
+        "pixel_scale_arcsec": 0.05,
+        "mask_radius_arcsec": 3.5,
+        "image_pixels_masked": 15361,
+        "over_sampled_pixels": 17980,
+        "mesh_shape": [
+          28,
+          28
+        ],
+        "source_pixels": 784
+      },
+      "device": {
+        "backend": "gpu",
+        "device": "cuda:0",
+        "nvidia_smi": "NVIDIA GeForce RTX 2060 with Max-Q Design, 1156 MiB, 6144 MiB"
+      },
+      "log_likelihood": {
+        "eager_numpy": 28664.622711734875,
+        "eager_log_evidence": 26232.068532040277,
+        "step_by_step_jit_log_evidence": 26232.06853204128,
+        "full_pipeline_jit": 26232.068270743886,
+        "vmap_first_element": 26232.068270743886
+      },
+      "steps": {
+        "Ray-trace grids": 0.003449369999998453,
+        "Lens light images (pre-PSF)": 0.000597349999952712,
+        "Blurred image (PSF convolution)": 0.004813629999989644,
+        "Profile-subtracted image": 0.0034461999999621184,
+        "Overlay grid (source pixel centres)": 0.005970090000027994,
+        "Inversion setup (steps 4-8 combined)": 0.042388409999966827,
+        "Data vector (D)": 0.0016589599999861093,
+        "Curvature matrix (F)": 0.10314830000006622,
+        "Regularization matrix (H)": 0.0003042600000298989,
+        "Regularized reconstruction": 0.06089155999998184,
+        "Mapped recon + log evidence": 0.014821949999986827
+      },
+      "total_step_by_step": 0.24149007999994862,
+      "full_pipeline_per_call": 0.1926175799999328,
+      "vmap": {
+        "batch_size": 3,
+        "batch_time": 0.6363203599999906,
+        "per_call": 0.21210678666666352,
+        "speedup_vs_single_jit": 0.91
+      },
+      "memory_mb": {
+        "output": 2.288818359375e-05,
+        "temp": 1169.2608108520508
+      }
+    },
+    "hpc_a100_fp64": {
+      "config_name": "hpc_a100_fp64",
+      "use_mixed_precision": false,
+      "autolens_version": "2026.5.1.4",
+      "instrument": "hst",
+      "configuration": {
+        "pixel_scale_arcsec": 0.05,
+        "mask_radius_arcsec": 3.5,
+        "image_pixels_masked": 15361,
+        "over_sampled_pixels": 17980,
+        "mesh_shape": [
+          28,
+          28
+        ],
+        "source_pixels": 784
+      },
+      "device": {
+        "backend": "gpu",
+        "device": "cuda:0",
+        "nvidia_smi": "NVIDIA A100 80GB PCIe, 19758 MiB, 81920 MiB"
+      },
+      "log_likelihood": {
+        "eager_numpy": 28664.6227532406,
+        "eager_log_evidence": 26232.068573757562,
+        "step_by_step_jit_log_evidence": 26232.587890625,
+        "full_pipeline_jit": 26232.3515625,
+        "vmap_first_element": 26232.384765625
+      },
+      "steps": {
+        "Ray-trace grids": 0.00018991990364156664,
+        "Lens light images (pre-PSF)": 0.0001634241023566574,
+        "Blurred image (PSF convolution)": 0.00037926189834252,
+        "Profile-subtracted image": 0.00020586790051311255,
+        "Overlay grid (source pixel centres)": 0.0001891719992272556,
+        "Inversion setup (steps 4-8 combined)": 0.002865140902576968,
+        "Data vector (D)": 0.0002377475961111486,
+        "Curvature matrix (F)": 0.000531411002157256,
+        "Regularization matrix (H)": 0.00021590680116787553,
+        "Regularized reconstruction": 0.006783974799327552,
+        "Mapped recon + log evidence": 0.004158158705104142
+      },
+      "total_step_by_step": 0.015919985610526054,
+      "full_pipeline_per_call": 0.009729937301017344,
+      "vmap": {
+        "batch_size": 3,
+        "batch_time": 0.03691700249910355,
+        "per_call": 0.012305667499701183,
+        "speedup_vs_single_jit": 0.79
+      },
+      "memory_mb": {
+        "output": 1.1444091796875e-05,
+        "temp": 584.6328887939453
+      }
+    },
+    "hpc_a100_mp": {
+      "config_name": "hpc_a100_mp",
+      "use_mixed_precision": true,
+      "autolens_version": "2026.5.1.4",
+      "instrument": "hst",
+      "configuration": {
+        "pixel_scale_arcsec": 0.05,
+        "mask_radius_arcsec": 3.5,
+        "image_pixels_masked": 15361,
+        "over_sampled_pixels": 17980,
+        "mesh_shape": [
+          28,
+          28
+        ],
+        "source_pixels": 784
+      },
+      "device": {
+        "backend": "gpu",
+        "device": "cuda:0",
+        "nvidia_smi": "NVIDIA A100 80GB PCIe, 19758 MiB, 81920 MiB"
+      },
+      "log_likelihood": {
+        "eager_numpy": 28664.622711734875,
+        "eager_log_evidence": 26232.068532040277,
+        "step_by_step_jit_log_evidence": 26232.587890625,
+        "full_pipeline_jit": 26232.3515625,
+        "vmap_first_element": 26232.380859375
+      },
+      "steps": {
+        "Ray-trace grids": 0.00022412979742512107,
+        "Lens light images (pre-PSF)": 0.00020349880214780568,
+        "Blurred image (PSF convolution)": 0.00040258670342154803,
+        "Profile-subtracted image": 0.00021707680425606669,
+        "Overlay grid (source pixel centres)": 0.00019732489599846303,
+        "Inversion setup (steps 4-8 combined)": 0.002806928299833089,
+        "Data vector (D)": 0.00025349350180476905,
+        "Curvature matrix (F)": 0.0005326701037120074,
+        "Regularization matrix (H)": 0.00021385870059020817,
+        "Regularized reconstruction": 0.006761988997459412,
+        "Mapped recon + log evidence": 0.004188606503885239
+      },
+      "total_step_by_step": 0.016002163110533728,
+      "full_pipeline_per_call": 0.01007822940009646,
+      "vmap": {
+        "batch_size": 3,
+        "batch_time": 0.03722786569851451,
+        "per_call": 0.012409288566171503,
+        "speedup_vs_single_jit": 0.81
+      },
+      "memory_mb": {
+        "output": 1.1444091796875e-05,
+        "temp": 584.6328887939453
+      }
+    }
+  },
+  "headline": {
+    "full_pipeline_per_call": {
+      "local_cpu_fp64": 2.379487970000082,
+      "local_cpu_mp": 1.670137539999996,
+      "local_gpu_fp64": 0.2121996400000171,
+      "local_gpu_mp": 0.1926175799999328,
+      "hpc_a100_fp64": 0.009729937301017344,
+      "hpc_a100_mp": 0.01007822940009646
+    },
+    "vmap_per_call": {
+      "local_cpu_fp64": 2.15760488666665,
+      "local_cpu_mp": 1.8784964266666673,
+      "local_gpu_fp64": 0.23311172999998842,
+      "local_gpu_mp": 0.21210678666666352,
+      "hpc_a100_fp64": 0.012305667499701183,
+      "hpc_a100_mp": 0.012409288566171503
+    }
+  }
+}

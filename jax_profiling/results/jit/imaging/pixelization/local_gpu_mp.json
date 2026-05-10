@@ -1,0 +1,54 @@
+{
+  "config_name": "local_gpu_mp",
+  "use_mixed_precision": true,
+  "autolens_version": "2026.5.8.2",
+  "instrument": "hst",
+  "configuration": {
+    "pixel_scale_arcsec": 0.05,
+    "mask_radius_arcsec": 3.5,
+    "image_pixels_masked": 15361,
+    "over_sampled_pixels": 17980,
+    "mesh_shape": [
+      28,
+      28
+    ],
+    "source_pixels": 784
+  },
+  "device": {
+    "backend": "gpu",
+    "device": "cuda:0",
+    "nvidia_smi": "NVIDIA GeForce RTX 2060 with Max-Q Design, 1156 MiB, 6144 MiB"
+  },
+  "log_likelihood": {
+    "eager_numpy": 28664.622711734875,
+    "eager_log_evidence": 26232.068532040277,
+    "step_by_step_jit_log_evidence": 26232.06853204128,
+    "full_pipeline_jit": 26232.068270743886,
+    "vmap_first_element": 26232.068270743886
+  },
+  "steps": {
+    "Ray-trace grids": 0.003449369999998453,
+    "Lens light images (pre-PSF)": 0.000597349999952712,
+    "Blurred image (PSF convolution)": 0.004813629999989644,
+    "Profile-subtracted image": 0.0034461999999621184,
+    "Overlay grid (source pixel centres)": 0.005970090000027994,
+    "Inversion setup (steps 4-8 combined)": 0.042388409999966827,
+    "Data vector (D)": 0.0016589599999861093,
+    "Curvature matrix (F)": 0.10314830000006622,
+    "Regularization matrix (H)": 0.0003042600000298989,
+    "Regularized reconstruction": 0.06089155999998184,
+    "Mapped recon + log evidence": 0.014821949999986827
+  },
+  "total_step_by_step": 0.24149007999994862,
+  "full_pipeline_per_call": 0.1926175799999328,
+  "vmap": {
+    "batch_size": 3,
+    "batch_time": 0.6363203599999906,
+    "per_call": 0.21210678666666352,
+    "speedup_vs_single_jit": 0.91
+  },
+  "memory_mb": {
+    "output": 2.288818359375e-05,
+    "temp": 1169.2608108520508
+  }
+}
