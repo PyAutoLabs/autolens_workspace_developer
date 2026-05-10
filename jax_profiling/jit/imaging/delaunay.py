@@ -206,7 +206,7 @@ with timer.section("mask_and_oversample"):
 
 print("\n--- Image mesh construction (Delaunay) ---")
 
-overlay_shape = (26, 26)
+overlay_shape = (39, 39)  # calibrated → 1231 mesh vertices (1201 inside + 30 edge), science fiducial near 1250
 edge_n_points = 30
 
 with timer.section("image_mesh_overlay"):
@@ -1076,7 +1076,7 @@ print(f"  Bar chart saved to:    {chart_path}")
 # Simulator truth parameters via GaussianPrior(mean=truth, sigma=small)
 # make the full-pipeline log-evidence deterministic at the prior median.
 # vmap result asserted only when DELAUNAY_VMAP=1 (vmap compile takes 20+ min).
-EXPECTED_LOG_EVIDENCE_HST = 29179.9490711974
+EXPECTED_LOG_EVIDENCE_HST = 27433.90296505439  # overlay = 39x39 → 1231 mesh vertices
 
 np.testing.assert_allclose(
     log_evidence_ref,

@@ -197,7 +197,7 @@ with timer.section("mask_and_oversample"):
 
 print("\n--- Model construction ---")
 
-mesh_pixels_yx = 28
+mesh_pixels_yx = 35  # 35x35 = 1225, science fiducial near 1250 source pixels
 mesh_shape = (mesh_pixels_yx, mesh_pixels_yx)
 
 with timer.section("model_build"):
@@ -1004,7 +1004,7 @@ print(f"  Bar chart saved to:    {chart_path}")
 # RectangularAdaptDensity at prior medians is deterministic across the
 # eager / full-JIT / vmap paths to within rtol=1e-4 — the constant below
 # is the value those three paths agree on.
-EXPECTED_LOG_EVIDENCE_HST = 26232.068573757562
+EXPECTED_LOG_EVIDENCE_HST = 25918.02569499014  # mesh = 35x35 = 1225 source pixels
 
 np.testing.assert_allclose(
     log_evidence_ref,
