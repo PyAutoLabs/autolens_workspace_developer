@@ -702,14 +702,27 @@ likelihood_steps.append(("Regularization matrix (H)", timer.records[-1][1]))
 print(f"  regularization_matrix shape: {regularization_matrix.shape}")
 
 # ---------------------------------------------------------------------------
-# Step 12: Regularized reconstruction: s = (F + H)^{-1} D
+# Step 12: Regularized reconstruction: s = NNLS(F + H, D)
 # ---------------------------------------------------------------------------
+#
+# Uses ``reconstruction_positive_only_from`` (NNLS) to match production
+# AnalysisImaging behaviour. An earlier version of this script used
+# ``jnp.linalg.solve(F+H, D)`` which under-reports the per-step
+# reconstruction cost (~5 ms vs ~36 ms NNLS on RTX 2060). The two
+# solvers happen to produce identical reconstructions for the
+# well-conditioned ConstantSplit setup at prior medians (no negative
+# source pixels, NNLS reduces to linear solve), so the downstream
+# log-evidence value is unchanged within rtol=1e-4.
 
 print("\n--- Step 12: Regularized reconstruction ---")
 
 def compute_reconstruction(data_vector, curvature_matrix, regularization_matrix):
     curvature_reg_matrix = curvature_matrix + regularization_matrix
-    return jnp.linalg.solve(curvature_reg_matrix, data_vector)
+    return al.util.inversion.reconstruction_positive_only_from(
+        data_vector=data_vector,
+        curvature_reg_matrix=curvature_reg_matrix,
+        xp=jnp,
+    )
 
 with timer.section("reconstruction_eager"):
     reconstruction = compute_reconstruction(
