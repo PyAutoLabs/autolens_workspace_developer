@@ -1,5 +1,60 @@
 {
   "configs": {
+    "local_cpu_fp64": {
+      "config_name": "local_cpu_fp64",
+      "use_mixed_precision": false,
+      "autolens_version": "2026.5.8.2",
+      "instrument": "hst",
+      "configuration": {
+        "pixel_scale_arcsec": 0.05,
+        "mask_radius_arcsec": 3.5,
+        "image_pixels_masked": 15361,
+        "over_sampled_pixels": 17980,
+        "overlay_shape": [
+          26,
+          26
+        ],
+        "edge_n_points": 30,
+        "n_mesh_vertices": 570,
+        "edge_pixels_total": 30
+      },
+      "device": {
+        "backend": "cpu",
+        "device": "cpu"
+      },
+      "log_likelihood": {
+        "eager_numpy": 31594.79528120125,
+        "eager_log_evidence": 29179.9490711974,
+        "step_by_step_jit_log_evidence": 29179.949071196883,
+        "full_pipeline_jit": 29179.949071203526,
+        "vmap_first_element": 29179.949071203504
+      },
+      "steps": {
+        "Ray-trace data grid": 0.0029925100000127713,
+        "Ray-trace mesh grid": 0.0004017000000203552,
+        "Lens light images (pre-PSF)": 1.5970000004017492e-05,
+        "Blurred image (PSF convolution)": 0.006086279999999533,
+        "Profile-subtracted image": 8.162999997693988e-05,
+        "Inversion setup (steps 5-8 combined)": 0.6437937499999862,
+        "Data vector (D)": 0.003931839999995646,
+        "Curvature matrix (F)": 0.5242672899999888,
+        "Regularization matrix (H)": 0.011810200000127224,
+        "Regularized reconstruction": 0.07206992000001264,
+        "Mapped recon + log evidence": 0.018162660000007234
+      },
+      "total_step_by_step": 1.2836137500001314,
+      "full_pipeline_per_call": 1.1180814800000007,
+      "vmap": {
+        "batch_size": 3,
+        "batch_time": 3.9822933999999806,
+        "per_call": 1.3274311333333269,
+        "speedup_vs_single_jit": 0.84
+      },
+      "memory_mb": {
+        "output": 2.288818359375e-05,
+        "temp": 850.3049468994141
+      }
+    },
     "local_gpu_fp64": {
       "config_name": "local_gpu_fp64",
       "use_mixed_precision": false,
@@ -227,12 +282,14 @@
   },
   "headline": {
     "full_pipeline_per_call": {
+      "local_cpu_fp64": 1.1180814800000007,
       "local_gpu_fp64": 0.1624657499998648,
       "local_gpu_mp": 0.12341281999997591,
       "hpc_a100_fp64": 0.01732162349508144,
       "hpc_a100_mp": 0.017275546799646692
     },
     "vmap_per_call": {
+      "local_cpu_fp64": 1.3274311333333269,
       "local_gpu_fp64": 0.22756458999998963,
       "local_gpu_mp": 0.1737499866666743,
       "hpc_a100_fp64": 0.07054545079978804,
