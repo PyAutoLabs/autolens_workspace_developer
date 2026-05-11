@@ -206,7 +206,7 @@ with timer.section("mask_and_oversample"):
 
 print("\n--- Image mesh construction (Delaunay) ---")
 
-overlay_shape = (26, 26)
+overlay_shape = (39, 39)  # calibrated → 1231 mesh vertices (1201 inside + 30 edge), science fiducial near 1250
 edge_n_points = 30
 
 with timer.section("image_mesh_overlay"):
@@ -238,15 +238,14 @@ with timer.section("model_build"):
     # GaussianPrior(mean=truth, sigma=small) centres prior-median at the
     # simulator truth while keeping params free so gradient diagnostics
     # have dimensionality.
-    lens_bulge = af.Model(al.lp.Sersic)
-    lens_bulge.centre.centre_0 = af.GaussianPrior(mean=0.0, sigma=0.005)
-    lens_bulge.centre.centre_1 = af.GaussianPrior(mean=0.0, sigma=0.005)
-    _lens_bulge_ell = al.convert.ell_comps_from(axis_ratio=0.9, angle=45.0)
-    lens_bulge.ell_comps.ell_comps_0 = af.GaussianPrior(mean=_lens_bulge_ell[0], sigma=0.01)
-    lens_bulge.ell_comps.ell_comps_1 = af.GaussianPrior(mean=_lens_bulge_ell[1], sigma=0.01)
-    lens_bulge.intensity = af.GaussianPrior(mean=2.0, sigma=0.1)
-    lens_bulge.effective_radius = af.GaussianPrior(mean=0.6, sigma=0.05)
-    lens_bulge.sersic_index = af.GaussianPrior(mean=3.0, sigma=0.2)
+    # Lens light: MGE-60 (full production-fiducial) — replaces single Sersic.
+    # The 60 linear Gaussians enter the inversion's mapping matrix
+    # alongside the source-pixel columns.
+    lens_bulge = al.model_util.mge_model_from(
+        mask_radius=mask_radius,
+        total_gaussians=60,
+        centre_prior_is_uniform=True,
+    )
 
     mass = af.Model(al.mp.Isothermal)
     mass.centre.centre_0 = af.GaussianPrior(mean=0.0, sigma=0.005)
@@ -1076,7 +1075,7 @@ print(f"  Bar chart saved to:    {chart_path}")
 # Simulator truth parameters via GaussianPrior(mean=truth, sigma=small)
 # make the full-pipeline log-evidence deterministic at the prior median.
 # vmap result asserted only when DELAUNAY_VMAP=1 (vmap compile takes 20+ min).
-EXPECTED_LOG_EVIDENCE_HST = 29179.9490711974
+EXPECTED_LOG_EVIDENCE_HST = 26288.321397232066  # 39x39 overlay → 1231 vertices, MGE-60 lens
 
 np.testing.assert_allclose(
     log_evidence_ref,
