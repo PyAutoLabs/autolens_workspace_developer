@@ -17,38 +17,38 @@
   "device": {
     "backend": "gpu",
     "device": "cuda:0",
-    "nvidia_smi": "NVIDIA A100 80GB PCIe, 19758 MiB, 81920 MiB"
+    "nvidia_smi": "NVIDIA A100 80GB PCIe, 19740 MiB, 81920 MiB"
   },
   "log_likelihood": {
-    "eager_numpy": 29347.372848288476,
-    "eager_log_evidence": 25918.025704152875,
-    "step_by_step_jit_log_evidence": 25918.546875,
-    "full_pipeline_jit": 25918.390625,
-    "vmap_first_element": 25918.412109375
+    "eager_numpy": 28178.268788181376,
+    "eager_log_evidence": 24746.105678802393,
+    "step_by_step_jit_log_evidence": -Infinity,
+    "full_pipeline_jit": 24745.888671875,
+    "vmap_first_element": 24745.80078125
   },
   "steps": {
-    "Ray-trace grids": 0.0002187595993746072,
-    "Lens light images (pre-PSF)": 0.00018452390213496983,
-    "Blurred image (PSF convolution)": 0.0004006874980404973,
-    "Profile-subtracted image": 0.00020433879690244793,
-    "Overlay grid (source pixel centres)": 0.0001964877999853343,
-    "Inversion setup (steps 4-8 combined)": 0.0036595976969692858,
-    "Data vector (D)": 0.00028028630185872316,
-    "Curvature matrix (F)": 0.001067714497912675,
-    "Regularization matrix (H)": 0.0002155556983780116,
-    "Regularized reconstruction": 0.010230918595334515,
-    "Mapped recon + log evidence": 0.006853985204361379
+    "Ray-trace grids": 0.00020466780406422914,
+    "Lens light images (pre-PSF)": 5.302780191414058e-05,
+    "Blurred image (PSF convolution)": 0.0011528115021064878,
+    "Profile-subtracted image": 0.0002054208016488701,
+    "Overlay grid (source pixel centres)": 0.00023092880146577955,
+    "Inversion setup (steps 4-8 combined)": 0.007233467896003276,
+    "Data vector (D)": 0.00025283760041929784,
+    "Curvature matrix (F)": 0.0012941066990606487,
+    "Regularization matrix (H)": 0.02101114101242274,
+    "Regularized reconstruction": 0.016926451900508253,
+    "Mapped recon + log evidence": 0.007286740600829944
   },
-  "total_step_by_step": 0.023512855591252445,
-  "full_pipeline_per_call": 0.014946901996154338,
+  "total_step_by_step": 0.055851602420443666,
+  "full_pipeline_per_call": 0.024918627500301226,
   "vmap": {
     "batch_size": 3,
-    "batch_time": 0.06441775750136003,
-    "per_call": 0.021472585833786677,
-    "speedup_vs_single_jit": 0.7
+    "batch_time": 0.10330926550086587,
+    "per_call": 0.03443642183362196,
+    "speedup_vs_single_jit": 0.72
   },
   "memory_mb": {
     "output": 1.1444091796875e-05,
-    "temp": 913.4853057861328
+    "temp": 1124.6717224121094
   }
 }

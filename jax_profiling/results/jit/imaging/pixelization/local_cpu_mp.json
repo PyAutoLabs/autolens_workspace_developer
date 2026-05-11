@@ -19,35 +19,35 @@
     "device": "cpu"
   },
   "log_likelihood": {
-    "eager_numpy": 29347.372848288476,
-    "eager_log_evidence": 25918.025704152875,
-    "step_by_step_jit_log_evidence": 25918.025704153377,
-    "full_pipeline_jit": 25918.02577536884,
-    "vmap_first_element": 25918.02577536884
+    "eager_numpy": 28178.268788181376,
+    "eager_log_evidence": 24746.105678802393,
+    "step_by_step_jit_log_evidence": -Infinity,
+    "full_pipeline_jit": 24746.104526687206,
+    "vmap_first_element": 24746.10446745667
   },
   "steps": {
-    "Ray-trace grids": 0.002673589999903925,
-    "Lens light images (pre-PSF)": 1.3940000098955351e-05,
-    "Blurred image (PSF convolution)": 0.0059334100000342,
-    "Profile-subtracted image": 0.00010557999994489364,
-    "Overlay grid (source pixel centres)": 0.00017817999996623258,
-    "Inversion setup (steps 4-8 combined)": 1.6978409100000136,
-    "Data vector (D)": 0.007832149999921966,
-    "Curvature matrix (F)": 2.6247592699999585,
-    "Regularization matrix (H)": 0.0013842600001225946,
-    "Regularized reconstruction": 0.6287846600000193,
-    "Mapped recon + log evidence": 0.12412280999997165
+    "Ray-trace grids": 0.0022754099998564927,
+    "Lens light images (pre-PSF)": 2.0479999875533395e-05,
+    "Blurred image (PSF convolution)": 0.001001629999882425,
+    "Profile-subtracted image": 5.7420000121055634e-05,
+    "Overlay grid (source pixel centres)": 0.00019153000012011033,
+    "Inversion setup (steps 4-8 combined)": 1.291938129999835,
+    "Data vector (D)": 0.006565409999893745,
+    "Curvature matrix (F)": 2.0814974700000675,
+    "Regularization matrix (H)": 0.015459199999895645,
+    "Regularized reconstruction": 0.6156882200000837,
+    "Mapped recon + log evidence": 0.11441684000001259
   },
-  "total_step_by_step": 5.093628759999956,
-  "full_pipeline_per_call": 3.844066080000084,
+  "total_step_by_step": 4.129111739999644,
+  "full_pipeline_per_call": 3.80257117000001,
   "vmap": {
     "batch_size": 3,
-    "batch_time": 13.243540239999856,
-    "per_call": 4.414513413333285,
-    "speedup_vs_single_jit": 0.87
+    "batch_time": 12.924426940000012,
+    "per_call": 4.308142313333337,
+    "speedup_vs_single_jit": 0.88
   },
   "memory_mb": {
     "output": 2.288818359375e-05,
-    "temp": 1826.9590606689453
+    "temp": 1826.9699249267578
   }
 }
