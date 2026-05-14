@@ -1,0 +1,52 @@
+{
+  "autolens_version": "2026.5.14.2",
+  "instrument": "sma",
+  "model": "delaunay",
+  "n_channels": 4,
+  "configuration": {
+    "pixel_scale_arcsec": 0.1,
+    "mask_radius_arcsec": 3.0,
+    "real_space_shape": [
+      256,
+      256
+    ],
+    "visibilities_per_channel": 190,
+    "overlay_shape": [
+      26,
+      26
+    ],
+    "edge_n_points": 30,
+    "delaunay_vertices": 562,
+    "edge_zeroed_pixels": 30,
+    "regularization_coefficient": 1.0
+  },
+  "cube_log_evidence_eager": -12670.103571536305,
+  "cube_log_evidence_jit": -12670.103571530384,
+  "log_evidence_per_channel_eager": [
+    -3167.5258928840763,
+    -3167.5258928840763,
+    -3167.5258928840763,
+    -3167.5258928840763
+  ],
+  "steps_cube_cost": {
+    "Ray-trace data grid (shared)": 0.0006714999995892868,
+    "Ray-trace mesh grid (shared)": 0.0003400800000235904,
+    "Inversion setup, incl. NUFFT (per channel \u00d7 4)": 0.6777412800001912,
+    "Data vector D (per channel \u00d7 4)": 0.0045690800005104395,
+    "Curvature matrix F (per channel \u00d7 4)": 0.08024656000197865,
+    "Regularization matrix H (shared)": 0.023913299999549054,
+    "Reconstruction NNLS (per channel \u00d7 4)": 0.33382711999875025,
+    "Mapped recon + log evidence (per channel \u00d7 4)": 0.0428131199994823
+  },
+  "per_channel_costs": {
+    "inversion_setup": 0.1694353200000478,
+    "data_vector": 0.0011422700001276099,
+    "curvature_matrix": 0.020061640000494662,
+    "reconstruction": 0.08345677999968756,
+    "log_evidence": 0.010703279999870575
+  },
+  "total_step_by_step_cube": 1.164122040000075,
+  "full_pipeline_cube_single_jit": 1.4246763700000884,
+  "shared_lwl_savings_estimate": 0.06018492000148398,
+  "vmap": "SKIPPED \u2014 cube batching axis is 'datasets', not 'parameters'"
+}
