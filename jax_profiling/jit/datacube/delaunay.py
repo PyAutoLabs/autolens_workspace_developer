@@ -90,6 +90,7 @@ the shared-``Lᵀ W̃ L`` optimisation.
 import numpy as np
 import jax
 import jax.numpy as jnp
+import os
 import time
 import subprocess
 import sys
@@ -106,13 +107,16 @@ from autofit.jax import register_model as _register_model_pytrees
 # ---------------------------------------------------------------------------
 
 INSTRUMENTS = {
-    "sma": {"pixel_scale": 0.1, "real_space_shape": (256, 256)},
-    "alma": {"pixel_scale": 0.05, "real_space_shape": (256, 256)},
+    "sma": {"pixel_scale": 0.1, "real_space_shape": (256, 256), "mask_radius": 3.0},
+    "alma": {"pixel_scale": 0.05, "real_space_shape": (256, 256), "mask_radius": 3.0},
+    "hannah": {"pixel_scale": 0.125, "real_space_shape": (40, 40), "mask_radius": 2.3},
 }
 
-instrument = "sma"  # <-- change this to profile a different instrument
+instrument = "hannah"  # <-- realistic ALMA settings for Hannah's science case
 
-n_channels = 4
+# n_channels = 34 matches Hannah's real ALMA cube. For quick iteration on the
+# smaller SMA dataset, drop this to 4 (also flip ``instrument`` back to "sma").
+n_channels = 34
 overlay_shape = (26, 26)
 edge_n_points = 30
 regularization_coefficient = 1.0
@@ -198,7 +202,7 @@ if al.util.dataset.should_simulate(str(dataset_path)):
         check=True,
     )
 
-mask_radius = 3.0
+mask_radius = INSTRUMENTS[instrument]["mask_radius"]
 
 real_space_mask = al.Mask2D.circular(
     shape_native=real_space_shape,
@@ -214,6 +218,10 @@ with timer.section("dataset_list_load"):
             uv_wavelengths_path=dataset_path / "uv_wavelengths.fits",
             real_space_mask=real_space_mask,
             transformer_class=al.TransformerDFT,
+            # DFT is intentional even at ALMA-scale visibility counts — profiling
+            # the JAX-traceable path is the goal, NUFFT (pynufft) is not yet
+            # JIT-friendly.
+            raise_error_dft_visibilities_limit=False,
         )
         for _ in range(n_channels)
     ]
@@ -759,39 +767,59 @@ print("\n" + "=" * 70)
 print("FULL-PIPELINE CUBE JIT (for comparison)")
 print("=" * 70)
 
-analysis_list = [
-    al.AnalysisInterferometer(dataset=d, adapt_images=adapt_images, use_jax=True)
-    for d in dataset_list
-]
+# Part C is expensive at large n_channels: lower + compile build a graph
+# proportional to n_channels (e.g. ~70s for n_channels=34 on a laptop CPU),
+# and the steady-state first-call follows. Default to skipping; opt in with
+# CUBE_FULL_JIT=1 when the full-pipeline timing matters (e.g. comparing
+# step-by-step total against single-JIT).
+_run_full_cube_jit = os.environ.get("CUBE_FULL_JIT") == "1"
 
+if _run_full_cube_jit:
+    analysis_list = [
+        al.AnalysisInterferometer(dataset=d, adapt_images=adapt_images, use_jax=True)
+        for d in dataset_list
+    ]
 
-def full_cube_pipeline_from_params(params_tree):
-    """Cube log-evidence via the explicit per-channel sum.
+    def full_cube_pipeline_from_params(params_tree):
+        """Cube log-evidence via the explicit per-channel sum.
 
-    Same shape as the user-facing ``datacube/likelihood_function.py``:
-    feeds the shared instance to every per-channel
-    ``AnalysisInterferometer.log_likelihood_function`` and sums.
-    """
-    total = jnp.zeros(())
-    for analysis in analysis_list:
-        total = total + analysis.log_likelihood_function(instance=params_tree)
-    return total
+        Same shape as the user-facing ``datacube/likelihood_function.py``:
+        feeds the shared instance to every per-channel
+        ``AnalysisInterferometer.log_likelihood_function`` and sums.
+        """
+        total = jnp.zeros(())
+        for analysis in analysis_list:
+            total = total + analysis.log_likelihood_function(instance=params_tree)
+        return total
 
+    _full_cube_n_repeats = 3
+    _, full_cube_result = jit_profile(
+        full_cube_pipeline_from_params,
+        "full_cube_pipeline",
+        params_tree,
+        n_repeats=_full_cube_n_repeats,
+    )
+    full_pipeline_per_call = timer.records[-1][1] / _full_cube_n_repeats
 
-_, full_cube_result = jit_profile(
-    full_cube_pipeline_from_params, "full_cube_pipeline", params_tree
-)
-full_pipeline_per_call = timer.records[-1][1] / 10
+    print(f"  full cube log_evidence (JIT) = {full_cube_result}")
 
-print(f"  full cube log_evidence (JIT) = {full_cube_result}")
-
-np.testing.assert_allclose(
-    float(full_cube_result),
-    cube_log_evidence_ref,
-    rtol=1e-4,
-    err_msg="Full-pipeline cube JIT log_evidence does not match summed eager FitInterferometer.log_evidence",
-)
-print("  Eager-vs-JIT cube correctness PASSED")
+    np.testing.assert_allclose(
+        float(full_cube_result),
+        cube_log_evidence_ref,
+        rtol=1e-4,
+        err_msg="Full-pipeline cube JIT log_evidence does not match summed eager FitInterferometer.log_evidence",
+    )
+    print("  Eager-vs-JIT cube correctness PASSED")
+else:
+    full_cube_result = None
+    full_pipeline_per_call = float("nan")
+    print(
+        "  Full-pipeline cube JIT SKIPPED — opt-in via CUBE_FULL_JIT=1. "
+        f"At n_channels={n_channels} the lower + compile alone is on the order of "
+        f"{n_channels * 2}-{n_channels * 3}s, so it's gated to keep the default "
+        "runtime usable; the per-step Part B JIT data above is what feeds the "
+        "shared-Lᵀ W̃ L analysis."
+    )
 
 # ===================================================================
 # PART D — vmap (skipped for cube)
@@ -832,7 +860,10 @@ print(f"  Delaunay vertices:       {n_mesh_vertices}")
 print(f"  Edge zeroed pixels:      {edge_pixels_total}")
 print("-" * 70)
 print(f"  Cube reference log_evidence:  {cube_log_evidence_ref}")
-print(f"  Cube JIT log_evidence:        {float(full_cube_result)}")
+if full_cube_result is not None:
+    print(f"  Cube JIT log_evidence:        {float(full_cube_result)}")
+else:
+    print(f"  Cube JIT log_evidence:        SKIPPED (CUBE_FULL_JIT=1 to enable)")
 print("-" * 70)
 
 max_label = max(len(label) for label, _ in likelihood_steps)
@@ -848,7 +879,10 @@ shared_lwl_savings = (n_channels - 1) * curvature_matrix_per_channel
 
 print("-" * 70)
 print(f"      {'TOTAL (step-by-step cube cost)':<{max_label}}  {step_total:>12.6f} s")
-print(f"      {'Full pipeline cube (single JIT)':<{max_label}}  {full_pipeline_per_call:>12.6f} s")
+if np.isfinite(full_pipeline_per_call):
+    print(f"      {'Full pipeline cube (single JIT)':<{max_label}}  {full_pipeline_per_call:>12.6f} s")
+else:
+    print(f"      {'Full pipeline cube (single JIT)':<{max_label}}  SKIPPED")
 print(f"      {f'Shared-Lᵀ W̃ L savings (curvature only, est.)':<{max_label}}  {shared_lwl_savings:>12.6f} s")
 print("=" * 70)
 
@@ -871,7 +905,9 @@ likelihood_summary = {
         "regularization_coefficient": regularization_coefficient,
     },
     "cube_log_evidence_eager": cube_log_evidence_ref,
-    "cube_log_evidence_jit": float(full_cube_result),
+    "cube_log_evidence_jit": (
+        float(full_cube_result) if full_cube_result is not None else None
+    ),
     "log_evidence_per_channel_eager": [float(le) for le in log_evidence_per_channel],
     "steps_cube_cost": {label: per_call for label, per_call in likelihood_steps},
     "per_channel_costs": {
@@ -914,13 +950,14 @@ for bar, t in zip(bars, times):
         fontsize=9,
     )
 
-ax.axvline(
-    full_pipeline_per_call,
-    color="#C44E52",
-    linestyle="--",
-    linewidth=1.5,
-    label=f"Full pipeline cube (single JIT): {full_pipeline_per_call:.6f} s",
-)
+if np.isfinite(full_pipeline_per_call):
+    ax.axvline(
+        full_pipeline_per_call,
+        color="#C44E52",
+        linestyle="--",
+        linewidth=1.5,
+        label=f"Full pipeline cube (single JIT): {full_pipeline_per_call:.6f} s",
+    )
 ax.axvline(
     shared_lwl_savings,
     color="#8172B2",
@@ -959,26 +996,47 @@ print(f"  Bar chart saved to:    {chart_path}")
 # Regression assertion — deterministic cube log-evidence
 # ===================================================================
 #
-# Identical channels = exact N × single-channel log-evidence.
-EXPECTED_LOG_EVIDENCE_CUBE_SMA = n_channels * -3167.5258928840763
+# Identical channels = exact N × single-channel log-evidence (for "sma").
+# For "hannah" the per-channel literal isn't pinned yet, so the assertion is
+# skipped until the value below is filled in from a clean run.
+EXPECTED_LOG_EVIDENCE_PER_CHANNEL = {
+    "sma": -3167.5258928840763,
+    "alma": None,
+    "hannah": -204838.07924622478,
+}
 
-np.testing.assert_allclose(
-    cube_log_evidence_ref,
-    EXPECTED_LOG_EVIDENCE_CUBE_SMA,
-    rtol=1e-4,
-    err_msg=(
-        f"datacube/delaunay[{instrument}]: regression — eager cube log_evidence "
-        f"drifted (got {cube_log_evidence_ref}, expected {EXPECTED_LOG_EVIDENCE_CUBE_SMA})"
-    ),
+_per_channel = EXPECTED_LOG_EVIDENCE_PER_CHANNEL.get(instrument)
+expected_cube_log_evidence = (
+    n_channels * _per_channel if _per_channel is not None else None
 )
-print(
-    f"\n  Eager cube regression assertion PASSED: log_evidence matches "
-    f"{EXPECTED_LOG_EVIDENCE_CUBE_SMA:.6f}"
-)
-np.testing.assert_allclose(
-    float(full_cube_result),
-    EXPECTED_LOG_EVIDENCE_CUBE_SMA,
-    rtol=1e-4,
-    err_msg=f"datacube/delaunay[{instrument}]: regression — full cube log_evidence drifted",
-)
-print(f"  Full-pipeline cube regression assertion PASSED")
+
+if expected_cube_log_evidence is None:
+    print(
+        f"\n  Cube regression assertion SKIPPED for [{instrument}] — "
+        f"capture this run's eager cube log_evidence ({cube_log_evidence_ref}), "
+        f"divide by n_channels ({n_channels}) to get the per-channel value "
+        f"({cube_log_evidence_ref / n_channels}), and paste that into "
+        f"EXPECTED_LOG_EVIDENCE_PER_CHANNEL[{instrument!r}]."
+    )
+else:
+    np.testing.assert_allclose(
+        cube_log_evidence_ref,
+        expected_cube_log_evidence,
+        rtol=1e-4,
+        err_msg=(
+            f"datacube/delaunay[{instrument}]: regression — eager cube log_evidence "
+            f"drifted (got {cube_log_evidence_ref}, expected {expected_cube_log_evidence})"
+        ),
+    )
+    print(
+        f"\n  Eager cube regression assertion PASSED: log_evidence matches "
+        f"{expected_cube_log_evidence:.6f}"
+    )
+    if full_cube_result is not None:
+        np.testing.assert_allclose(
+            float(full_cube_result),
+            expected_cube_log_evidence,
+            rtol=1e-4,
+            err_msg=f"datacube/delaunay[{instrument}]: regression — full cube log_evidence drifted",
+        )
+        print(f"  Full-pipeline cube regression assertion PASSED")

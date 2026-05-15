@@ -1,0 +1,39 @@
+{
+  "autolens_version": "2026.5.14.2",
+  "instrument": "hannah",
+  "model": "delaunay",
+  "configuration": {
+    "pixel_scale_arcsec": 0.125,
+    "mask_radius_arcsec": 2.3,
+    "real_space_shape": [
+      40,
+      40
+    ],
+    "visibilities": 16984,
+    "overlay_shape": [
+      26,
+      26
+    ],
+    "edge_n_points": 30,
+    "delaunay_vertices": 578,
+    "edge_zeroed_pixels": 30,
+    "regularization_coefficient": 1.0
+  },
+  "log_likelihood_eager": -204561.286468125,
+  "figure_of_merit_eager": -204838.07924622478,
+  "log_evidence_jit": -204838.07924622117,
+  "steps": {
+    "Ray-trace data grid": 0.0003818699999101227,
+    "Ray-trace mesh grid": 0.00034264000023540573,
+    "Inversion setup (steps 5-8 combined, incl. NUFFT)": 4.5931885300000435,
+    "Data vector (D)": 0.11071577000002435,
+    "Curvature matrix (F)": 1.0810229799997615,
+    "Regularization matrix (H)": 0.018836100000044098,
+    "Regularized reconstruction": 0.07121871999988798,
+    "Mapped recon + log evidence": 0.021166530000118654
+  },
+  "total_step_by_step": 5.896873140000025,
+  "full_pipeline_single_jit": 5.6682252599999625,
+  "vmap": "SKIPPED \u2014 opt-in via DELAUNAY_VMAP=1",
+  "memory_mb": null
+}

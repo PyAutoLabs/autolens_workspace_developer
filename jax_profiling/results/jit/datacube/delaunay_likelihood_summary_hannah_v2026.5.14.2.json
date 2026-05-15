@@ -1,0 +1,82 @@
+{
+  "autolens_version": "2026.5.14.2",
+  "instrument": "hannah",
+  "model": "delaunay",
+  "n_channels": 34,
+  "configuration": {
+    "pixel_scale_arcsec": 0.125,
+    "mask_radius_arcsec": 2.3,
+    "real_space_shape": [
+      40,
+      40
+    ],
+    "visibilities_per_channel": 16984,
+    "overlay_shape": [
+      26,
+      26
+    ],
+    "edge_n_points": 30,
+    "delaunay_vertices": 578,
+    "edge_zeroed_pixels": 30,
+    "regularization_coefficient": 1.0
+  },
+  "cube_log_evidence_eager": -6964494.6943716435,
+  "cube_log_evidence_jit": null,
+  "log_evidence_per_channel_eager": [
+    -204838.07924622478,
+    -204838.07924622478,
+    -204838.07924622478,
+    -204838.07924622478,
+    -204838.07924622478,
+    -204838.07924622478,
+    -204838.07924622478,
+    -204838.07924622478,
+    -204838.07924622478,
+    -204838.07924622478,
+    -204838.07924622478,
+    -204838.07924622478,
+    -204838.07924622478,
+    -204838.07924622478,
+    -204838.07924622478,
+    -204838.07924622478,
+    -204838.07924622478,
+    -204838.07924622478,
+    -204838.07924622478,
+    -204838.07924622478,
+    -204838.07924622478,
+    -204838.07924622478,
+    -204838.07924622478,
+    -204838.07924622478,
+    -204838.07924622478,
+    -204838.07924622478,
+    -204838.07924622478,
+    -204838.07924622478,
+    -204838.07924622478,
+    -204838.07924622478,
+    -204838.07924622478,
+    -204838.07924622478,
+    -204838.07924622478,
+    -204838.07924622478
+  ],
+  "steps_cube_cost": {
+    "Ray-trace data grid (shared)": 0.0004436899998836452,
+    "Ray-trace mesh grid (shared)": 0.0004176900001766626,
+    "Inversion setup, incl. NUFFT (per channel \u00d7 34)": 163.414330899989,
+    "Data vector D (per channel \u00d7 34)": 4.0696905199954925,
+    "Curvature matrix F (per channel \u00d7 34)": 35.87535703999529,
+    "Regularization matrix H (shared)": 0.015476199998374796,
+    "Reconstruction NNLS (per channel \u00d7 34)": 1.985523500007548,
+    "Mapped recon + log evidence (per channel \u00d7 34)": 0.5584676800041053
+  },
+  "per_channel_costs": {
+    "inversion_setup": 4.806303849999677,
+    "data_vector": 0.11969677999986743,
+    "curvature_matrix": 1.0551575599998615,
+    "reconstruction": 0.058397750000222,
+    "log_evidence": 0.016425520000120743
+  },
+  "total_step_by_step_cube": 205.9197072199899,
+  "full_pipeline_cube_single_jit": NaN,
+  "shared_lwl_savings_estimate": 34.82019947999543,
+  "vmap": "SKIPPED \u2014 cube batching axis is 'datasets', not 'parameters'"
+}
