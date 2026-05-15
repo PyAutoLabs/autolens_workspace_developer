@@ -48,6 +48,7 @@ INSTRUMENTS = {
         "shape_native": (256, 256),
         "noise_sigma": 1000.0,
         "seed": 1,
+        "transformer_class": "dft",
     },
     "alma": {
         "n_visibilities": 1000,
@@ -56,6 +57,16 @@ INSTRUMENTS = {
         "shape_native": (256, 256),
         "noise_sigma": 100.0,
         "seed": 1,
+        "transformer_class": "dft",
+    },
+    "hannah": {
+        "n_visibilities": 16984,
+        "uv_scale": 2.0e6,
+        "pixel_scale": 0.125,
+        "shape_native": (40, 40),
+        "noise_sigma": 100.0,
+        "seed": 1,
+        "transformer_class": "nufft",
     },
 }
 
@@ -102,11 +113,17 @@ def simulate(instrument: str):
 
     print(f"  Total visibilities: {uv_wavelengths.shape[0]}")
 
+    transformer_choice = config.get("transformer_class", "dft").lower()
+    transformer_class = {
+        "dft": al.TransformerDFT,
+        "nufft": al.TransformerNUFFT,
+    }[transformer_choice]
+
     simulator = al.SimulatorInterferometer(
         uv_wavelengths=uv_wavelengths,
         exposure_time=300.0,
         noise_sigma=config["noise_sigma"],
-        transformer_class=al.TransformerDFT,
+        transformer_class=transformer_class,
         noise_seed=1,
     )
 

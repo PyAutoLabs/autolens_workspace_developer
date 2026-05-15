@@ -98,8 +98,9 @@ from autofit.jax import register_model as _register_model_pytrees
 # ---------------------------------------------------------------------------
 
 INSTRUMENTS = {
-    "sma": {"pixel_scale": 0.1, "real_space_shape": (256, 256)},
-    "alma": {"pixel_scale": 0.05, "real_space_shape": (256, 256)},
+    "sma": {"pixel_scale": 0.1, "real_space_shape": (256, 256), "mask_radius": 3.0},
+    "alma": {"pixel_scale": 0.05, "real_space_shape": (256, 256), "mask_radius": 3.0},
+    "hannah": {"pixel_scale": 0.125, "real_space_shape": (40, 40), "mask_radius": 2.3},
 }
 
 instrument = "sma"  # <-- change this to profile a different instrument
@@ -190,7 +191,7 @@ if al.util.dataset.should_simulate(str(dataset_path)):
         check=True,
     )
 
-mask_radius = 3.0
+mask_radius = INSTRUMENTS[instrument]["mask_radius"]
 
 real_space_mask = al.Mask2D.circular(
     shape_native=real_space_shape,
@@ -205,6 +206,10 @@ with timer.section("dataset_load"):
         uv_wavelengths_path=dataset_path / "uv_wavelengths.fits",
         real_space_mask=real_space_mask,
         transformer_class=al.TransformerDFT,
+        # DFT is intentional even at ALMA-scale visibility counts — profiling
+        # the JAX-traceable path is the goal, NUFFT (pynufft) is not yet
+        # JIT-friendly.
+        raise_error_dft_visibilities_limit=False,
     )
 
 n_visibilities = dataset.uv_wavelengths.shape[0]
@@ -1108,31 +1113,39 @@ print(f"  Bar chart saved to:    {chart_path}")
 #
 # Simulator truth parameters via GaussianPrior(mean=truth, sigma=small)
 # make the full-pipeline log-evidence deterministic at the prior median.
-EXPECTED_LOG_EVIDENCE_SMA = -3167.5258928840763
+# Pinned empirically per instrument; ``None`` means "skip the assertion and
+# print the value so it can be pasted in here on a clean run".
+EXPECTED_LOG_EVIDENCE = {
+    "sma": -3167.5258928840763,
+    "alma": None,
+    "hannah": -204838.07924622478,
+}
 
-if EXPECTED_LOG_EVIDENCE_SMA is None:
+expected_log_evidence = EXPECTED_LOG_EVIDENCE.get(instrument)
+
+if expected_log_evidence is None:
     print(
-        f"\n  Regression assertion SKIPPED — "
+        f"\n  Regression assertion SKIPPED for [{instrument}] — "
         f"capture this run's eager log_evidence ({figure_of_merit_ref}) "
-        f"and set EXPECTED_LOG_EVIDENCE_SMA in this script."
+        f"and paste it into EXPECTED_LOG_EVIDENCE[{instrument!r}]."
     )
 else:
     np.testing.assert_allclose(
         figure_of_merit_ref,
-        EXPECTED_LOG_EVIDENCE_SMA,
+        expected_log_evidence,
         rtol=1e-4,
         err_msg=(
             f"interferometer/delaunay[{instrument}]: regression — eager log_evidence "
-            f"drifted (got {figure_of_merit_ref}, expected {EXPECTED_LOG_EVIDENCE_SMA})"
+            f"drifted (got {figure_of_merit_ref}, expected {expected_log_evidence})"
         ),
     )
     print(
         f"  Eager regression assertion PASSED: log_evidence matches "
-        f"{EXPECTED_LOG_EVIDENCE_SMA:.6f}"
+        f"{expected_log_evidence:.6f}"
     )
     np.testing.assert_allclose(
         float(full_result),
-        EXPECTED_LOG_EVIDENCE_SMA,
+        expected_log_evidence,
         rtol=1e-4,
         err_msg=f"interferometer/delaunay[{instrument}]: regression — full log_evidence drifted",
     )
@@ -1140,7 +1153,7 @@ else:
     if result_vmap is not None:
         np.testing.assert_allclose(
             np.array(result_vmap),
-            EXPECTED_LOG_EVIDENCE_SMA,
+            expected_log_evidence,
             rtol=1e-4,
             err_msg=f"interferometer/delaunay[{instrument}]: regression — vmap log_evidence drifted",
         )
