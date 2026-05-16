@@ -212,6 +212,13 @@ with timer.section("dataset_load"):
         raise_error_dft_visibilities_limit=False,
     )
 
+with timer.section("apply_sparse_operator"):
+    # Precompute the NUFFT precision-matrix preload so per-fit curvature
+    # assembly uses the FFT-based sparse path instead of dense DFT for every
+    # source pixel. Unblocked by PyAutoArray#316 (the Pmax > 1 extent-indexing
+    # fix); on Delaunay this was previously guarded with NotImplementedError.
+    dataset = dataset.apply_sparse_operator(use_jax=True, show_progress=True)
+
 n_visibilities = dataset.uv_wavelengths.shape[0]
 print(f"  Total visibilities: {n_visibilities}")
 

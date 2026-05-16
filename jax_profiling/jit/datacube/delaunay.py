@@ -211,6 +211,11 @@ real_space_mask = al.Mask2D.circular(
 )
 
 with timer.section("dataset_list_load"):
+    # apply_sparse_operator: precompute the NUFFT precision-matrix preload per
+    # channel so per-fit curvature assembly uses the FFT-based sparse path
+    # instead of dense DFT for every source pixel. Unblocked by PyAutoArray#316
+    # (the Pmax > 1 extent-indexing fix); on Delaunay this was previously
+    # guarded with NotImplementedError.
     dataset_list = [
         al.Interferometer.from_fits(
             data_path=dataset_path / "data.fits",
@@ -222,7 +227,7 @@ with timer.section("dataset_list_load"):
             # the JAX-traceable path is the goal, NUFFT (pynufft) is not yet
             # JIT-friendly.
             raise_error_dft_visibilities_limit=False,
-        )
+        ).apply_sparse_operator(use_jax=True, show_progress=False)
         for _ in range(n_channels)
     ]
 
