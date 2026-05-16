@@ -1,0 +1,28 @@
+{
+  "autolens_version": "2026.5.14.2",
+  "instrument": "hst",
+  "configuration": {
+    "pixel_scale_arcsec": 0.05,
+    "mask_radius_arcsec": 3.5,
+    "image_pixels_masked": 15361,
+    "over_sampled_pixels": 17980,
+    "delaunay_vertices": 1231,
+    "edge_zeroed_pixels": 30
+  },
+  "steps": {
+    "Ray-trace data grid": 0.0023554100000183096,
+    "Ray-trace mesh grid": 0.00041168999996443745,
+    "Lens light images (pre-PSF)": 4.3150000055902635e-05,
+    "Blurred image (PSF convolution)": 0.0011305200001515913,
+    "Profile-subtracted image": 0.00018316999994567597,
+    "Inversion setup (steps 5-8 combined)": 4.339011489999757,
+    "Data vector (D)": 0.01801582000007329,
+    "Curvature matrix (F)": 2.4775824899999863,
+    "Regularization matrix (H)": 0.033709300001646625,
+    "Regularized reconstruction": 0.787687879999794,
+    "Mapped recon + log evidence": 0.22291796999998043
+  },
+  "total_step_by_step": 7.883048890001374,
+  "full_pipeline_single_jit": 7.787424830000236,
+  "vmap": "SKIPPED \u2014 compilation takes 20+ minutes (set DELAUNAY_VMAP=1)"
+}
