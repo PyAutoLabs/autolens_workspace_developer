@@ -1,10 +1,16 @@
 from autoconf import jax_wrapper  # Sets JAX environment before other imports
 
 import json
+import os
 from pathlib import Path
+
+import matplotlib
+
+matplotlib.use("Agg")  # non-interactive backend for headless runs
 
 import autofit as af
 import autolens as al
+import autolens.plot as aplt
 import numpy as np
 
 
@@ -14,6 +20,23 @@ MASK_RADIUS = 3.0
 ZERO_POINT = 25.0
 SCIENCE_GRID_SHAPE = (400, 400)
 SCIENCE_PIXEL_SCALE = 0.03
+N_POSTERIOR_DRAWS = int(os.environ.get("SOURCE_SCIENCE_N_DRAWS", "50"))
+
+QUANTITY_KEYS = (
+    "image_plane_flux",
+    "source_plane_flux",
+    "source_magnification",
+    "source_magnitude_zp_25",
+)
+MODEL_NAMES = (
+    "sersic__sersic",
+    "mge_lens__sersic_source",
+    "mge_lens__mge_source",
+)
+MODELS_WITH_LINEAR_LP = {
+    "mge_lens__sersic_source",
+    "mge_lens__mge_source",
+}
 
 
 def load_dataset():
@@ -172,23 +195,212 @@ def make_model(model_name: str) -> af.Collection:
     return af.Collection(galaxies=af.Collection(lens=lens, source=source))
 
 
-def fit_model(dataset: al.Imaging, model_name: str) -> tuple[af.Result, dict]:
+def fit_model(dataset: al.Imaging, model_name: str) -> af.Result:
     model = make_model(model_name=model_name)
 
     search = af.Nautilus(
-        path_prefix=Path("output") / "source_science_v2",
+        path_prefix=Path("output") / "source_science_v3",
         name=model_name,
-        unique_tag=f"{DATASET_NAME}_v2",
+        unique_tag=f"{DATASET_NAME}_v3",
         n_live=75,
         n_batch=25,
         iterations_per_quick_update=2000000,
     )
 
     analysis = al.AnalysisImaging(dataset=dataset, use_jax=True)
-    result = search.fit(model=model, analysis=analysis)
-    values = source_science_from(tracer=result.max_log_likelihood_tracer)
+    return search.fit(model=model, analysis=analysis)
 
-    return result, values
+
+def _solved_tracer_from_instance(
+    instance, dataset: al.Imaging, has_linear_lp: bool
+) -> al.Tracer:
+    """Build a tracer from a posterior `ModelInstance`.
+
+    For models with linear light profiles (MGE), a FitImaging is constructed
+    so the inversion solves the per-Gaussian intensities, and the returned
+    tracer carries those solved intensities as ordinary light profiles. For
+    fully non-linear models (Sersic+Sersic), the instance already has
+    intensities so the inversion step is skipped.
+    """
+    tracer = al.Tracer(galaxies=instance.galaxies)
+
+    if not has_linear_lp:
+        return tracer
+
+    fit = al.FitImaging(dataset=dataset, tracer=tracer)
+    return fit.tracer_linear_light_profiles_to_light_profiles
+
+
+def posterior_source_science_from(
+    samples,
+    dataset: al.Imaging,
+    has_linear_lp: bool,
+    n_draws: int = N_POSTERIOR_DRAWS,
+) -> dict:
+    """Draw posterior samples, compute source science for each, and report
+    median + lower/upper 1σ and 3σ bounds on each derived quantity."""
+    draws_by_quantity = {key: [] for key in QUANTITY_KEYS}
+    n_failed = 0
+
+    for _ in range(n_draws):
+        instance = samples.draw_randomly_via_pdf()
+        try:
+            tracer = _solved_tracer_from_instance(
+                instance=instance, dataset=dataset, has_linear_lp=has_linear_lp
+            )
+            values = source_science_from(tracer=tracer)
+        except Exception as e:  # noqa: BLE001 - sample-level failures should not abort the sweep
+            n_failed += 1
+            print(f"  posterior draw failed: {e}")
+            continue
+
+        for key in QUANTITY_KEYS:
+            draws_by_quantity[key].append(values[key])
+
+    summary = {"n_draws_requested": n_draws, "n_draws_failed": n_failed}
+
+    for key, draws in draws_by_quantity.items():
+        if not draws:
+            summary[key] = None
+            continue
+        arr = np.asarray(draws)
+        summary[key] = {
+            "median": float(np.median(arr)),
+            "lower_1sigma": float(np.percentile(arr, 15.865)),
+            "upper_1sigma": float(np.percentile(arr, 84.135)),
+            "lower_3sigma": float(np.percentile(arr, 0.135)),
+            "upper_3sigma": float(np.percentile(arr, 99.865)),
+            "std": float(np.std(arr, ddof=1)) if arr.size > 1 else 0.0,
+        }
+
+    return summary
+
+
+def with_pdf_comparison(pdf_summary: dict, truth: dict) -> dict:
+    """Annotate each posterior summary with truth-coverage flags."""
+    compared = {
+        "n_draws_requested": pdf_summary.get("n_draws_requested"),
+        "n_draws_failed": pdf_summary.get("n_draws_failed"),
+    }
+
+    for key in QUANTITY_KEYS:
+        entry = pdf_summary.get(key)
+        if entry is None:
+            compared[key] = None
+            continue
+
+        truth_value = truth[key]
+        within_1sigma = entry["lower_1sigma"] <= truth_value <= entry["upper_1sigma"]
+        within_3sigma = entry["lower_3sigma"] <= truth_value <= entry["upper_3sigma"]
+        compared[key] = {
+            **entry,
+            "truth": truth_value,
+            "delta_median": entry["median"] - truth_value,
+            "z_score": (
+                (entry["median"] - truth_value) / entry["std"]
+                if entry["std"] > 0
+                else None
+            ),
+            "truth_within_1sigma": bool(within_1sigma),
+            "truth_within_3sigma": bool(within_3sigma),
+        }
+
+    return compared
+
+
+def save_fit_subplot(result: af.Result, model_name: str) -> Path:
+    """Copy the Nautilus-generated `fit.png` for this fit to a per-model
+    filename inside `dataset/imaging/simple/fits/`.
+
+    Generating a fresh subplot via `aplt.subplot_fit_imaging` and pointing it
+    at a custom directory always writes a file called `fit.png`, so three
+    successive calls would overwrite each other. The search already emits a
+    `image/fit.png` inside its own output folder, so just copy that.
+    """
+    import shutil
+
+    fit_image_dir = DATASET_PATH / "fits"
+    fit_image_dir.mkdir(parents=True, exist_ok=True)
+    output_path = fit_image_dir / f"{model_name}.png"
+
+    src = Path(result.paths.image_path) / "fit.png"
+    if src.exists():
+        shutil.copyfile(src, output_path)
+    else:
+        raise FileNotFoundError(f"Expected {src} from search output")
+
+    return output_path
+
+
+def _fmt(value: float, precision: int = 4) -> str:
+    if value is None:
+        return "—"
+    if isinstance(value, bool):
+        return "yes" if value else "**NO**"
+    return f"{value:.{precision}g}"
+
+
+def write_markdown_summary(summary: dict, output_path: Path) -> None:
+    """Render a compact human-readable comparison table."""
+    truth = summary["truth"]
+    lines = [
+        "# Source-Science Fit Comparison",
+        "",
+        f"Dataset: `{summary['dataset_path']}` (zero-point = {summary['zero_point_assumption']})",
+        f"Posterior draws per fit: {N_POSTERIOR_DRAWS}",
+        "",
+        "## Truth (from tracer)",
+        "",
+        f"- image-plane flux:    {truth['image_plane_flux']:.4f}",
+        f"- source-plane flux:   {truth['source_plane_flux']:.4f}",
+        f"- magnification:       {truth['source_magnification']:.4f}",
+        f"- magnitude (zp=25):   {truth['source_magnitude_zp_25']:.4f}",
+        "",
+    ]
+
+    for model_name, fit_data in summary["fits"].items():
+        mle = fit_data["mle"]
+        pdf = fit_data["pdf"]
+        lines += [
+            f"## {model_name}",
+            "",
+            f"max log likelihood: {fit_data['log_likelihood']:.4f}",
+            "",
+            "| Quantity | Truth | MLE | MLE / truth | PDF median | PDF ±1σ | within 1σ? | within 3σ? | z-score |",
+            "|---|---|---|---|---|---|---|---|---|",
+        ]
+        for key, label in [
+            ("source_plane_flux", "source flux"),
+            ("image_plane_flux", "image flux"),
+            ("source_magnification", "magnification"),
+            ("source_magnitude_zp_25", "magnitude"),
+        ]:
+            truth_value = truth[key]
+            mle_value = mle[key]
+            mle_frac_key = f"frac_{key}"
+            mle_frac = mle.get(mle_frac_key)
+            pdf_entry = pdf.get(key)
+            if pdf_entry is None:
+                lines.append(
+                    f"| {label} | {_fmt(truth_value)} | {_fmt(mle_value)} | "
+                    f"{_fmt(mle_frac)} | — | — | — | — | — |"
+                )
+                continue
+
+            sigma_str = (
+                f"+{pdf_entry['upper_1sigma'] - pdf_entry['median']:.4g} / "
+                f"-{pdf_entry['median'] - pdf_entry['lower_1sigma']:.4g}"
+            )
+            lines.append(
+                f"| {label} | {_fmt(truth_value)} | {_fmt(mle_value)} | {_fmt(mle_frac)} | "
+                f"{_fmt(pdf_entry['median'])} | {sigma_str} | "
+                f"{_fmt(pdf_entry['truth_within_1sigma'])} | "
+                f"{_fmt(pdf_entry['truth_within_3sigma'])} | "
+                f"{_fmt(pdf_entry['z_score'])} |"
+            )
+        lines += ["", ""]
+
+    output_path.write_text("\n".join(lines))
 
 
 def main():
@@ -207,30 +419,53 @@ def main():
     summary = {
         "dataset_path": str(DATASET_PATH),
         "zero_point_assumption": ZERO_POINT,
+        "n_posterior_draws": N_POSTERIOR_DRAWS,
         "truth": truth,
         "fits": {},
     }
 
-    for model_name in [
-        "sersic__sersic",
-        "mge_lens__sersic_source",
-        "mge_lens__mge_source",
-    ]:
+    for model_name in MODEL_NAMES:
         print(f"Running fit: {model_name}")
-        result, values = fit_model(dataset=dataset, model_name=model_name)
-        compared = with_comparison(values=values, truth=truth)
-        summary["fits"][model_name] = compared
+        result = fit_model(dataset=dataset, model_name=model_name)
+        log_likelihood = float(result.max_log_likelihood_fit.log_likelihood)
+        print(f"Completed fit: {model_name}  log_likelihood={log_likelihood}")
 
-        print(f"Completed fit: {model_name}")
-        print(json.dumps(compared, indent=4))
-        print(f"Max log likelihood: {result.max_log_likelihood_fit.log_likelihood}")
+        mle_values = source_science_from(tracer=result.max_log_likelihood_tracer)
+        mle_compared = with_comparison(values=mle_values, truth=truth)
 
-    output_path = DATASET_PATH / "fit_comparison.json"
+        has_linear_lp = model_name in MODELS_WITH_LINEAR_LP
+        print(
+            f"  posterior expansion (n_draws={N_POSTERIOR_DRAWS}, has_linear_lp={has_linear_lp})..."
+        )
+        pdf_summary = posterior_source_science_from(
+            samples=result.samples, dataset=dataset, has_linear_lp=has_linear_lp
+        )
+        pdf_compared = with_pdf_comparison(pdf_summary=pdf_summary, truth=truth)
 
-    with open(output_path, "w") as f:
+        try:
+            fit_image_path = save_fit_subplot(result=result, model_name=model_name)
+            print(f"  wrote fit subplot: {fit_image_path}")
+        except Exception as e:  # noqa: BLE001 - plotting failures should not abort the sweep
+            print(f"  WARNING failed to save fit subplot for {model_name}: {e}")
+
+        summary["fits"][model_name] = {
+            "log_likelihood": log_likelihood,
+            "mle": mle_compared,
+            "pdf": pdf_compared,
+        }
+
+        print(f"  MLE comparison:\n{json.dumps(mle_compared, indent=4)}")
+        print(f"  posterior comparison:\n{json.dumps(pdf_compared, indent=4)}")
+
+    json_path = DATASET_PATH / "fit_comparison.json"
+    md_path = DATASET_PATH / "fit_comparison.md"
+
+    with open(json_path, "w") as f:
         json.dump(summary, f, indent=4)
+    write_markdown_summary(summary=summary, output_path=md_path)
 
-    print(f"Wrote comparison summary to {output_path}")
+    print(f"Wrote comparison JSON to {json_path}")
+    print(f"Wrote comparison Markdown to {md_path}")
 
 
 if __name__ == "__main__":
