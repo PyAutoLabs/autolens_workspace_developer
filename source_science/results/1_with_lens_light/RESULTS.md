@@ -45,6 +45,28 @@ for the two MGE fits (so the inversion-solved intensities are included).
 See `fit_comparison.md` for the full table including flux quantities; raw
 JSON in `fit_comparison.json`; per-fit subplots in `fits/<model_name>.png`.
 
+### Diagnostic plots
+
+- `fits/source_1d_profile.png` — 1D source-plane radial brightness for
+  truth + each fit's MLE, with posterior 1σ band per fit. The MGE+MGE
+  curve has the diffuse halo signature: a wide tail of brightness
+  extending past where the truth source has dropped to zero.
+- `fits/source_cumulative_flux.png` — cumulative source-plane flux inside
+  a circular aperture as a function of aperture radius. Truth saturates
+  near 157 by ~0.5 arcsec; the MGE+MGE curve keeps growing past 300 out
+  to large radius. This is *where* the test-1 MGE bias sits — outside
+  the strongly-magnified region.
+- `fits/source_2d_brightness_panel.png` — side-by-side 2D source-plane
+  images, same colour scale.
+
+A cross-experiment plot at `../test1_vs_test2_mge_source.png` overlays
+the test-1 and test-2 MGE source profiles against truth — the single
+image that summarises the lens-light degeneracy effect.
+
+See also [`../2_no_lens_light/RESULTS.md`](../2_no_lens_light/RESULTS.md)
+for the controlled re-run that confirms the lens-light degeneracy
+hypothesis.
+
 ## What the numbers say
 
 ### 1. Sersic source ≠ truth, even when the lens is also Sersic
