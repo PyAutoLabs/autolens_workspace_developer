@@ -19,21 +19,33 @@ and from the fit model. Same lens mass + shear and same `SersicCore` source as
 test 1 — only the lens Sersic bulge is dropped. If the hypothesis is right,
 the MGE-source bias should collapse.
 
-## Bottom line — **hypothesis confirmed**
+## Bottom line — **hypothesis confirmed for the catastrophic part**
 
-Without lens light the MGE-source recovery is excellent. The 44%
-magnification under-estimate from test 1 drops to 3.6%; the 0.77 mag
-magnitude bias drops to 0.045 mag; the source-flux 2× over-estimate drops
-to 4%. The MGE source is no longer catastrophically wrong — it now agrees
-with the Sersic source to within their respective error bars on every
-derived quantity. This pins the test-1 MGE failure squarely on
-lens-light/source-light degeneracy.
+Removing lens light collapses the test-1 MGE disaster:
 
-The remaining ~3-4% magnification bias is shared between Sersic and MGE
-fits, doesn't depend on the source-light parameterisation, and matches
-what test 1 saw on the Sersic side. That residual is the **source profile-
-shape effect** — `radius_break` mismatch and `sersic_index` drift —
-identified as test-2 follow-up in `1_with_lens_light/RESULTS.md`.
+- magnification bias: −44% → **−3.6%**
+- source-flux bias: +103% → **+3.9%**
+- magnitude bias: −0.77 mag → **−0.045 mag**
+
+The MGE source now agrees with the Sersic source to within their respective
+1σ on every derived quantity. The test-1 MGE failure was lens-light /
+source-light degeneracy, not a fundamental MGE problem.
+
+**But neither test-2 fit is science-acceptable yet.** Both still miss truth
+by ~5σ on magnification and source flux — the posterior 1σ on magnification
+is only ±0.20, so a 1.27 absolute deviation registers as -5.8σ (Sersic) and
+-5.0σ (MGE). For Euclid we'd want < 1% bias and truth inside 1σ; we're at
+3.6% bias with truth excluded at 3σ. The MGE catastrophe is fixed; the
+underlying precision-vs-accuracy problem from test 1 is not.
+
+Crucially, **the residual bias is the same direction and magnitude for both
+fits** (Sersic ≈ MGE on magnification, source flux, and magnitude). Since
+the source parameterisation no longer matters, the residual must be a
+profile-shape / data-coupling effect that lives in the *integration* of
+source-plane flux outside the lensed region — most likely the
+`SersicCore.radius_break` mismatch (fit uses 0.05; library default and
+simulator use 0.025) and/or the `sersic_index` drift away from truth
+n = 1.0. Both are scoped for test 3.
 
 ## Setup
 
@@ -86,6 +98,24 @@ across the two datasets and don't carry information about source recovery.
 
 **The MGE-source row is what you'd expect to see if the lens-light
 absorption hypothesis is correct, and that's exactly what we got.**
+
+### Diagnostic plots
+
+- `fits/source_1d_profile.png` — 1D source-plane radial brightness for
+  truth + each fit's MLE, with posterior 1σ band per fit. Both the Sersic
+  and MGE curves now track truth closely in the core; the small residual
+  discrepancy is the profile-shape effect that explains the −3.6%
+  magnification bias.
+- `fits/source_cumulative_flux.png` — cumulative source-plane flux as a
+  function of aperture radius. Compare to the test-1 version: the test-2
+  MGE source no longer keeps growing past truth into a diffuse halo.
+- `fits/source_2d_brightness_panel.png` — side-by-side 2D source-plane
+  images, same colour scale.
+
+The headline cross-experiment plot lives at
+[`../test1_vs_test2_mge_source.png`](../test1_vs_test2_mge_source.png).
+It overlays the test-1 and test-2 MGE source profiles against truth and
+is the single image that summarises the hypothesis confirmation.
 
 ## What the numbers tell us
 
