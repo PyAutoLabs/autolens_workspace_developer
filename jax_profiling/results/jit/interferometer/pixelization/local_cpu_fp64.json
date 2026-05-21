@@ -1,0 +1,38 @@
+{
+  "autolens_version": "2026.5.14.2",
+  "device": {
+    "backend": "cpu",
+    "device": "TFRT_CPU_0"
+  },
+  "instrument": "sma",
+  "model": "pixelization",
+  "configuration": {
+    "pixel_scale_arcsec": 0.1,
+    "mask_radius_arcsec": 3.0,
+    "real_space_shape": [
+      256,
+      256
+    ],
+    "visibilities": 190,
+    "mesh_shape": [
+      32,
+      32
+    ],
+    "source_pixels": 1024,
+    "regularization_coefficient": 1.0
+  },
+  "log_likelihood_eager": -3153.74117860196,
+  "figure_of_merit_eager": -3166.339552277188,
+  "log_evidence_jit": -3166.338582474716,
+  "full_pipeline_single_jit": 0.7528386299999965,
+  "vmap": {
+    "batch_size": 3,
+    "batch_time": 3.112691599999971,
+    "per_call": 1.037563866666657,
+    "speedup_vs_single_jit": 0.7
+  },
+  "memory_mb": {
+    "output": 2.288818359375e-05,
+    "temp": 193.46559143066406
+  }
+}

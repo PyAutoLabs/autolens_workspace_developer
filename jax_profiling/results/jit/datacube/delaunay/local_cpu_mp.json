@@ -1,0 +1,82 @@
+{
+  "autolens_version": "2026.5.14.2",
+  "device": {
+    "backend": "cpu",
+    "device": "TFRT_CPU_0"
+  },
+  "instrument": "hannah",
+  "model": "delaunay",
+  "n_channels": 34,
+  "configuration": {
+    "pixel_scale_arcsec": 0.125,
+    "mask_radius_arcsec": 2.3,
+    "real_space_shape": [
+      40,
+      40
+    ],
+    "visibilities_per_channel": 16984,
+    "hilbert_pixels": 500,
+    "delaunay_vertices": 500,
+    "edge_zeroed_pixels": 0,
+    "regularization_coefficient": 1.0
+  },
+  "cube_log_evidence_eager": -6962381.549156394,
+  "cube_log_evidence_jit": null,
+  "log_evidence_per_channel_eager": [
+    -204775.92791636448,
+    -204775.92791636448,
+    -204775.92791636448,
+    -204775.92791636448,
+    -204775.92791636448,
+    -204775.92791636448,
+    -204775.92791636448,
+    -204775.92791636448,
+    -204775.92791636448,
+    -204775.92791636448,
+    -204775.92791636448,
+    -204775.92791636448,
+    -204775.92791636448,
+    -204775.92791636448,
+    -204775.92791636448,
+    -204775.92791636448,
+    -204775.92791636448,
+    -204775.92791636448,
+    -204775.92791636448,
+    -204775.92791636448,
+    -204775.92791636448,
+    -204775.92791636448,
+    -204775.92791636448,
+    -204775.92791636448,
+    -204775.92791636448,
+    -204775.92791636448,
+    -204775.92791636448,
+    -204775.92791636448,
+    -204775.92791636448,
+    -204775.92791636448,
+    -204775.92791636448,
+    -204775.92791636448,
+    -204775.92791636448,
+    -204775.92791636448
+  ],
+  "steps_cube_cost": {
+    "Ray-trace data grid (shared)": 0.0003309700000045268,
+    "Ray-trace mesh grid (shared)": 0.00025432000002183485,
+    "Inversion setup, incl. NUFFT (per channel \u00d7 34)": 133.3793636400006,
+    "Data vector D (per channel \u00d7 34)": 6.3634760400005685,
+    "Curvature matrix F (per channel \u00d7 34)": 23.215129280001022,
+    "Regularization matrix H (shared)": 0.011470900000404072,
+    "Reconstruction NNLS (per channel \u00d7 34)": 1.2280592599991906,
+    "Mapped recon + log evidence (per channel \u00d7 34)": 0.4598333399992953
+  },
+  "per_channel_costs": {
+    "inversion_setup": 3.922922460000018,
+    "data_vector": 0.18716106000001673,
+    "curvature_matrix": 0.68279792000003,
+    "reconstruction": 0.036119389999976194,
+    "log_evidence": 0.013524509999979274
+  },
+  "total_step_by_step_cube": 164.65791775000113,
+  "full_pipeline_cube_single_jit": NaN,
+  "shared_lwl_savings_estimate": 22.532331360000992,
+  "vmap": "SKIPPED \u2014 cube batching axis is 'datasets', not 'parameters'"
+}

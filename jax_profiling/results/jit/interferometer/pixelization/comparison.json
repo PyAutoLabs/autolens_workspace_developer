@@ -1,0 +1,84 @@
+{
+  "configs": {
+    "local_cpu_fp64": {
+      "autolens_version": "2026.5.14.2",
+      "device": {
+        "backend": "cpu",
+        "device": "TFRT_CPU_0"
+      },
+      "instrument": "sma",
+      "model": "pixelization",
+      "configuration": {
+        "pixel_scale_arcsec": 0.1,
+        "mask_radius_arcsec": 3.0,
+        "real_space_shape": [
+          256,
+          256
+        ],
+        "visibilities": 190,
+        "mesh_shape": [
+          32,
+          32
+        ],
+        "source_pixels": 1024,
+        "regularization_coefficient": 1.0
+      },
+      "log_likelihood_eager": -3153.74117860196,
+      "figure_of_merit_eager": -3166.339552277188,
+      "log_evidence_jit": -3166.338582474716,
+      "full_pipeline_single_jit": 0.7528386299999965,
+      "vmap": {
+        "batch_size": 3,
+        "batch_time": 3.112691599999971,
+        "per_call": 1.037563866666657,
+        "speedup_vs_single_jit": 0.7
+      },
+      "memory_mb": {
+        "output": 2.288818359375e-05,
+        "temp": 193.46559143066406
+      },
+      "full_pipeline_per_call": 0.7528386299999965,
+      "config_name": "local_cpu_fp64"
+    },
+    "local_cpu_mp": {
+      "autolens_version": "2026.5.14.2",
+      "device": {
+        "backend": "cpu",
+        "device": "TFRT_CPU_0"
+      },
+      "instrument": "sma",
+      "model": "pixelization",
+      "configuration": {
+        "pixel_scale_arcsec": 0.1,
+        "mask_radius_arcsec": 3.0,
+        "real_space_shape": [
+          256,
+          256
+        ],
+        "visibilities": 190,
+        "mesh_shape": [
+          32,
+          32
+        ],
+        "source_pixels": 1024,
+        "regularization_coefficient": 1.0
+      },
+      "log_likelihood_eager": -3153.7411786024736,
+      "figure_of_merit_eager": -3166.339552277395,
+      "log_evidence_jit": -3166.3385824748907,
+      "full_pipeline_single_jit": 0.696637630000032,
+      "vmap": {
+        "batch_size": 3,
+        "batch_time": 2.7855878800000027,
+        "per_call": 0.9285292933333342,
+        "speedup_vs_single_jit": 0.8
+      },
+      "memory_mb": {
+        "output": 2.288818359375e-05,
+        "temp": 193.46559143066406
+      },
+      "full_pipeline_per_call": 0.696637630000032,
+      "config_name": "local_cpu_mp"
+    }
+  }
+}

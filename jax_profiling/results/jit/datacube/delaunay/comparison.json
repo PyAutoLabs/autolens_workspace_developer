@@ -1,0 +1,192 @@
+{
+  "configs": {
+    "local_cpu_fp64": {
+      "autolens_version": "2026.5.14.2",
+      "device": {
+        "backend": "cpu",
+        "device": "TFRT_CPU_0"
+      },
+      "instrument": "hannah",
+      "model": "delaunay",
+      "n_channels": 34,
+      "configuration": {
+        "pixel_scale_arcsec": 0.125,
+        "mask_radius_arcsec": 2.3,
+        "real_space_shape": [
+          40,
+          40
+        ],
+        "visibilities_per_channel": 16984,
+        "hilbert_pixels": 500,
+        "delaunay_vertices": 500,
+        "edge_zeroed_pixels": 0,
+        "regularization_coefficient": 1.0
+      },
+      "cube_log_evidence_eager": -6962381.549148887,
+      "cube_log_evidence_jit": null,
+      "log_evidence_per_channel_eager": [
+        -204775.92791614364,
+        -204775.92791614364,
+        -204775.92791614364,
+        -204775.92791614364,
+        -204775.92791614364,
+        -204775.92791614364,
+        -204775.92791614364,
+        -204775.92791614364,
+        -204775.92791614364,
+        -204775.92791614364,
+        -204775.92791614364,
+        -204775.92791614364,
+        -204775.92791614364,
+        -204775.92791614364,
+        -204775.92791614364,
+        -204775.92791614364,
+        -204775.92791614364,
+        -204775.92791614364,
+        -204775.92791614364,
+        -204775.92791614364,
+        -204775.92791614364,
+        -204775.92791614364,
+        -204775.92791614364,
+        -204775.92791614364,
+        -204775.92791614364,
+        -204775.92791614364,
+        -204775.92791614364,
+        -204775.92791614364,
+        -204775.92791614364,
+        -204775.92791614364,
+        -204775.92791614364,
+        -204775.92791614364,
+        -204775.92791614364,
+        -204775.92791614364
+      ],
+      "steps_cube_cost": {
+        "Ray-trace data grid (shared)": 0.0003386800000043877,
+        "Ray-trace mesh grid (shared)": 0.00027953000003435593,
+        "Inversion setup, incl. NUFFT (per channel \u00d7 34)": 153.81314263999923,
+        "Data vector D (per channel \u00d7 34)": 7.341806659999747,
+        "Curvature matrix F (per channel \u00d7 34)": 33.49520472000031,
+        "Regularization matrix H (shared)": 0.022104199999830598,
+        "Reconstruction NNLS (per channel \u00d7 34)": 1.6303911199993308,
+        "Mapped recon + log evidence (per channel \u00d7 34)": 0.6032545199993364
+      },
+      "per_channel_costs": {
+        "inversion_setup": 4.523915959999977,
+        "data_vector": 0.21593548999999257,
+        "curvature_matrix": 0.9851530800000091,
+        "reconstruction": 0.04795267999998032,
+        "log_evidence": 0.017742779999980484
+      },
+      "total_step_by_step_cube": 196.9065220699978,
+      "full_pipeline_cube_single_jit": NaN,
+      "shared_lwl_savings_estimate": 32.5100516400003,
+      "vmap": "SKIPPED \u2014 cube batching axis is 'datasets', not 'parameters'",
+      "full_pipeline_per_call": 196.9065220699978,
+      "steps": {
+        "Ray-trace data grid (shared)": 0.0003386800000043877,
+        "Ray-trace mesh grid (shared)": 0.00027953000003435593,
+        "Inversion setup, incl. NUFFT (per channel \u00d7 34)": 153.81314263999923,
+        "Data vector D (per channel \u00d7 34)": 7.341806659999747,
+        "Curvature matrix F (per channel \u00d7 34)": 33.49520472000031,
+        "Regularization matrix H (shared)": 0.022104199999830598,
+        "Reconstruction NNLS (per channel \u00d7 34)": 1.6303911199993308,
+        "Mapped recon + log evidence (per channel \u00d7 34)": 0.6032545199993364
+      },
+      "config_name": "local_cpu_fp64"
+    },
+    "local_cpu_mp": {
+      "autolens_version": "2026.5.14.2",
+      "device": {
+        "backend": "cpu",
+        "device": "TFRT_CPU_0"
+      },
+      "instrument": "hannah",
+      "model": "delaunay",
+      "n_channels": 34,
+      "configuration": {
+        "pixel_scale_arcsec": 0.125,
+        "mask_radius_arcsec": 2.3,
+        "real_space_shape": [
+          40,
+          40
+        ],
+        "visibilities_per_channel": 16984,
+        "hilbert_pixels": 500,
+        "delaunay_vertices": 500,
+        "edge_zeroed_pixels": 0,
+        "regularization_coefficient": 1.0
+      },
+      "cube_log_evidence_eager": -6962381.549156394,
+      "cube_log_evidence_jit": null,
+      "log_evidence_per_channel_eager": [
+        -204775.92791636448,
+        -204775.92791636448,
+        -204775.92791636448,
+        -204775.92791636448,
+        -204775.92791636448,
+        -204775.92791636448,
+        -204775.92791636448,
+        -204775.92791636448,
+        -204775.92791636448,
+        -204775.92791636448,
+        -204775.92791636448,
+        -204775.92791636448,
+        -204775.92791636448,
+        -204775.92791636448,
+        -204775.92791636448,
+        -204775.92791636448,
+        -204775.92791636448,
+        -204775.92791636448,
+        -204775.92791636448,
+        -204775.92791636448,
+        -204775.92791636448,
+        -204775.92791636448,
+        -204775.92791636448,
+        -204775.92791636448,
+        -204775.92791636448,
+        -204775.92791636448,
+        -204775.92791636448,
+        -204775.92791636448,
+        -204775.92791636448,
+        -204775.92791636448,
+        -204775.92791636448,
+        -204775.92791636448,
+        -204775.92791636448,
+        -204775.92791636448
+      ],
+      "steps_cube_cost": {
+        "Ray-trace data grid (shared)": 0.0003309700000045268,
+        "Ray-trace mesh grid (shared)": 0.00025432000002183485,
+        "Inversion setup, incl. NUFFT (per channel \u00d7 34)": 133.3793636400006,
+        "Data vector D (per channel \u00d7 34)": 6.3634760400005685,
+        "Curvature matrix F (per channel \u00d7 34)": 23.215129280001022,
+        "Regularization matrix H (shared)": 0.011470900000404072,
+        "Reconstruction NNLS (per channel \u00d7 34)": 1.2280592599991906,
+        "Mapped recon + log evidence (per channel \u00d7 34)": 0.4598333399992953
+      },
+      "per_channel_costs": {
+        "inversion_setup": 3.922922460000018,
+        "data_vector": 0.18716106000001673,
+        "curvature_matrix": 0.68279792000003,
+        "reconstruction": 0.036119389999976194,
+        "log_evidence": 0.013524509999979274
+      },
+      "total_step_by_step_cube": 164.65791775000113,
+      "full_pipeline_cube_single_jit": NaN,
+      "shared_lwl_savings_estimate": 22.532331360000992,
+      "vmap": "SKIPPED \u2014 cube batching axis is 'datasets', not 'parameters'",
+      "full_pipeline_per_call": 164.65791775000113,
+      "steps": {
+        "Ray-trace data grid (shared)": 0.0003309700000045268,
+        "Ray-trace mesh grid (shared)": 0.00025432000002183485,
+        "Inversion setup, incl. NUFFT (per channel \u00d7 34)": 133.3793636400006,
+        "Data vector D (per channel \u00d7 34)": 6.3634760400005685,
+        "Curvature matrix F (per channel \u00d7 34)": 23.215129280001022,
+        "Regularization matrix H (shared)": 0.011470900000404072,
+        "Reconstruction NNLS (per channel \u00d7 34)": 1.2280592599991906,
+        "Mapped recon + log evidence (per channel \u00d7 34)": 0.4598333399992953
+      },
+      "config_name": "local_cpu_mp"
+    }
+  }
+}
