@@ -1,0 +1,39 @@
+{
+  "autolens_version": "2026.5.14.2",
+  "device": {
+    "backend": "cpu",
+    "device": "TFRT_CPU_0"
+  },
+  "instrument": "sma",
+  "model": "delaunay",
+  "configuration": {
+    "pixel_scale_arcsec": 0.1,
+    "mask_radius_arcsec": 3.0,
+    "real_space_shape": [
+      256,
+      256
+    ],
+    "visibilities": 190,
+    "hilbert_pixels": 1000,
+    "delaunay_vertices": 1000,
+    "edge_zeroed_pixels": 0,
+    "regularization_coefficient": 1.0
+  },
+  "log_likelihood_eager": -3152.385198632988,
+  "figure_of_merit_eager": -3167.144638780922,
+  "log_evidence_jit": -3167.1446387785927,
+  "steps": {
+    "Ray-trace data grid": 0.0006503900000097929,
+    "Ray-trace mesh grid": 0.00033304000003226976,
+    "Inversion setup (steps 5-8 combined, incl. NUFFT)": 0.2771895399999721,
+    "Data vector (D)": 0.0008603299999776937,
+    "Curvature matrix (F)": 0.037679560000015044,
+    "Regularization matrix (H)": 0.012505200000305194,
+    "Regularized reconstruction": 0.29199574999997824,
+    "Mapped recon + log evidence": 0.045797240000001696
+  },
+  "total_step_by_step": 0.6670110500002921,
+  "full_pipeline_single_jit": 0.8810054600000058,
+  "vmap": "SKIPPED \u2014 opt-in via DELAUNAY_VMAP=1",
+  "memory_mb": null
+}

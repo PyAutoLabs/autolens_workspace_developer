@@ -1,0 +1,170 @@
+{
+  "configs": {
+    "local_cpu_fp64": {
+      "autolens_version": "2026.5.14.2",
+      "device": {
+        "backend": "cpu",
+        "device": "TFRT_CPU_0"
+      },
+      "instrument": "sma",
+      "model": "delaunay",
+      "configuration": {
+        "pixel_scale_arcsec": 0.1,
+        "mask_radius_arcsec": 3.0,
+        "real_space_shape": [
+          256,
+          256
+        ],
+        "visibilities": 190,
+        "hilbert_pixels": 1000,
+        "delaunay_vertices": 1000,
+        "edge_zeroed_pixels": 0,
+        "regularization_coefficient": 1.0
+      },
+      "log_likelihood_eager": -3152.385198632988,
+      "figure_of_merit_eager": -3167.144638780922,
+      "log_evidence_jit": -3167.1446387785927,
+      "steps": {
+        "Ray-trace data grid": 0.0006503900000097929,
+        "Ray-trace mesh grid": 0.00033304000003226976,
+        "Inversion setup (steps 5-8 combined, incl. NUFFT)": 0.2771895399999721,
+        "Data vector (D)": 0.0008603299999776937,
+        "Curvature matrix (F)": 0.037679560000015044,
+        "Regularization matrix (H)": 0.012505200000305194,
+        "Regularized reconstruction": 0.29199574999997824,
+        "Mapped recon + log evidence": 0.045797240000001696
+      },
+      "total_step_by_step": 0.6670110500002921,
+      "full_pipeline_single_jit": 0.8810054600000058,
+      "vmap": "SKIPPED \u2014 opt-in via DELAUNAY_VMAP=1",
+      "memory_mb": null,
+      "full_pipeline_per_call": 0.8810054600000058,
+      "config_name": "local_cpu_fp64"
+    },
+    "local_cpu_mp": {
+      "autolens_version": "2026.5.14.2",
+      "device": {
+        "backend": "cpu",
+        "device": "TFRT_CPU_0"
+      },
+      "instrument": "sma",
+      "model": "delaunay",
+      "configuration": {
+        "pixel_scale_arcsec": 0.1,
+        "mask_radius_arcsec": 3.0,
+        "real_space_shape": [
+          256,
+          256
+        ],
+        "visibilities": 190,
+        "hilbert_pixels": 1000,
+        "delaunay_vertices": 1000,
+        "edge_zeroed_pixels": 0,
+        "regularization_coefficient": 1.0
+      },
+      "log_likelihood_eager": -3152.3851986345717,
+      "figure_of_merit_eager": -3167.1446387817355,
+      "log_evidence_jit": -3167.144638779406,
+      "steps": {
+        "Ray-trace data grid": 0.0005618400000003021,
+        "Ray-trace mesh grid": 0.00033986999997068776,
+        "Inversion setup (steps 5-8 combined, incl. NUFFT)": 0.2705333000000337,
+        "Data vector (D)": 0.0007767399999920599,
+        "Curvature matrix (F)": 0.036160750000044574,
+        "Regularization matrix (H)": 0.008952399999998306,
+        "Regularized reconstruction": 0.26729473000000326,
+        "Mapped recon + log evidence": 0.04538525000002665
+      },
+      "total_step_by_step": 0.6300048800000696,
+      "full_pipeline_single_jit": 0.7880197699999826,
+      "vmap": "SKIPPED \u2014 opt-in via DELAUNAY_VMAP=1",
+      "memory_mb": null,
+      "full_pipeline_per_call": 0.7880197699999826,
+      "config_name": "local_cpu_mp"
+    },
+    "local_gpu_fp64": {
+      "autolens_version": "2026.5.14.2",
+      "device": {
+        "backend": "gpu",
+        "device": "cuda:0",
+        "nvidia_smi": "NVIDIA GeForce RTX 2060 with Max-Q Design, 3252 MiB, 6144 MiB"
+      },
+      "instrument": "sma",
+      "model": "delaunay",
+      "configuration": {
+        "pixel_scale_arcsec": 0.1,
+        "mask_radius_arcsec": 3.0,
+        "real_space_shape": [
+          256,
+          256
+        ],
+        "visibilities": 190,
+        "hilbert_pixels": 1000,
+        "delaunay_vertices": 1000,
+        "edge_zeroed_pixels": 0,
+        "regularization_coefficient": 1.0
+      },
+      "log_likelihood_eager": -3152.385198632988,
+      "figure_of_merit_eager": -3167.144638780922,
+      "log_evidence_jit": -3167.144638775059,
+      "steps": {
+        "Ray-trace data grid": 0.002934600000116916,
+        "Ray-trace mesh grid": 0.0029093900000589203,
+        "Inversion setup (steps 5-8 combined, incl. NUFFT)": 0.03854974000005314,
+        "Data vector (D)": 0.00026956999990943584,
+        "Curvature matrix (F)": 0.0051286899999468,
+        "Regularization matrix (H)": 0.017311900001004688,
+        "Regularized reconstruction": 0.07841918000012811,
+        "Mapped recon + log evidence": 0.03029205999991973
+      },
+      "total_step_by_step": 0.17581513000113774,
+      "full_pipeline_single_jit": 0.1309565499999735,
+      "vmap": "SKIPPED \u2014 opt-in via DELAUNAY_VMAP=1",
+      "memory_mb": null,
+      "full_pipeline_per_call": 0.1309565499999735,
+      "config_name": "local_gpu_fp64"
+    },
+    "local_gpu_mp": {
+      "autolens_version": "2026.5.14.2",
+      "device": {
+        "backend": "gpu",
+        "device": "cuda:0",
+        "nvidia_smi": "NVIDIA GeForce RTX 2060 with Max-Q Design, 3252 MiB, 6144 MiB"
+      },
+      "instrument": "sma",
+      "model": "delaunay",
+      "configuration": {
+        "pixel_scale_arcsec": 0.1,
+        "mask_radius_arcsec": 3.0,
+        "real_space_shape": [
+          256,
+          256
+        ],
+        "visibilities": 190,
+        "hilbert_pixels": 1000,
+        "delaunay_vertices": 1000,
+        "edge_zeroed_pixels": 0,
+        "regularization_coefficient": 1.0
+      },
+      "log_likelihood_eager": -3152.3851986345717,
+      "figure_of_merit_eager": -3167.1446387817355,
+      "log_evidence_jit": -3167.1446387768838,
+      "steps": {
+        "Ray-trace data grid": 0.0027977799998552657,
+        "Ray-trace mesh grid": 0.002799830000003567,
+        "Inversion setup (steps 5-8 combined, incl. NUFFT)": 0.062334789999840726,
+        "Data vector (D)": 0.0005977799999527633,
+        "Curvature matrix (F)": 0.005227459999878193,
+        "Regularization matrix (H)": 0.022318100000120467,
+        "Regularized reconstruction": 0.08168509999995877,
+        "Mapped recon + log evidence": 0.03330643000008422
+      },
+      "total_step_by_step": 0.211067269999694,
+      "full_pipeline_single_jit": 0.13836795999995957,
+      "vmap": "SKIPPED \u2014 opt-in via DELAUNAY_VMAP=1",
+      "memory_mb": null,
+      "full_pipeline_per_call": 0.13836795999995957,
+      "config_name": "local_gpu_mp"
+    }
+  }
+}

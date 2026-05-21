@@ -1,0 +1,35 @@
+{
+  "autolens_version": "2026.5.14.2",
+  "device": {
+    "backend": "gpu",
+    "device": "cuda:0",
+    "nvidia_smi": "NVIDIA GeForce RTX 2060 with Max-Q Design, 3212 MiB, 6144 MiB"
+  },
+  "instrument": "sma",
+  "model": "mge",
+  "transformer": "TransformerNUFFT",
+  "use_mixed_precision": false,
+  "configuration": {
+    "pixel_scale_arcsec": 0.1,
+    "mask_radius_arcsec": 3.0,
+    "real_space_shape": [
+      256,
+      256
+    ],
+    "visibilities": 190,
+    "linear_gaussians": 20
+  },
+  "log_likelihood_eager": -3153.8939746810656,
+  "log_likelihood_jit": -3153.902008418832,
+  "full_pipeline_single_jit": 1.9664750699999787,
+  "vmap": {
+    "batch_size": 3,
+    "batch_time": 1.8479969599999095,
+    "per_call": 0.6159989866666365,
+    "speedup_vs_single_jit": 3.2
+  },
+  "memory_mb": {
+    "output": 2.288818359375e-05,
+    "temp": 480.01016998291016
+  }
+}

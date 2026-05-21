@@ -1,0 +1,150 @@
+{
+  "configs": {
+    "local_cpu_fp64": {
+      "autolens_version": "2026.5.14.2",
+      "device": {
+        "backend": "cpu",
+        "device": "TFRT_CPU_0"
+      },
+      "instrument": "sma",
+      "model": "mge",
+      "transformer": "TransformerNUFFT",
+      "use_mixed_precision": false,
+      "configuration": {
+        "pixel_scale_arcsec": 0.1,
+        "mask_radius_arcsec": 3.0,
+        "real_space_shape": [
+          256,
+          256
+        ],
+        "visibilities": 190,
+        "linear_gaussians": 20
+      },
+      "log_likelihood_eager": -3153.8939746810656,
+      "log_likelihood_jit": -3153.902008418832,
+      "full_pipeline_single_jit": 0.2612897200000134,
+      "vmap": {
+        "batch_size": 3,
+        "batch_time": 0.6878970899999786,
+        "per_call": 0.22929902999999285,
+        "speedup_vs_single_jit": 1.1
+      },
+      "memory_mb": {
+        "output": 2.288818359375e-05,
+        "temp": 480.00465393066406
+      },
+      "full_pipeline_per_call": 0.2612897200000134,
+      "config_name": "local_cpu_fp64"
+    },
+    "local_cpu_mp": {
+      "autolens_version": "2026.5.14.2",
+      "device": {
+        "backend": "cpu",
+        "device": "TFRT_CPU_0"
+      },
+      "instrument": "sma",
+      "model": "mge",
+      "transformer": "TransformerNUFFT",
+      "use_mixed_precision": true,
+      "configuration": {
+        "pixel_scale_arcsec": 0.1,
+        "mask_radius_arcsec": 3.0,
+        "real_space_shape": [
+          256,
+          256
+        ],
+        "visibilities": 190,
+        "linear_gaussians": 20
+      },
+      "log_likelihood_eager": -3153.8939746810656,
+      "log_likelihood_jit": -3153.902008528998,
+      "full_pipeline_single_jit": 0.20209875000000466,
+      "vmap": {
+        "batch_size": 3,
+        "batch_time": 0.6006840799999736,
+        "per_call": 0.20022802666665787,
+        "speedup_vs_single_jit": 1.0
+      },
+      "memory_mb": {
+        "output": 2.288818359375e-05,
+        "temp": 480.00465393066406
+      },
+      "full_pipeline_per_call": 0.20209875000000466,
+      "config_name": "local_cpu_mp"
+    },
+    "local_gpu_fp64": {
+      "autolens_version": "2026.5.14.2",
+      "device": {
+        "backend": "gpu",
+        "device": "cuda:0",
+        "nvidia_smi": "NVIDIA GeForce RTX 2060 with Max-Q Design, 3212 MiB, 6144 MiB"
+      },
+      "instrument": "sma",
+      "model": "mge",
+      "transformer": "TransformerNUFFT",
+      "use_mixed_precision": false,
+      "configuration": {
+        "pixel_scale_arcsec": 0.1,
+        "mask_radius_arcsec": 3.0,
+        "real_space_shape": [
+          256,
+          256
+        ],
+        "visibilities": 190,
+        "linear_gaussians": 20
+      },
+      "log_likelihood_eager": -3153.8939746810656,
+      "log_likelihood_jit": -3153.902008418832,
+      "full_pipeline_single_jit": 1.9664750699999787,
+      "vmap": {
+        "batch_size": 3,
+        "batch_time": 1.8479969599999095,
+        "per_call": 0.6159989866666365,
+        "speedup_vs_single_jit": 3.2
+      },
+      "memory_mb": {
+        "output": 2.288818359375e-05,
+        "temp": 480.01016998291016
+      },
+      "full_pipeline_per_call": 1.9664750699999787,
+      "config_name": "local_gpu_fp64"
+    },
+    "local_gpu_mp": {
+      "autolens_version": "2026.5.14.2",
+      "device": {
+        "backend": "gpu",
+        "device": "cuda:0",
+        "nvidia_smi": "NVIDIA GeForce RTX 2060 with Max-Q Design, 3212 MiB, 6144 MiB"
+      },
+      "instrument": "sma",
+      "model": "mge",
+      "transformer": "TransformerNUFFT",
+      "use_mixed_precision": true,
+      "configuration": {
+        "pixel_scale_arcsec": 0.1,
+        "mask_radius_arcsec": 3.0,
+        "real_space_shape": [
+          256,
+          256
+        ],
+        "visibilities": 190,
+        "linear_gaussians": 20
+      },
+      "log_likelihood_eager": -3153.8939746810656,
+      "log_likelihood_jit": -3153.9020085289985,
+      "full_pipeline_single_jit": 1.427804920000017,
+      "vmap": {
+        "batch_size": 3,
+        "batch_time": 1.9420215000000098,
+        "per_call": 0.6473405000000033,
+        "speedup_vs_single_jit": 2.2
+      },
+      "memory_mb": {
+        "output": 2.288818359375e-05,
+        "temp": 480.01016998291016
+      },
+      "full_pipeline_per_call": 1.427804920000017,
+      "config_name": "local_gpu_mp"
+    }
+  }
+}
