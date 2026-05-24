@@ -1,0 +1,23 @@
+{
+  "autolens_version": "2026.5.14.2",
+  "device": {
+    "backend": "gpu",
+    "device": "cuda:0",
+    "nvidia_smi": "NVIDIA A100 80GB PCIe, 587 MiB, 81920 MiB"
+  },
+  "instrument": "hst",
+  "configuration": {
+    "pixel_scale_arcsec": 0.05,
+    "mask_radius_arcsec": 3.5,
+    "image_pixels_masked": 15361,
+    "over_sampled_pixels": 17980,
+    "linear_gaussians": 0
+  },
+  "full_pipeline_single_jit": 0.005812915298156441,
+  "vmap": {
+    "batch_size": 3,
+    "batch_time": 0.009904556185938418,
+    "per_call": 0.0033015187286461393,
+    "speedup_vs_single_jit": 1.8
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "autolens_version": "2026.5.14.2",
+  "device": {
+    "backend": "gpu",
+    "device": "cuda:0",
+    "nvidia_smi": "NVIDIA A100 80GB PCIe, 2585 MiB, 81920 MiB"
+  },
+  "instrument": "hst",
+  "configuration": {
+    "pixel_scale_arcsec": 0.05,
+    "mask_radius_arcsec": 3.5,
+    "image_pixels_masked": 15361,
+    "over_sampled_pixels": 17980,
+    "delaunay_vertices": 1500,
+    "edge_zeroed_pixels": 0
+  },
+  "full_pipeline_single_jit": 0.0772161086089909,
+  "vmap": "SKIPPED \u2014 compilation takes 20+ minutes (set DELAUNAY_VMAP=1)"
+}
