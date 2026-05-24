@@ -1,0 +1,29 @@
+{
+  "autolens_version": "2026.5.14.2",
+  "device": {
+    "backend": "gpu",
+    "device": "cuda:0",
+    "nvidia_smi": "NVIDIA A100 80GB PCIe, 33973 MiB, 81920 MiB"
+  },
+  "instrument": "jvla",
+  "model": "delaunay",
+  "configuration": {
+    "pixel_scale_arcsec": 0.01,
+    "mask_radius_arcsec": 3.5,
+    "real_space_shape": [
+      800,
+      800
+    ],
+    "visibilities": 25000000,
+    "hilbert_pixels": 1000,
+    "delaunay_vertices": 1000,
+    "edge_zeroed_pixels": 0,
+    "regularization_coefficient": 1.0
+  },
+  "log_likelihood_eager": -301289778.094006,
+  "figure_of_merit_eager": -301296857.98251384,
+  "log_evidence_jit": -301296857.9825139,
+  "full_pipeline_single_jit": 0.6358319016871974,
+  "vmap": "SKIPPED \u2014 opt-in via DELAUNAY_VMAP=1",
+  "memory_mb": null
+}
