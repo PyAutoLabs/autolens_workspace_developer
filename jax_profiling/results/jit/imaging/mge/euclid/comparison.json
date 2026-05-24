@@ -1,0 +1,54 @@
+{
+  "configs": {
+    "hpc_a100_fp64": {
+      "autolens_version": "2026.5.14.2",
+      "device": {
+        "backend": "gpu",
+        "device": "cuda:0",
+        "nvidia_smi": "NVIDIA A100 80GB PCIe, 587 MiB, 81920 MiB"
+      },
+      "instrument": "hst",
+      "configuration": {
+        "pixel_scale_arcsec": 0.05,
+        "mask_radius_arcsec": 3.5,
+        "image_pixels_masked": 15361,
+        "over_sampled_pixels": 17980,
+        "linear_gaussians": 0
+      },
+      "full_pipeline_single_jit": 0.005867398693226278,
+      "vmap": {
+        "batch_size": 3,
+        "batch_time": 0.01002610889263451,
+        "per_call": 0.003342036297544837,
+        "speedup_vs_single_jit": 1.8
+      },
+      "full_pipeline_per_call": 0.005867398693226278,
+      "config_name": "hpc_a100_fp64"
+    },
+    "hpc_a100_mp": {
+      "autolens_version": "2026.5.14.2",
+      "device": {
+        "backend": "gpu",
+        "device": "cuda:0",
+        "nvidia_smi": "NVIDIA A100 80GB PCIe, 587 MiB, 81920 MiB"
+      },
+      "instrument": "hst",
+      "configuration": {
+        "pixel_scale_arcsec": 0.05,
+        "mask_radius_arcsec": 3.5,
+        "image_pixels_masked": 15361,
+        "over_sampled_pixels": 17980,
+        "linear_gaussians": 0
+      },
+      "full_pipeline_single_jit": 0.005842400901019573,
+      "vmap": {
+        "batch_size": 3,
+        "batch_time": 0.010028205905109644,
+        "per_call": 0.0033427353017032144,
+        "speedup_vs_single_jit": 1.7
+      },
+      "full_pipeline_per_call": 0.005842400901019573,
+      "config_name": "hpc_a100_mp"
+    }
+  }
+}
