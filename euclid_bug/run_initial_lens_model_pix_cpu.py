@@ -41,7 +41,7 @@ DATASET_NAME = "Tile102005065RA0135279431487DECNEG0701599765928"
 SAMPLE_NAME = None
 ITERATIONS_PER_QUICK_UPDATE = 5000
 NUMBER_OF_CORES = 1
-USE_CPU = True   # True triggers dataset.apply_sparse_operator_cpu() in vis_pix
+USE_CPU = True  # True triggers dataset.apply_sparse_operator_cpu() in vis_pix
 SKIP_PIX = False
 
 LOCAL_OUTPUT_PATH = _SCRIPT_DIR / "output"
@@ -67,7 +67,11 @@ def fit():
     print(f"[run_initial_lens_model_pix_cpu] dataset_centre = {d.dataset_centre}")
 
     settings_search = af.SettingsSearch(
-        path_prefix=Path(SAMPLE_NAME) / DATASET_NAME if SAMPLE_NAME is not None else Path(DATASET_NAME),
+        path_prefix=(
+            Path(SAMPLE_NAME) / DATASET_NAME
+            if SAMPLE_NAME is not None
+            else Path(DATASET_NAME)
+        ),
         unique_tag="initial_lens_model",
         info={"magzero": d.magzero},
         session=None,
@@ -89,7 +93,9 @@ def fit():
     mass.centre.centre_1 = d.dataset_centre[1]
 
     source_bulge = al.model_util.mge_model_from(
-        mask_radius=d.mask_radius, total_gaussians=20, centre_prior_is_uniform=False,
+        mask_radius=d.mask_radius,
+        total_gaussians=20,
+        centre_prior_is_uniform=False,
     )
 
     model = af.Collection(
@@ -127,7 +133,9 @@ def fit():
         n_like_max=100000,
     )
 
-    source_lp_result = search.fit(model=model, analysis=analysis, **settings_search.fit_dict)
+    source_lp_result = search.fit(
+        model=model, analysis=analysis, **settings_search.fit_dict
+    )
 
     if SKIP_PIX:
         return source_lp_result
@@ -145,7 +153,9 @@ def fit():
 
     hilbert_pixels = 500
 
-    image_mesh = al.image_mesh.Hilbert(pixels=hilbert_pixels, weight_power=3.5, weight_floor=0.01)
+    image_mesh = al.image_mesh.Hilbert(
+        pixels=hilbert_pixels, weight_power=3.5, weight_floor=0.01
+    )
 
     galaxy_image_name_dict = al.galaxy_name_image_dict_via_result_from(
         result=source_lp_result
@@ -190,14 +200,20 @@ def fit():
         dataset=dataset,
         adapt_images=adapt_images,
         positions_likelihood_list=[
-            source_lp_result.positions_likelihood_from(factor=3.0, minimum_threshold=0.2)
+            source_lp_result.positions_likelihood_from(
+                factor=3.0, minimum_threshold=0.2
+            )
         ],
         use_jax=not USE_CPU,
     )
 
     mass = af.Model(al.mp.Isothermal)
-    mass.centre.centre_0 = af.UniformPrior(lower_limit=d.dataset_centre[0]-0.1, upper_limit=d.dataset_centre[0]+0.1)
-    mass.centre.centre_1 = af.UniformPrior(lower_limit=d.dataset_centre[1]-0.1, upper_limit=d.dataset_centre[1]+0.1)
+    mass.centre.centre_0 = af.UniformPrior(
+        lower_limit=d.dataset_centre[0] - 0.1, upper_limit=d.dataset_centre[0] + 0.1
+    )
+    mass.centre.centre_1 = af.UniformPrior(
+        lower_limit=d.dataset_centre[1] - 0.1, upper_limit=d.dataset_centre[1] + 0.1
+    )
 
     shear = source_lp_result.model.galaxies.lens.shear
 
@@ -225,7 +241,10 @@ def fit():
         ),
     )
 
-    vis_pix_search_dict = {**settings_search.search_dict, "number_of_cores": NUMBER_OF_CORES}
+    vis_pix_search_dict = {
+        **settings_search.search_dict,
+        "number_of_cores": NUMBER_OF_CORES,
+    }
 
     search = af.Nautilus(
         name="vis_pix",

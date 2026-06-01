@@ -12,6 +12,7 @@ Output: ``output/comparison.png`` — 2×3 grid:
   row 1: rotated  (RectangularRotatedAdaptImage)
   cols: source-plane mesh + reconstruction, image-plane model, residuals
 """
+
 from pathlib import Path
 
 import matplotlib
@@ -104,7 +105,11 @@ def warped_mesh_centres_source_frame(mapper):
         centres = centres @ R + centroid
         corners = corners @ R + centroid
 
-    return centres, corners, y_edges.size  # corners are still rectangular in their frame
+    return (
+        centres,
+        corners,
+        y_edges.size,
+    )  # corners are still rectangular in their frame
 
 
 def draw_image_panel(ax, arr, title, what, vmax):
@@ -122,8 +127,7 @@ def draw_image_panel(ax, arr, title, what, vmax):
         -SHAPE_NATIVE[0] * PIXEL_SCALES / 2,
         +SHAPE_NATIVE[0] * PIXEL_SCALES / 2,
     )
-    im = ax.imshow(arr, cmap=cmap, vmin=vmin, vmax=vmax, origin="lower",
-                   extent=extent)
+    im = ax.imshow(arr, cmap=cmap, vmin=vmin, vmax=vmax, origin="lower", extent=extent)
     ax.set_title(title)
     ax.set_xlabel("image x [arcsec]")
     ax.set_ylabel("image y [arcsec]")
@@ -144,7 +148,7 @@ def main():
 
     cases = [
         ("baseline", al.mesh.RectangularSplineAdaptImage),
-        ("rotated",  al.mesh.RectangularRotatedAdaptImage),
+        ("rotated", al.mesh.RectangularRotatedAdaptImage),
     ]
 
     # First pass — run both fits, collect data, compute shared scales.
@@ -156,17 +160,26 @@ def main():
         centres, corners, _ = warped_mesh_centres_source_frame(mapper)
         model = np.asarray(fit.model_data.native.array)
         residual = np.asarray(fit.residual_map.native.array)
-        chi2 = float(np.sum((residual / np.asarray(dataset.noise_map.native.array)) ** 2))
+        chi2 = float(
+            np.sum((residual / np.asarray(dataset.noise_map.native.array)) ** 2)
+        )
         print(
             f"  chi^2 = {chi2:.1f}, "
             f"|residual|_max = {np.nanmax(np.abs(residual)):.3f}, "
             f"recon range = [{np.nanmin(fit.inversion.reconstruction):.2f}, "
             f"{np.nanmax(fit.inversion.reconstruction):.2f}]"
         )
-        results.append({
-            "label": label, "fit": fit, "centres": centres, "corners": corners,
-            "model": model, "residual": residual, "chi2": chi2,
-        })
+        results.append(
+            {
+                "label": label,
+                "fit": fit,
+                "centres": centres,
+                "corners": corners,
+                "model": model,
+                "residual": residual,
+                "chi2": chi2,
+            }
+        )
 
     # Shared scales per column
     model_vmax = max(np.nanmax(r["model"]) for r in results)
@@ -182,16 +195,32 @@ def main():
         # Source-plane mesh + reconstruction with shared colour range
         recon = np.asarray(r["fit"].inversion.reconstruction)
         sc = row[0].scatter(
-            r["centres"][:, 1], r["centres"][:, 0],
-            c=recon, cmap="hot", s=12, edgecolors="none",
-            vmin=0.0, vmax=recon_vmax,
+            r["centres"][:, 1],
+            r["centres"][:, 0],
+            c=recon,
+            cmap="hot",
+            s=12,
+            edgecolors="none",
+            vmin=0.0,
+            vmax=recon_vmax,
         )
-        for (py, px) in SOURCE_POSITIONS:
-            row[0].plot(px, py, "o", markersize=14, markerfacecolor="none",
-                        markeredgecolor="lime", markeredgewidth=2)
-        ghosts = [(py, px) for py, _ in SOURCE_POSITIONS for _, px in SOURCE_POSITIONS
-                  if (py, px) not in SOURCE_POSITIONS]
-        for (py, px) in ghosts:
+        for py, px in SOURCE_POSITIONS:
+            row[0].plot(
+                px,
+                py,
+                "o",
+                markersize=14,
+                markerfacecolor="none",
+                markeredgecolor="lime",
+                markeredgewidth=2,
+            )
+        ghosts = [
+            (py, px)
+            for py, _ in SOURCE_POSITIONS
+            for _, px in SOURCE_POSITIONS
+            if (py, px) not in SOURCE_POSITIONS
+        ]
+        for py, px in ghosts:
             row[0].plot(px, py, "x", color="red", markersize=14, markeredgewidth=2)
         row[0].set_xlim(-1.4, 1.4)
         row[0].set_ylim(-1.4, 1.4)
@@ -201,19 +230,30 @@ def main():
         row[0].set_ylabel("source y [arcsec]")
         src_sc = sc
 
-        img_im = draw_image_panel(row[1], r["model"],
-                                  f"{r['label']}: image-plane model",
-                                  "model", vmax=model_vmax)
-        res_im = draw_image_panel(row[2], r["residual"],
-                                  f"{r['label']}: residuals (data − model)",
-                                  "residual", vmax=residual_vmax)
+        img_im = draw_image_panel(
+            row[1],
+            r["model"],
+            f"{r['label']}: image-plane model",
+            "model",
+            vmax=model_vmax,
+        )
+        res_im = draw_image_panel(
+            row[2],
+            r["residual"],
+            f"{r['label']}: residuals (data − model)",
+            "residual",
+            vmax=residual_vmax,
+        )
 
-    fig.colorbar(src_sc, ax=axes[:, 0].tolist(), label="reconstruction",
-                 fraction=0.04, pad=0.04)
-    fig.colorbar(img_im, ax=axes[:, 1].tolist(), label="model flux",
-                 fraction=0.04, pad=0.04)
-    fig.colorbar(res_im, ax=axes[:, 2].tolist(), label="residual",
-                 fraction=0.04, pad=0.04)
+    fig.colorbar(
+        src_sc, ax=axes[:, 0].tolist(), label="reconstruction", fraction=0.04, pad=0.04
+    )
+    fig.colorbar(
+        img_im, ax=axes[:, 1].tolist(), label="model flux", fraction=0.04, pad=0.04
+    )
+    fig.colorbar(
+        res_im, ax=axes[:, 2].tolist(), label="residual", fraction=0.04, pad=0.04
+    )
     out_path = output_path / "comparison.png"
     fig.savefig(out_path, dpi=130, bbox_inches="tight")
     print(f"\nfigure written: {out_path}")

@@ -51,9 +51,7 @@ class TestComovingDistance:
 
 class TestComovingVolume:
     def test_zero(self, cosmology):
-        assert comoving_volume_mpc3_from(0.0, cosmology) == pytest.approx(
-            0.0, abs=1e-6
-        )
+        assert comoving_volume_mpc3_from(0.0, cosmology) == pytest.approx(0.0, abs=1e-6)
 
     def test_positive(self, cosmology):
         v = comoving_volume_mpc3_from(0.5, cosmology)
@@ -158,16 +156,16 @@ class TestMassRatio:
 
         c = 10.0
         cti = 100.0
-        delta_c = 200.0 / 3.0 * (c ** 3 / (np.log(1 + c) - c / (1 + c)))
+        delta_c = 200.0 / 3.0 * (c**3 / (np.log(1 + c) - c / (1 + c)))
         tau = fsolve(
-            lambda t, dc, ct: ct / 3.0 * (t ** 3 / (np.log(1 + t) - t / (1 + t))) - dc,
+            lambda t, dc, ct: ct / 3.0 * (t**3 / (np.log(1 + t) - t / (1 + t))) - dc,
             10.0,
             args=(delta_c, cti),
         )[0]
 
         ratio = _mass_ratio_from_concentration_and_tau(c, tau)
 
-        tau2 = tau ** 2
+        tau2 = tau**2
         expected = (
             tau2
             / (tau2 + 1.0) ** 2
@@ -188,9 +186,7 @@ class TestMassRatio:
 
 class TestNumberOfHalos:
     def test_positive(self):
-        n = number_of_halos_from(
-            A=-1.9, B=8.0, m_min=1e7, m_max=1e10, volume=1.0
-        )
+        n = number_of_halos_from(A=-1.9, B=8.0, m_min=1e7, m_max=1e10, volume=1.0)
         assert n > 0
 
     def test_scales_with_volume(self):
@@ -374,8 +370,10 @@ class TestLOSSampler:
         n_front = 3
         n_back = 2
         _, centres = los_planes_from(
-            z_lens=0.5, z_source=1.0,
-            planes_before_lens=n_front, planes_after_lens=n_back,
+            z_lens=0.5,
+            z_source=1.0,
+            planes_before_lens=n_front,
+            planes_after_lens=n_back,
         )
         n_planes = len(centres)
 
@@ -399,8 +397,7 @@ class TestLOSSampler:
         n_sheets = sum(
             1
             for g in galaxies
-            if hasattr(g, "mass_sheet")
-            and isinstance(g.mass_sheet, ag.mp.MassSheet)
+            if hasattr(g, "mass_sheet") and isinstance(g.mass_sheet, ag.mp.MassSheet)
         )
         assert n_sheets == n_planes
 
@@ -408,9 +405,7 @@ class TestLOSSampler:
         galaxies = self._make_sampler(cosmology).galaxies_from()
 
         for g in galaxies:
-            if hasattr(g, "mass_sheet") and isinstance(
-                g.mass_sheet, ag.mp.MassSheet
-            ):
+            if hasattr(g, "mass_sheet") and isinstance(g.mass_sheet, ag.mp.MassSheet):
                 assert g.mass_sheet.kappa < 0.0
 
     def test_reproducible(self, cosmology):
@@ -429,9 +424,7 @@ class TestLOSSampler:
         )
 
         for g in galaxies:
-            found = any(
-                abs(g.redshift - c) < 1e-10 for c in centres
-            )
-            assert found, (
-                f"Galaxy redshift {g.redshift} does not match any plane centre"
-            )
+            found = any(abs(g.redshift - c) < 1e-10 for c in centres)
+            assert (
+                found
+            ), f"Galaxy redshift {g.redshift} does not match any plane centre"

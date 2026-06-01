@@ -91,6 +91,7 @@ def _rel_diff(a, b):
 
 def main():
     from autoconf import conf
+
     conf.instance.push(
         new_path=_EUCLID_ROOT / "config",
         output_path=LOCAL_OUTPUT_PATH,
@@ -106,6 +107,7 @@ def main():
     if TRY_JAX:
         try:
             import jax.numpy as jnp  # noqa: F401
+
             have_jax = True
             print("[likelihood_comparison] JAX detected — will run JAX path.")
         except ImportError:
@@ -126,7 +128,8 @@ def main():
             (Path(SAMPLE_NAME) / DATASET_NAME)
             if SAMPLE_NAME is not None
             else Path(DATASET_NAME)
-        ) / COMPARISON_TAG,
+        )
+        / COMPARISON_TAG,
         unique_tag="vis_lp_prep",
         info={"magzero": d.magzero},
         session=None,
@@ -162,9 +165,7 @@ def main():
                 mass=lp_mass,
                 shear=af.Model(al.mp.ExternalShear),
             ),
-            source=af.Model(
-                al.Galaxy, redshift=redshift_source, bulge=source_bulge
-            ),
+            source=af.Model(al.Galaxy, redshift=redshift_source, bulge=source_bulge),
         )
     )
 
@@ -199,9 +200,7 @@ def main():
     mask = base_dataset.mask
     mask_radius = d.mask_radius
 
-    image_mesh = al.image_mesh.Hilbert(
-        pixels=500, weight_power=3.5, weight_floor=0.01
-    )
+    image_mesh = al.image_mesh.Hilbert(pixels=500, weight_power=3.5, weight_floor=0.01)
     galaxy_image_name_dict = al.galaxy_name_image_dict_via_result_from(
         result=source_lp_result
     )
@@ -231,8 +230,7 @@ def main():
 
     signal_to_noise_threshold = 3.0
     over_sample_size_pixelization = np.where(
-        galaxy_image_name_dict["('galaxies', 'source')"]
-        > signal_to_noise_threshold,
+        galaxy_image_name_dict["('galaxies', 'source')"] > signal_to_noise_threshold,
         4,
         2,
     )
@@ -334,6 +332,7 @@ def main():
     fit_jax = None
     if have_jax:
         import jax.numpy as jnp
+
         try:
             fit_jax = al.FitImaging(
                 dataset=dataset_no_sparse,
@@ -349,13 +348,11 @@ def main():
             fit_jax = None
 
     print(
-        f"[C] delta sparse - non_sparse = "
-        f"{log_ev_sparse - log_ev_no_sparse:+.6e}"
+        f"[C] delta sparse - non_sparse = " f"{log_ev_sparse - log_ev_no_sparse:+.6e}"
     )
     if log_ev_jax is not None:
         print(
-            f"[C] delta jax    - non_sparse = "
-            f"{log_ev_jax - log_ev_no_sparse:+.6e}"
+            f"[C] delta jax    - non_sparse = " f"{log_ev_jax - log_ev_no_sparse:+.6e}"
         )
 
     # ===================================================================

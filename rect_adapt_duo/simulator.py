@@ -16,6 +16,7 @@ Outputs (``./dataset/``):
 - ``tracer.json`` — truth tracer (lens + two sources) for re-use by
   ``adapt_image.py`` and ``compare_meshes.py``
 """
+
 from pathlib import Path
 
 import autolens as al
@@ -43,7 +44,7 @@ def build_tracer() -> al.Tracer:
         ),
     )
     sources = []
-    for (cy, cx) in SOURCE_POSITIONS:
+    for cy, cx in SOURCE_POSITIONS:
         sources.append(
             al.Galaxy(
                 redshift=SOURCE_REDSHIFT,
@@ -83,6 +84,7 @@ def main():
     dataset = simulator.via_tracer_from(tracer=tracer, grid=grid)
 
     import autolens.plot as aplt
+
     aplt.fits_imaging(
         dataset=dataset,
         data_path=dataset_path / "data.fits",
