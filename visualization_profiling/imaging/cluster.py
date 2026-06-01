@@ -90,8 +90,8 @@ with timer.section("build_tracer"):
     source_redshifts = [1.0, 2.0]
 
     main_lens_centres = [
-        (0.0, 0.0),      # BCG
-        (10.0, 8.0),     # satellite
+        (0.0, 0.0),  # BCG
+        (10.0, 8.0),  # satellite
     ]
     host_halo_centre = (0.0, 0.0)
     source_centres = [
@@ -129,9 +129,7 @@ with timer.section("build_tracer"):
     for i, (centre, src_z) in enumerate(zip(source_centres, source_redshifts)):
         bulge = al.lp.SersicCore(
             centre=centre,
-            ell_comps=al.convert.ell_comps_from(
-                axis_ratio=0.8, angle=60.0 + 30.0 * i
-            ),
+            ell_comps=al.convert.ell_comps_from(axis_ratio=0.8, angle=60.0 + 30.0 * i),
             intensity=2.0,
             effective_radius=0.3,
             sersic_index=1.0,
@@ -160,9 +158,9 @@ print("\n--- Image rendering: SimulatorImaging.via_tracer_from ---")
 
 variants = [
     ("baseline_1000x1000_oversample_32_8_2", (1000, 1000), 0.1, [32, 8, 2]),
-    ("half_500x500_oversample_32_8_2",        (500, 500),   0.2, [32, 8, 2]),
-    ("half_500x500_oversample_8_4_2",         (500, 500),   0.2, [8, 4, 2]),
-    ("baseline_1000x1000_no_oversample",      (1000, 1000), 0.1, None),
+    ("half_500x500_oversample_32_8_2", (500, 500), 0.2, [32, 8, 2]),
+    ("half_500x500_oversample_8_4_2", (500, 500), 0.2, [8, 4, 2]),
+    ("baseline_1000x1000_no_oversample", (1000, 1000), 0.1, None),
 ]
 
 psf = None  # built once below

@@ -276,5 +276,13 @@ print(extent)
 
 print(f"Figure of Merit = {fit.figure_of_merit}")
 
-aplt.plot_array(array=fit.model_images_of_planes_list[1], output=aplt.Output(path=file_path, filename=f"{dataset_name}_source", format="png"))
-aplt.plot_array(array=fit.model_images_of_planes_list[1], output=aplt.Output(path=file_path, filename=f"{dataset_name}_source_zoom", format="png"))
+aplt.plot_array(
+    array=fit.model_images_of_planes_list[1],
+    output=aplt.Output(path=file_path, filename=f"{dataset_name}_source", format="png"),
+)
+aplt.plot_array(
+    array=fit.model_images_of_planes_list[1],
+    output=aplt.Output(
+        path=file_path, filename=f"{dataset_name}_source_zoom", format="png"
+    ),
+)
