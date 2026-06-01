@@ -12,6 +12,7 @@ a wiring test, not a converged posterior.
 Requirements:
     pip install dynesty
 """
+
 import time
 from pathlib import Path
 

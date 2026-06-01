@@ -14,6 +14,7 @@ nested-sampling scripts in this folder.
 Requirements:
     scipy (included with autofit)
 """
+
 import time
 from pathlib import Path
 

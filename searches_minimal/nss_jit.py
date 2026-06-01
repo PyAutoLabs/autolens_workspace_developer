@@ -14,6 +14,7 @@ this is the same entry point used by ``af.Fitness.call`` in production.
 Requirements:
     pip install git+https://github.com/yallup/nss.git
 """
+
 import time
 from pathlib import Path
 

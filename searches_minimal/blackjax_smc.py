@@ -27,6 +27,7 @@ and ``nss_jit.py`` (pure-JAX nested sampler).
 Requirements:
     pip install blackjax
 """
+
 import time
 from pathlib import Path
 
@@ -64,6 +65,7 @@ ndim = model.prior_count
 # kernel and this is the regime ``pure_callback`` runs reliably under.
 # --------------------------------------------------------------------------
 
+
 def _cube_to_physical_host(cube_np):
     return np.asarray(
         model.vector_from_unit_vector(list(np.asarray(cube_np))),
@@ -83,6 +85,7 @@ def cube_to_physical(cube):
 # --------------------------------------------------------------------------
 # Log prior + log likelihood, both in unit-cube space.
 # --------------------------------------------------------------------------
+
 
 def log_prior(cube):
     in_cube = jnp.all((cube >= 0.0) & (cube <= 1.0))
@@ -211,10 +214,9 @@ max_logl = float(jnp.max(final_log_l))
 # tracking. This is an upper bound — RWM always evaluates the proposal even
 # when log_prior=-inf short-circuits acceptance, because the JIT trace can't
 # branch on the prior value.
-n_likelihood_calls = (
-    n_particles  # initial weights
-    + n_smc_steps * n_particles * (num_mcmc_steps + 1)  # MCMC evals + max-tracking
-)
+n_likelihood_calls = n_particles + n_smc_steps * n_particles * (  # initial weights
+    num_mcmc_steps + 1
+)  # MCMC evals + max-tracking
 
 evals_to_ml, time_to_ml = MLTracker.from_log_l_history(
     log_l_history,

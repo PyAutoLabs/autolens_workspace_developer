@@ -15,6 +15,7 @@ identical to ``nss_jit.py`` with HMC replacing slice sampling.
 Requirements:
     pip install git+https://github.com/yallup/nss.git
 """
+
 import time
 from pathlib import Path
 

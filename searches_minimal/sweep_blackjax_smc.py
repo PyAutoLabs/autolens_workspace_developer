@@ -20,6 +20,7 @@ OOM seen in ``sweep_nss_jit.py``). On HPC this isn't an issue because
 the 6 GB ceiling is irrelevant; locally, drop ``c7_more_particles`` if
 you hit OOM and want to keep the rest of the sweep going.
 """
+
 import csv
 import sys
 import time
@@ -51,14 +52,58 @@ class SweepConfig:
 
 
 CONFIGS = [
-    SweepConfig("c1_baseline",        n_particles=256, num_mcmc_steps=5,  target_ess=0.5, rmh_sigma=0.05),
-    SweepConfig("c2_fewer_mcmc",      n_particles=256, num_mcmc_steps=3,  target_ess=0.5, rmh_sigma=0.05),
-    SweepConfig("c3_more_mcmc",       n_particles=256, num_mcmc_steps=10, target_ess=0.5, rmh_sigma=0.05),
-    SweepConfig("c4_lower_ess",       n_particles=256, num_mcmc_steps=5,  target_ess=0.3, rmh_sigma=0.05),
-    SweepConfig("c5_smaller_step",    n_particles=256, num_mcmc_steps=5,  target_ess=0.5, rmh_sigma=0.02),
-    SweepConfig("c6_bigger_step",     n_particles=256, num_mcmc_steps=5,  target_ess=0.5, rmh_sigma=0.10),
-    SweepConfig("c7_more_particles",  n_particles=512, num_mcmc_steps=5,  target_ess=0.5, rmh_sigma=0.05),
-    SweepConfig("c8_fewer_particles", n_particles=128, num_mcmc_steps=5,  target_ess=0.5, rmh_sigma=0.05),
+    SweepConfig(
+        "c1_baseline", n_particles=256, num_mcmc_steps=5, target_ess=0.5, rmh_sigma=0.05
+    ),
+    SweepConfig(
+        "c2_fewer_mcmc",
+        n_particles=256,
+        num_mcmc_steps=3,
+        target_ess=0.5,
+        rmh_sigma=0.05,
+    ),
+    SweepConfig(
+        "c3_more_mcmc",
+        n_particles=256,
+        num_mcmc_steps=10,
+        target_ess=0.5,
+        rmh_sigma=0.05,
+    ),
+    SweepConfig(
+        "c4_lower_ess",
+        n_particles=256,
+        num_mcmc_steps=5,
+        target_ess=0.3,
+        rmh_sigma=0.05,
+    ),
+    SweepConfig(
+        "c5_smaller_step",
+        n_particles=256,
+        num_mcmc_steps=5,
+        target_ess=0.5,
+        rmh_sigma=0.02,
+    ),
+    SweepConfig(
+        "c6_bigger_step",
+        n_particles=256,
+        num_mcmc_steps=5,
+        target_ess=0.5,
+        rmh_sigma=0.10,
+    ),
+    SweepConfig(
+        "c7_more_particles",
+        n_particles=512,
+        num_mcmc_steps=5,
+        target_ess=0.5,
+        rmh_sigma=0.05,
+    ),
+    SweepConfig(
+        "c8_fewer_particles",
+        n_particles=128,
+        num_mcmc_steps=5,
+        target_ess=0.5,
+        rmh_sigma=0.05,
+    ),
 ]
 
 CSV_FIELDS = [
@@ -138,10 +183,7 @@ def run_one(cfg: SweepConfig, log_prior, log_likelihood, vmapped_log_l, model) -
     # MCMC evals per particle plus the per-step ``vmapped_log_l`` we use for
     # max-tracking. JIT-traced proposals always evaluate even on rejected MH
     # moves, so this is an upper bound, not the literal count.
-    evals = (
-        cfg.n_particles
-        + n_smc_steps * cfg.n_particles * (cfg.num_mcmc_steps + 1)
-    )
+    evals = cfg.n_particles + n_smc_steps * cfg.n_particles * (cfg.num_mcmc_steps + 1)
 
     row = dict(
         name=cfg.name,
@@ -263,9 +305,7 @@ def main() -> int:
             r["delta_logL"] = best_logL - r["max_logL_final"]
             r["converged"] = r["delta_logL"] < 1.0
         converged = [r for r in succeeded if r["converged"]]
-        recommended = (
-            min(converged, key=lambda r: r["evals"]) if converged else None
-        )
+        recommended = min(converged, key=lambda r: r["evals"]) if converged else None
     else:
         best_logL = float("nan")
         recommended = None

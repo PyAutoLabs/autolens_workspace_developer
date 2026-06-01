@@ -20,6 +20,7 @@ direction. Compare versus ``nss_jit.py`` (no Python boundary) and
 Requirements:
     pip install nautilus-sampler
 """
+
 import time
 from pathlib import Path
 

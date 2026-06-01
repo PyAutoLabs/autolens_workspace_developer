@@ -17,6 +17,7 @@ Requirements:
     pip install git+https://github.com/yallup/nss.git
     (pulls handley-lab/blackjax fork with nested sampling support)
 """
+
 import time
 from pathlib import Path
 
@@ -89,9 +90,7 @@ rng_key, init_key = jax.random.split(rng_key)
 unit_cube = np.asarray(
     jax.random.uniform(init_key, shape=(n_live, ndim), minval=0.0, maxval=1.0)
 )
-physical = np.array(
-    [model.vector_from_unit_vector(list(u)) for u in unit_cube]
-)
+physical = np.array([model.vector_from_unit_vector(list(u)) for u in unit_cube])
 initial_samples = jnp.asarray(physical)
 
 print(f"Running NSS (autofit NumPy likelihood via pure_callback)...")
@@ -114,7 +113,9 @@ positions = final_state.particles.position
 log_likelihoods = final_state.particles.loglikelihood
 
 best_idx = int(jnp.argmax(log_likelihoods))
-best_instance = model.instance_from_vector(vector=np.asarray(positions[best_idx]).tolist())
+best_instance = model.instance_from_vector(
+    vector=np.asarray(positions[best_idx]).tolist()
+)
 max_logl = float(jnp.max(log_likelihoods))
 evals_to_ml, time_to_ml = tracker.finalise(max_log_l=max_logl, tolerance=1.0)
 

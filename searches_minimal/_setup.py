@@ -16,6 +16,7 @@ Usage
     model = build_model(mask_radius=3.5)
     analysis = build_analysis(dataset, use_jax=False)
 """
+
 import subprocess
 import sys
 from pathlib import Path
@@ -69,7 +70,9 @@ def build_dataset(mask_radius: float = MASK_RADIUS) -> al.Imaging:
     return dataset
 
 
-def build_model(mask_radius: float = MASK_RADIUS, total_gaussians: int = 20) -> af.Collection:
+def build_model(
+    mask_radius: float = MASK_RADIUS, total_gaussians: int = 20
+) -> af.Collection:
     """Build the lens + source model used in ``jax_profiling/imaging/mge.py``."""
     lens_bulge = al.model_util.mge_model_from(
         mask_radius=mask_radius,
@@ -78,9 +81,7 @@ def build_model(mask_radius: float = MASK_RADIUS, total_gaussians: int = 20) -> 
     )
     mass = af.Model(al.mp.Isothermal)
     shear = af.Model(al.mp.ExternalShear)
-    lens = af.Model(
-        al.Galaxy, redshift=0.5, bulge=lens_bulge, mass=mass, shear=shear
-    )
+    lens = af.Model(al.Galaxy, redshift=0.5, bulge=lens_bulge, mass=mass, shear=shear)
 
     source_bulge = al.model_util.mge_model_from(
         mask_radius=mask_radius,

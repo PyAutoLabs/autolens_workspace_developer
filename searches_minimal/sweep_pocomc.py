@@ -17,7 +17,9 @@ JAX nor PyTorch necessarily releases memory cleanly between configs. The
 ``c7_huge`` config (n_effective=2048) is HPC-targeted and may OOM on a
 6 GB card; lower-resource configs work locally.
 """
+
 import os
+
 # Cap JAX VRAM at 50% so PyTorch (Zuko flow) has headroom on small cards.
 # Must be set before any JAX import.
 os.environ.setdefault("XLA_PYTHON_CLIENT_MEM_FRACTION", "0.5")
@@ -52,13 +54,31 @@ class SweepConfig:
 
 
 CONFIGS = [
-    SweepConfig("c1_baseline",       n_effective=512,  n_active=256, n_total=4096,  n_evidence=4096),
-    SweepConfig("c2_smaller",        n_effective=256,  n_active=128, n_total=2048,  n_evidence=2048),
-    SweepConfig("c3_bigger",         n_effective=1024, n_active=512, n_total=8192,  n_evidence=8192),
-    SweepConfig("c4_more_effective", n_effective=1024, n_active=256, n_total=4096,  n_evidence=4096),
-    SweepConfig("c5_more_total",     n_effective=512,  n_active=256, n_total=8192,  n_evidence=4096),
-    SweepConfig("c6_more_evidence",  n_effective=512,  n_active=256, n_total=4096,  n_evidence=8192),
-    SweepConfig("c7_huge",           n_effective=2048, n_active=512, n_total=16384, n_evidence=8192),
+    SweepConfig(
+        "c1_baseline", n_effective=512, n_active=256, n_total=4096, n_evidence=4096
+    ),
+    SweepConfig(
+        "c2_smaller", n_effective=256, n_active=128, n_total=2048, n_evidence=2048
+    ),
+    SweepConfig(
+        "c3_bigger", n_effective=1024, n_active=512, n_total=8192, n_evidence=8192
+    ),
+    SweepConfig(
+        "c4_more_effective",
+        n_effective=1024,
+        n_active=256,
+        n_total=4096,
+        n_evidence=4096,
+    ),
+    SweepConfig(
+        "c5_more_total", n_effective=512, n_active=256, n_total=8192, n_evidence=4096
+    ),
+    SweepConfig(
+        "c6_more_evidence", n_effective=512, n_active=256, n_total=4096, n_evidence=8192
+    ),
+    SweepConfig(
+        "c7_huge", n_effective=2048, n_active=512, n_total=16384, n_evidence=8192
+    ),
 ]
 
 CSV_FIELDS = [
@@ -163,9 +183,7 @@ def main() -> int:
 
     print("JIT-compiling MGE likelihood (one-shot)...", flush=True)
     t0 = time.time()
-    warmup_physical = jnp.asarray(
-        model.vector_from_unit_vector([0.5] * ndim)
-    )
+    warmup_physical = jnp.asarray(model.vector_from_unit_vector([0.5] * ndim))
     _ = float(jax.block_until_ready(jit_log_likelihood(warmup_physical)))
     print(f"  Compiled in {time.time() - t0:.2f} s", flush=True)
 
@@ -220,9 +238,7 @@ def main() -> int:
             r["delta_logL"] = best_logL - r["max_logL"]
             r["converged"] = r["delta_logL"] < 1.0
         converged = [r for r in succeeded if r["converged"]]
-        recommended = (
-            min(converged, key=lambda r: r["evals"]) if converged else None
-        )
+        recommended = min(converged, key=lambda r: r["evals"]) if converged else None
     else:
         best_logL = float("nan")
         recommended = None

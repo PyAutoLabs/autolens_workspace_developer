@@ -23,6 +23,7 @@ This is a wiring smoke test, not a tuned production run. ``num_chains``,
 Requirements:
     pip install numpyro
 """
+
 import time
 from pathlib import Path
 
@@ -56,6 +57,7 @@ ndim = model.prior_count
 # ``nautilus_jax.py`` boundary cost.
 # --------------------------------------------------------------------------
 
+
 def _cube_to_physical_host(cube_np):
     return np.asarray(
         model.vector_from_unit_vector(list(np.asarray(cube_np))),
@@ -79,6 +81,7 @@ def cube_to_physical(cube):
 # uniform prior on ``[0, 1]^N`` the joint density is just the likelihood,
 # gated to ``-inf`` outside the cube — equivalently ``+inf`` potential.
 # --------------------------------------------------------------------------
+
 
 def log_likelihood(cube):
     in_cube = jnp.all((cube >= 0.0) & (cube <= 1.0))
@@ -165,6 +168,7 @@ max_logl = float(jnp.max(log_l_per_sample))
 
 # n_eff and r_hat via NumPyro's diagnostic on the full sample tensor.
 import numpyro.diagnostics as diagnostics
+
 n_eff_per_param = diagnostics.effective_sample_size(np.asarray(samples_by_chain))
 r_hat_per_param = diagnostics.gelman_rubin(np.asarray(samples_by_chain))
 ess_min = float(np.min(n_eff_per_param))

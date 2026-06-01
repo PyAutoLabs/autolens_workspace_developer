@@ -15,6 +15,7 @@ parameter points (prior median, three samples from the same narrow band
 Final verdict line is one of:
   OK_HMC_VIABLE   WARN_ILL_CONDITIONED   FAIL_NAN_OR_INF   FAIL_FD_MISMATCH
 """
+
 import sys
 import time
 from pathlib import Path
@@ -82,9 +83,7 @@ def main() -> int:
     p_med = jnp.asarray(model.vector_from_unit_vector([0.5] * ndim))
     p_band = [
         jnp.asarray(
-            model.vector_from_unit_vector(
-                rng.uniform(0.4, 0.6, size=ndim).tolist()
-            )
+            model.vector_from_unit_vector(rng.uniform(0.4, 0.6, size=ndim).tolist())
         )
         for _ in range(3)
     ]
@@ -182,7 +181,9 @@ def main() -> int:
 
     print("\n=== Finite-difference cross-check ===")
     for c in fd_checks:
-        flag = "OK" if c["rel_err"] < 1e-2 else ("WARN" if c["rel_err"] < 1e-1 else "FAIL")
+        flag = (
+            "OK" if c["rel_err"] < 1e-2 else ("WARN" if c["rel_err"] < 1e-1 else "FAIL")
+        )
         print(
             f"  [{c['point']:13s}] idx={c['idx']:2d}  eps={c['eps']:.3e}"
             f"  grad_an={c['grad_an']:+.4e}  grad_fd={c['grad_fd']:+.4e}"
@@ -218,7 +219,9 @@ def main() -> int:
     summary_lines.append("")
     summary_lines.append("Finite-difference cross-check (eps = 1e-3 * sigma_prior):")
     for c in fd_checks:
-        flag = "OK" if c["rel_err"] < 1e-2 else ("WARN" if c["rel_err"] < 1e-1 else "FAIL")
+        flag = (
+            "OK" if c["rel_err"] < 1e-2 else ("WARN" if c["rel_err"] < 1e-1 else "FAIL")
+        )
         summary_lines.append(
             f"  {c['point']:13s} idx={c['idx']:2d}  grad_an={c['grad_an']:+.4e}"
             f"  grad_fd={c['grad_fd']:+.4e}  rel_err={c['rel_err']:.2e} [{flag}]"

@@ -12,6 +12,7 @@ Why no wall-clock cap: ``run_nested_sampling`` exposes only the
 to fit in ~10–15 min on the RTX 2060; the largest (n_live=500) loosens
 ``termination`` to -1 to stay in budget.
 """
+
 import csv
 import sys
 import time
@@ -41,12 +42,24 @@ class SweepConfig:
 
 
 CONFIGS = [
-    SweepConfig("c1_baseline",   n_live=200, num_mcmc_steps=5,  num_delete=10, termination=-3),
-    SweepConfig("c2_fewer_mcmc", n_live=200, num_mcmc_steps=3,  num_delete=10, termination=-3),
-    SweepConfig("c3_more_mcmc",  n_live=200, num_mcmc_steps=10, num_delete=10, termination=-3),
-    SweepConfig("c4_big_delete", n_live=200, num_mcmc_steps=5,  num_delete=50, termination=-3),
-    SweepConfig("c5_half_live",  n_live=100, num_mcmc_steps=5,  num_delete=10, termination=-3),
-    SweepConfig("c6_big_live",   n_live=500, num_mcmc_steps=5,  num_delete=10, termination=-1),
+    SweepConfig(
+        "c1_baseline", n_live=200, num_mcmc_steps=5, num_delete=10, termination=-3
+    ),
+    SweepConfig(
+        "c2_fewer_mcmc", n_live=200, num_mcmc_steps=3, num_delete=10, termination=-3
+    ),
+    SweepConfig(
+        "c3_more_mcmc", n_live=200, num_mcmc_steps=10, num_delete=10, termination=-3
+    ),
+    SweepConfig(
+        "c4_big_delete", n_live=200, num_mcmc_steps=5, num_delete=50, termination=-3
+    ),
+    SweepConfig(
+        "c5_half_live", n_live=100, num_mcmc_steps=5, num_delete=10, termination=-3
+    ),
+    SweepConfig(
+        "c6_big_live", n_live=500, num_mcmc_steps=5, num_delete=10, termination=-1
+    ),
 ]
 
 CSV_FIELDS = [
@@ -193,9 +206,7 @@ def main() -> int:
             r["delta_logL"] = best_logL - r["max_logL_live"]
             r["converged"] = r["delta_logL"] < 1.0
         converged = [r for r in succeeded if r["converged"]]
-        recommended = (
-            min(converged, key=lambda r: r["evals"]) if converged else None
-        )
+        recommended = min(converged, key=lambda r: r["evals"]) if converged else None
     else:
         best_logL = float("nan")
         recommended = None

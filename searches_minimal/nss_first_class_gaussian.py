@@ -110,30 +110,30 @@ Likelihood evals:      {info["total_samples"]}
         "Result.max_log_likelihood_instance is missing model attributes; "
         "NSSamples conversion or Result construction is broken."
     )
-    assert isinstance(best_instance.x, float), (
-        f"best_instance.x has type {type(best_instance.x)}, expected float"
-    )
-    assert np.isfinite(info["log_evidence"]), (
-        f"log_evidence = {info['log_evidence']!r} is not finite"
-    )
-    assert np.isfinite(info["log_evidence_error"]), (
-        f"log_evidence_error = {info['log_evidence_error']!r} is not finite"
-    )
-    assert info["total_accepted_samples"] > 0, (
-        "No accepted samples — NSS run produced an empty posterior."
-    )
+    assert isinstance(
+        best_instance.x, float
+    ), f"best_instance.x has type {type(best_instance.x)}, expected float"
+    assert np.isfinite(
+        info["log_evidence"]
+    ), f"log_evidence = {info['log_evidence']!r} is not finite"
+    assert np.isfinite(
+        info["log_evidence_error"]
+    ), f"log_evidence_error = {info['log_evidence_error']!r} is not finite"
+    assert (
+        info["total_accepted_samples"] > 0
+    ), "No accepted samples — NSS run produced an empty posterior."
     assert weights.min() >= 0.0, "Negative posterior weight encountered"
-    assert abs(weight_total - 1.0) < 1e-6, (
-        f"Posterior weights do not sum to 1: total = {weight_total!r}"
-    )
+    assert (
+        abs(weight_total - 1.0) < 1e-6
+    ), f"Posterior weights do not sum to 1: total = {weight_total!r}"
     # Loose recovery check — termination=-1 doesn't fully converge but the
     # posterior should at least be in the right ballpark of the prior mean.
-    assert abs(x_weighted_mean - 2.5) < 1.5, (
-        f"x weighted mean {x_weighted_mean:.4f} too far from prior mean 2.5"
-    )
-    assert abs(y_weighted_mean - (-1.0)) < 1.0, (
-        f"y weighted mean {y_weighted_mean:.4f} too far from prior mean -1.0"
-    )
+    assert (
+        abs(x_weighted_mean - 2.5) < 1.5
+    ), f"x weighted mean {x_weighted_mean:.4f} too far from prior mean 2.5"
+    assert (
+        abs(y_weighted_mean - (-1.0)) < 1.0
+    ), f"y weighted mean {y_weighted_mean:.4f} too far from prior mean -1.0"
 
     # Verify samples.csv was written through the Paths pipeline.
     samples_csv = Path(result.paths._files_path) / "samples.csv"

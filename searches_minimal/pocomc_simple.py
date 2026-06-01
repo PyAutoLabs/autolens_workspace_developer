@@ -26,7 +26,9 @@ bridge-sampling estimator, not a path-temperature integral.
 Requirements:
     pip install pocomc
 """
+
 import os
+
 # JAX preallocates 75% of GPU memory by default; PocoMC trains a Zuko
 # normalizing flow on PyTorch which competes for the same VRAM. Cap JAX
 # at 50% so torch has headroom on small cards. Setting before any JAX
@@ -62,6 +64,7 @@ ndim = model.prior_count
 # --------------------------------------------------------------------------
 # JAX-jitted likelihood in physical space, identical to ``nautilus_jax.py``.
 # --------------------------------------------------------------------------
+
 
 def log_likelihood_jax(physical):
     instance = model.instance_from_vector(vector=physical, xp=jnp)

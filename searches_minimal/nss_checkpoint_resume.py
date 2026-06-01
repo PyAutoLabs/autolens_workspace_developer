@@ -34,6 +34,7 @@ os.environ.setdefault("NUMBA_CACHE_DIR", "/tmp/numba_cache")
 os.environ.setdefault("MPLCONFIGDIR", "/tmp/matplotlib")
 
 import warnings
+
 warnings.filterwarnings("ignore", category=RuntimeWarning)
 
 import numpy as np
@@ -131,24 +132,22 @@ def main():
         capture_search.paths.search_internal_path / "nss_checkpoint.pkl"
     )
 
-    assert snapshot_count["n"] >= 1, (
-        "No checkpoint write captured during capture pass — Phase 2 hook is broken."
-    )
+    assert (
+        snapshot_count["n"] >= 1
+    ), "No checkpoint write captured during capture pass — Phase 2 hook is broken."
     assert snapshot_path.exists(), f"Snapshot not written at {snapshot_path}"
-    assert not capture_checkpoint.exists(), (
-        f"Post-success cleanup did not delete {capture_checkpoint}."
-    )
+    assert (
+        not capture_checkpoint.exists()
+    ), f"Post-success cleanup did not delete {capture_checkpoint}."
     assert _VIZ_COUNT["n"] >= 1, (
         f"Quick-update visualize did not fire (count={_VIZ_COUNT['n']}). "
         f"Phase 3 hook is broken or the run was too short."
     )
 
-    capture_log_evidence = float(
-        capture_result.samples.samples_info["log_evidence"]
-    )
-    assert np.isfinite(capture_log_evidence), (
-        f"Capture-pass log_evidence not finite: {capture_log_evidence!r}"
-    )
+    capture_log_evidence = float(capture_result.samples.samples_info["log_evidence"])
+    assert np.isfinite(
+        capture_log_evidence
+    ), f"Capture-pass log_evidence not finite: {capture_log_evidence!r}"
 
     print(f"  Snapshot captured at: {snapshot_path}")
     print(f"  Quick-update viz fires: {_VIZ_COUNT['n']}")
@@ -185,12 +184,10 @@ def main():
         f"Recent log lines: {log_capture[-10:]}"
     )
 
-    resume_log_evidence = float(
-        resume_result.samples.samples_info["log_evidence"]
-    )
-    assert np.isfinite(resume_log_evidence), (
-        f"Resume-pass log_evidence not finite: {resume_log_evidence!r}"
-    )
+    resume_log_evidence = float(resume_result.samples.samples_info["log_evidence"])
+    assert np.isfinite(
+        resume_log_evidence
+    ), f"Resume-pass log_evidence not finite: {resume_log_evidence!r}"
     assert not target_checkpoint.exists(), (
         f"Post-success cleanup did not delete resumed-run checkpoint at "
         f"{target_checkpoint}."

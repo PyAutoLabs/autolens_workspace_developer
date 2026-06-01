@@ -14,6 +14,7 @@ steps falling off the prior edges.
 Requirements:
     pip install emcee
 """
+
 import time
 from pathlib import Path
 
@@ -81,13 +82,15 @@ flat_log_prob = sampler.get_log_prob(flat=True)
 best_idx = np.argmax(flat_log_prob)
 best_instance = model.instance_from_vector(vector=list(flat_samples[best_idx]))
 best_log_post = float(flat_log_prob[best_idx])
-max_logl = float(max(tracker.history_log_l)) if tracker.history_log_l else float('nan')
+max_logl = float(max(tracker.history_log_l)) if tracker.history_log_l else float("nan")
 
 # Try autocorrelation-based ESS; emcee raises if chain is too short.
 try:
     tau = sampler.get_autocorr_time(quiet=False)
     autocorr_ess = nsteps / float(np.mean(tau)) * nwalkers
-    ess_str = f"{autocorr_ess:.1f}     (mean autocorr time = {float(np.mean(tau)):.1f} steps)"
+    ess_str = (
+        f"{autocorr_ess:.1f}     (mean autocorr time = {float(np.mean(tau)):.1f} steps)"
+    )
     converged_str = "yes (chain length > 50 * autocorr time)"
 except Exception as exc:
     ess_str = f"n/a ({type(exc).__name__}: chain too short for reliable autocorr)"

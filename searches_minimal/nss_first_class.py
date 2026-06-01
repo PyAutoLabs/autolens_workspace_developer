@@ -89,9 +89,7 @@ Sampler config:      n_live={info.get("number_live_points")}, num_mcmc_steps={in
 --- Correctness gates ---
 """
 
-    einstein_radius = float(
-        best_instance.galaxies.lens.mass.einstein_radius
-    )
+    einstein_radius = float(best_instance.galaxies.lens.mass.einstein_radius)
     log_evidence = float(info["log_evidence"])
 
     assertion_lines = []

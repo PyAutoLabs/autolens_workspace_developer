@@ -13,6 +13,7 @@ callback is impossible without forcing a host round-trip), use
 ``MLTracker.from_log_l_history`` instead with the full per-eval log L
 sequence reconstructed from the sampler's dead-point + live-point state.
 """
+
 from __future__ import annotations
 
 import time

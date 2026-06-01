@@ -12,6 +12,7 @@ a wiring test, not a converged posterior.
 Requirements:
     pip install nautilus-sampler
 """
+
 import time
 from pathlib import Path
 

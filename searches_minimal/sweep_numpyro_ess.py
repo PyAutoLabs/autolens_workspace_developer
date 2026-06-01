@@ -18,6 +18,7 @@ JAX BFC allocator does NOT release between configs. The ``c3_huge_chains``
 config (n_chains=128) is HPC-targeted and may OOM on a 6 GB card; lower-
 chain configs work locally.
 """
+
 import csv
 import sys
 import time
@@ -48,13 +49,13 @@ class SweepConfig:
 
 
 CONFIGS = [
-    SweepConfig("c1_baseline",     n_chains=32,  num_warmup=200,  num_samples=200),
-    SweepConfig("c2_more_chains",  n_chains=64,  num_warmup=200,  num_samples=200),
-    SweepConfig("c3_huge_chains",  n_chains=128, num_warmup=200,  num_samples=200),
-    SweepConfig("c4_more_warmup",  n_chains=32,  num_warmup=500,  num_samples=200),
-    SweepConfig("c5_less_warmup",  n_chains=32,  num_warmup=50,   num_samples=200),
-    SweepConfig("c6_more_samples", n_chains=32,  num_warmup=200,  num_samples=500),
-    SweepConfig("c7_long_run",     n_chains=32,  num_warmup=1000, num_samples=2000),
+    SweepConfig("c1_baseline", n_chains=32, num_warmup=200, num_samples=200),
+    SweepConfig("c2_more_chains", n_chains=64, num_warmup=200, num_samples=200),
+    SweepConfig("c3_huge_chains", n_chains=128, num_warmup=200, num_samples=200),
+    SweepConfig("c4_more_warmup", n_chains=32, num_warmup=500, num_samples=200),
+    SweepConfig("c5_less_warmup", n_chains=32, num_warmup=50, num_samples=200),
+    SweepConfig("c6_more_samples", n_chains=32, num_warmup=200, num_samples=500),
+    SweepConfig("c7_long_run", n_chains=32, num_warmup=1000, num_samples=2000),
 ]
 
 CSV_FIELDS = [
@@ -236,9 +237,7 @@ def main() -> int:
             # ESS "converged" means r_hat well below 1.1 AND within 1 nat of best.
             r["converged"] = r["delta_logL"] < 1.0 and r["r_hat_max"] < 1.1
         converged = [r for r in succeeded if r["converged"]]
-        recommended = (
-            min(converged, key=lambda r: r["evals"]) if converged else None
-        )
+        recommended = min(converged, key=lambda r: r["evals"]) if converged else None
     else:
         best_logL = float("nan")
         recommended = None
@@ -274,9 +273,7 @@ def main() -> int:
             f"  wall={recommended['wall_time']:.1f}s"
         )
     else:
-        lines.append(
-            "No config converged (delta_logL < 1.0 nat AND r_hat < 1.1)."
-        )
+        lines.append("No config converged (delta_logL < 1.0 nat AND r_hat < 1.1).")
     lines.append("")
     lines.append("Best fit per config:")
     for r in rows:
