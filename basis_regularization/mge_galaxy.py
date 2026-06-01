@@ -22,6 +22,7 @@ The fix was to switch to a positive-only linear algebra solver, which is the
 default in PyAutoGalaxy. The regularization branch here is preserved for
 completeness and for the occasional overfit-mitigation experiment.
 """
+
 import numpy as np
 from pathlib import Path
 

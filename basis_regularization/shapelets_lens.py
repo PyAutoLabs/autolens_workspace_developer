@@ -24,6 +24,7 @@ For shapelets specifically, regularization is not a substitute for the
 positive-negative solver problem (shapelets *require* negative intensities to
 work). It is preserved here for completeness.
 """
+
 from autoconf import jax_wrapper  # Sets JAX environment before other imports
 
 import numpy as np
@@ -41,9 +42,7 @@ If the dataset has not been simulated yet, run the corresponding simulator
 there first.
 """
 dataset_name = "simple__no_lens_light"
-dataset_path = (
-    Path("..") / "autolens_workspace" / "dataset" / "imaging" / dataset_name
-)
+dataset_path = Path("..") / "autolens_workspace" / "dataset" / "imaging" / dataset_name
 
 dataset = al.Imaging.from_fits(
     data_path=dataset_path / "data.fits",

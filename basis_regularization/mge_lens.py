@@ -45,6 +45,7 @@ smooth, in that its light changes smoothly as a function of radius.
 This adds one extra parameter to the fit, the `coefficient`, which controls
 the degree of smoothing applied.
 """
+
 from autoconf import jax_wrapper  # Sets JAX environment before other imports
 
 import numpy as np
@@ -64,9 +65,7 @@ corresponding simulator there first:
     python autolens_workspace/scripts/imaging/features/multi_gaussian_expansion/simulator.py
 """
 dataset_name = "lens_light_asymmetric"
-dataset_path = (
-    Path("..") / "autolens_workspace" / "dataset" / "imaging" / dataset_name
-)
+dataset_path = Path("..") / "autolens_workspace" / "dataset" / "imaging" / dataset_name
 
 dataset = al.Imaging.from_fits(
     data_path=dataset_path / "data.fits",

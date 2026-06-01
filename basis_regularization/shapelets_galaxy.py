@@ -22,6 +22,7 @@ For shapelets specifically, regularization is not a substitute for the
 positive-negative solver problem (shapelets *require* negative intensities to
 work). It is preserved here for completeness.
 """
+
 import numpy as np
 from pathlib import Path
 
