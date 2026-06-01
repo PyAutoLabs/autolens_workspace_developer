@@ -58,6 +58,7 @@ class PlotterQuantity(Plotter):
             Optional override for the plots module; defaults to
             ``autogalaxy.quantity.plot.fit_quantity_plots``.
         """
+
         def should_plot(name):
             return plot_setting(section="fit_quantity", name=name)
 

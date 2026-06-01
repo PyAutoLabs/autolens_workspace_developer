@@ -9,6 +9,7 @@ It is used for model comparison workflows where two different mass profile famil
 (e.g. power-law vs. NFW) are compared by fitting one's predicted lensing quantity to
 the other's, with a noise-map providing the figure-of-merit.
 """
+
 import numpy as np
 
 import autofit as af

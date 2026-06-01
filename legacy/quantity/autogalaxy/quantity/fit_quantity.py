@@ -14,6 +14,7 @@ This is useful for, for example:
 
 The `AnalysisQuantity` class uses `FitQuantity` internally to enable non-linear fitting of these quantities.
 """
+
 from typing import List, Optional, Union
 
 import autoarray as aa

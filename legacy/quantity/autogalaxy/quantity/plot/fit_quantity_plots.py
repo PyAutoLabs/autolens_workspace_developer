@@ -1,4 +1,3 @@
-
 import autoarray as aa
 from autoarray.plot.utils import subplots, conf_subplot_figsize, tight_layout
 
@@ -6,7 +5,16 @@ from autogalaxy.quantity.fit_quantity import FitQuantity
 from autogalaxy.util.plot_utils import plot_array, _save_subplot
 
 
-def _subplot_fit_array(fit, output_path, output_format, colormap, use_log10, positions, filename="fit", title_prefix=None):
+def _subplot_fit_array(
+    fit,
+    output_path,
+    output_format,
+    colormap,
+    use_log10,
+    positions,
+    filename="fit",
+    title_prefix=None,
+):
     """Render a six-panel fit summary subplot for a single array-valued quantity fit.
 
     The panels show: data, signal-to-noise map, model image, residual map,
@@ -95,11 +103,33 @@ def subplot_fit(
         Point positions to scatter-plot over each panel.
     """
     if isinstance(fit.dataset.data, aa.Array2D):
-        _subplot_fit_array(fit, output_path, output_format, colormap, use_log10, positions, title_prefix=title_prefix)
+        _subplot_fit_array(
+            fit,
+            output_path,
+            output_format,
+            colormap,
+            use_log10,
+            positions,
+            title_prefix=title_prefix,
+        )
     else:
         _subplot_fit_array(
-            fit.y, output_path, output_format, colormap, use_log10, positions, filename="fit_y", title_prefix=title_prefix
+            fit.y,
+            output_path,
+            output_format,
+            colormap,
+            use_log10,
+            positions,
+            filename="fit_y",
+            title_prefix=title_prefix,
         )
         _subplot_fit_array(
-            fit.x, output_path, output_format, colormap, use_log10, positions, filename="fit_x", title_prefix=title_prefix
+            fit.x,
+            output_path,
+            output_format,
+            colormap,
+            use_log10,
+            positions,
+            filename="fit_x",
+            title_prefix=title_prefix,
         )

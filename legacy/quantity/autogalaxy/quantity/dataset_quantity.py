@@ -8,6 +8,7 @@ a dataset and fitted via `FitQuantity` and `AnalysisQuantity`.
 The noise-map enables the computation of chi-squared values and log-likelihoods, turning a pure
 comparison of model quantities into a statistically principled goodness-of-fit metric.
 """
+
 import logging
 import numpy as np
 from pathlib import Path
@@ -233,4 +234,3 @@ class DatasetQuantity(AbstractDataset):
     @property
     def pixel_scales(self):
         return self.data.pixel_scales
-

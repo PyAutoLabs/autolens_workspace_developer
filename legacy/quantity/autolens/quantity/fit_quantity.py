@@ -15,6 +15,7 @@ Typical use cases include:
 The ``AnalysisQuantity`` class uses ``FitQuantity`` as its evaluation engine when
 performing a Bayesian model fit via a non-linear search.
 """
+
 import autogalaxy as ag
 
 from autogalaxy.quantity.dataset_quantity import DatasetQuantity

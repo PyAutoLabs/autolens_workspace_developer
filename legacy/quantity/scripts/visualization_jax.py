@@ -136,16 +136,16 @@ import numpy as _sanity_np
 
 _fit_for_vis = analysis.fit_from(instance=instance)
 _model_field = _sanity_np.asarray(_fit_for_vis.model_data)
-assert _sanity_np.isfinite(_model_field).all(), (
-    "fit.model_data has nan/inf — JAX-trace mismatch on quantity helpers"
-)
-assert float(_sanity_np.abs(_model_field).sum()) > 0.0, (
-    "fit.model_data all-zero — quantity model field collapsed"
-)
+assert _sanity_np.isfinite(
+    _model_field
+).all(), "fit.model_data has nan/inf — JAX-trace mismatch on quantity helpers"
+assert (
+    float(_sanity_np.abs(_model_field).sum()) > 0.0
+), "fit.model_data all-zero — quantity model field collapsed"
 _fom = float(_fit_for_vis.figure_of_merit)
-assert _sanity_np.isfinite(_fom), (
-    f"figure_of_merit = {_fom} — chi² nan/inf, fit collapsed"
-)
+assert _sanity_np.isfinite(
+    _fom
+), f"figure_of_merit = {_fom} — chi² nan/inf, fit collapsed"
 print(
     f"  PASS Visualization Sanity (autogalaxy quantity): "
     f"|model_data|.sum() = {float(_sanity_np.abs(_model_field).sum()):.4f}, "

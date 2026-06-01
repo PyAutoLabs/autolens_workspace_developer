@@ -151,16 +151,14 @@ exercised (the first-call compile is already paid above).
 """
 
 _model_field = np.asarray(fit_2.model_data)
-assert np.isfinite(_model_field).all(), (
-    "fit.model_data has nan/inf — JAX-trace mismatch on quantity helpers"
-)
-assert float(np.abs(_model_field).sum()) > 0.0, (
-    "fit.model_data all-zero — quantity model field collapsed"
-)
+assert np.isfinite(
+    _model_field
+).all(), "fit.model_data has nan/inf — JAX-trace mismatch on quantity helpers"
+assert (
+    float(np.abs(_model_field).sum()) > 0.0
+), "fit.model_data all-zero — quantity model field collapsed"
 _fom = float(fit_2.figure_of_merit)
-assert np.isfinite(_fom), (
-    f"figure_of_merit = {_fom} — chi² nan/inf, fit collapsed"
-)
+assert np.isfinite(_fom), f"figure_of_merit = {_fom} — chi² nan/inf, fit collapsed"
 print(
     f"  PASS Visualization Sanity (autogalaxy quantity): "
     f"|model_data|.sum() = {float(np.abs(_model_field).sum()):.4f}, "
