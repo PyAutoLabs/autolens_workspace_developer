@@ -114,6 +114,7 @@ regularization_coefficient = 1.0
 # Profiling helpers
 # ---------------------------------------------------------------------------
 
+
 class Timer:
     """Accumulates named timing measurements and prints a summary."""
 
@@ -184,8 +185,14 @@ if al.util.dataset.should_simulate(str(dataset_path)):
     subprocess.run(
         [
             sys.executable,
-            str(_workspace_root / "jax_profiling" / "dataset_setup" / "interferometer.py"),
-            "--instrument", instrument,
+            str(
+                _workspace_root
+                / "jax_profiling"
+                / "dataset_setup"
+                / "interferometer.py"
+            ),
+            "--instrument",
+            instrument,
         ],
         cwd=str(_workspace_root),
         check=True,
@@ -230,7 +237,9 @@ print("\n--- Image mesh construction (Delaunay) ---")
 
 with timer.section("image_mesh_overlay"):
     image_mesh = al.image_mesh.Overlay(shape=overlay_shape)
-    image_plane_mesh_grid = image_mesh.image_plane_mesh_grid_from(mask=dataset.real_space_mask)
+    image_plane_mesh_grid = image_mesh.image_plane_mesh_grid_from(
+        mask=dataset.real_space_mask
+    )
 
 with timer.section("edge_points"):
     pre_edge_pixels = image_plane_mesh_grid.shape[0]
@@ -607,12 +616,16 @@ print("\n--- Step 9: Data vector (D) ---")
 
 
 def compute_data_vector(
-    transformed_mm_real, transformed_mm_imag, data_real, data_imag,
-    noise_real, noise_imag,
+    transformed_mm_real,
+    transformed_mm_imag,
+    data_real,
+    data_imag,
+    noise_real,
+    noise_imag,
 ):
     # Visibility-space data vector: D_i = sum_j f_ij d_j / sigma_j^2 (real + imag).
-    weighted_data_real = data_real / (noise_real ** 2)
-    weighted_data_imag = data_imag / (noise_imag ** 2)
+    weighted_data_real = data_real / (noise_real**2)
+    weighted_data_imag = data_imag / (noise_imag**2)
     return jnp.matmul(transformed_mm_real.T, weighted_data_real) + jnp.matmul(
         transformed_mm_imag.T, weighted_data_imag
     )
@@ -620,15 +633,24 @@ def compute_data_vector(
 
 with timer.section("data_vector_eager"):
     data_vector = compute_data_vector(
-        transformed_mm_real_jnp, transformed_mm_imag_jnp,
-        data_real_jnp, data_imag_jnp, noise_real_jnp, noise_imag_jnp,
+        transformed_mm_real_jnp,
+        transformed_mm_imag_jnp,
+        data_real_jnp,
+        data_imag_jnp,
+        noise_real_jnp,
+        noise_imag_jnp,
     )
     block(data_vector)
 
 _, data_vector = jit_profile(
-    compute_data_vector, "data_vector_jit",
-    transformed_mm_real_jnp, transformed_mm_imag_jnp,
-    data_real_jnp, data_imag_jnp, noise_real_jnp, noise_imag_jnp,
+    compute_data_vector,
+    "data_vector_jit",
+    transformed_mm_real_jnp,
+    transformed_mm_imag_jnp,
+    data_real_jnp,
+    data_imag_jnp,
+    noise_real_jnp,
+    noise_imag_jnp,
 )
 likelihood_steps.append(("Data vector (D)", timer.records[-1][1] / 10))
 
@@ -646,7 +668,10 @@ no_reg_list = list(inversion.no_regularization_index_list)
 
 
 def compute_curvature_matrix(
-    transformed_mm_real, transformed_mm_imag, noise_real, noise_imag,
+    transformed_mm_real,
+    transformed_mm_imag,
+    noise_real,
+    noise_imag,
 ):
     real_curv = al.util.inversion.curvature_matrix_via_mapping_matrix_from(
         mapping_matrix=transformed_mm_real,
@@ -669,13 +694,20 @@ def compute_curvature_matrix(
 
 with timer.section("curvature_matrix_eager"):
     curvature_matrix = compute_curvature_matrix(
-        transformed_mm_real_jnp, transformed_mm_imag_jnp, noise_real_jnp, noise_imag_jnp,
+        transformed_mm_real_jnp,
+        transformed_mm_imag_jnp,
+        noise_real_jnp,
+        noise_imag_jnp,
     )
     block(curvature_matrix)
 
 _, curvature_matrix = jit_profile(
-    compute_curvature_matrix, "curvature_matrix_jit",
-    transformed_mm_real_jnp, transformed_mm_imag_jnp, noise_real_jnp, noise_imag_jnp,
+    compute_curvature_matrix,
+    "curvature_matrix_jit",
+    transformed_mm_real_jnp,
+    transformed_mm_imag_jnp,
+    noise_real_jnp,
+    noise_imag_jnp,
 )
 likelihood_steps.append(("Curvature matrix (F)", timer.records[-1][1] / 10))
 
@@ -726,8 +758,11 @@ with timer.section("reconstruction_eager"):
     block(reconstruction)
 
 _, reconstruction = jit_profile(
-    compute_reconstruction, "reconstruction_jit",
-    jnp.array(data_vector), jnp.array(curvature_matrix), jnp.array(regularization_matrix),
+    compute_reconstruction,
+    "reconstruction_jit",
+    jnp.array(data_vector),
+    jnp.array(curvature_matrix),
+    jnp.array(regularization_matrix),
 )
 likelihood_steps.append(("Regularized reconstruction", timer.records[-1][1] / 10))
 
@@ -744,9 +779,16 @@ print("\n--- Step 13: Mapped reconstructed visibilities + log evidence ---")
 
 
 def compute_log_evidence(
-    data_real, data_imag, noise_real, noise_imag,
-    transformed_mm_real, transformed_mm_imag,
-    reconstruction, curvature_matrix, regularization_matrix, mapper_indices,
+    data_real,
+    data_imag,
+    noise_real,
+    noise_imag,
+    transformed_mm_real,
+    transformed_mm_imag,
+    reconstruction,
+    curvature_matrix,
+    regularization_matrix,
+    mapper_indices,
 ):
     """Visibility-space log-evidence — five-term formula matching the production
     ``FitInterferometer.log_evidence``.
@@ -779,14 +821,16 @@ def compute_log_evidence(
     )
 
     # Noise normalisation (real + imag)
-    noise_normalization = (
-        jnp.sum(jnp.log(2 * jnp.pi * noise_real ** 2))
-        + jnp.sum(jnp.log(2 * jnp.pi * noise_imag ** 2))
+    noise_normalization = jnp.sum(jnp.log(2 * jnp.pi * noise_real**2)) + jnp.sum(
+        jnp.log(2 * jnp.pi * noise_imag**2)
     )
 
     return -0.5 * (
-        chi_squared + regularization_term + log_det_curvature_reg
-        - log_det_regularization + noise_normalization
+        chi_squared
+        + regularization_term
+        + log_det_curvature_reg
+        - log_det_regularization
+        + noise_normalization
     )
 
 
@@ -800,17 +844,32 @@ reg_jnp = jnp.array(regularization_matrix)
 
 with timer.section("log_evidence_eager"):
     log_evidence = compute_log_evidence(
-        data_real_jnp, data_imag_jnp, noise_real_jnp, noise_imag_jnp,
-        transformed_mm_real_jnp, transformed_mm_imag_jnp,
-        reconstruction, curvature_matrix, reg_jnp, mapper_indices_jnp,
+        data_real_jnp,
+        data_imag_jnp,
+        noise_real_jnp,
+        noise_imag_jnp,
+        transformed_mm_real_jnp,
+        transformed_mm_imag_jnp,
+        reconstruction,
+        curvature_matrix,
+        reg_jnp,
+        mapper_indices_jnp,
     )
     block(log_evidence)
 
 _, log_evidence = jit_profile(
-    compute_log_evidence, "log_evidence_jit",
-    data_real_jnp, data_imag_jnp, noise_real_jnp, noise_imag_jnp,
-    transformed_mm_real_jnp, transformed_mm_imag_jnp,
-    reconstruction, curvature_matrix, reg_jnp, mapper_indices_jnp,
+    compute_log_evidence,
+    "log_evidence_jit",
+    data_real_jnp,
+    data_imag_jnp,
+    noise_real_jnp,
+    noise_imag_jnp,
+    transformed_mm_real_jnp,
+    transformed_mm_imag_jnp,
+    reconstruction,
+    curvature_matrix,
+    reg_jnp,
+    mapper_indices_jnp,
 )
 likelihood_steps.append(("Mapped recon + log evidence", timer.records[-1][1] / 10))
 
@@ -818,9 +877,16 @@ print(f"  log_evidence (step-by-step) = {log_evidence}")
 
 # Correctness check: use the inversion's own reconstruction and curvature matrix
 log_evidence_check = compute_log_evidence(
-    data_real_jnp, data_imag_jnp, noise_real_jnp, noise_imag_jnp,
-    transformed_mm_real_jnp, transformed_mm_imag_jnp,
-    inv_recon_jnp, inv_curv_jnp, reg_jnp, mapper_indices_jnp,
+    data_real_jnp,
+    data_imag_jnp,
+    noise_real_jnp,
+    noise_imag_jnp,
+    transformed_mm_real_jnp,
+    transformed_mm_imag_jnp,
+    inv_recon_jnp,
+    inv_curv_jnp,
+    reg_jnp,
+    mapper_indices_jnp,
 )
 print(f"  log_evidence (inv matrices) = {log_evidence_check}")
 print(f"  log_evidence (reference)    = {figure_of_merit_ref}")
@@ -852,6 +918,7 @@ analysis = al.AnalysisInterferometer(
     dataset=dataset, adapt_images=adapt_images, use_jax=True
 )
 
+
 def full_pipeline_from_params(params_tree):
     """Full interferometer likelihood from a pytree-shaped ``ModelInstance``.
 
@@ -860,6 +927,7 @@ def full_pipeline_from_params(params_tree):
     ``aux_data`` partition set up by ``autofit.jax.register_model``.
     """
     return analysis.log_likelihood_function(instance=params_tree)
+
 
 _, full_result = jit_profile(full_pipeline_from_params, "full_pipeline", params_tree)
 full_pipeline_per_call = timer.records[-1][1] / 10
@@ -902,8 +970,10 @@ _n_leaves = len(jax.tree_util.tree_leaves(params_tree))
 if not run_vmap:
     print("  SKIPPED: opt-in via DELAUNAY_VMAP=1 (compilation can take 20+ minutes).")
 elif _n_leaves == 0:
-    print(f"  SKIPPED: model has 0 free parameters (all fixed to truth); "
-          f"vmap requires at least one array leaf.")
+    print(
+        f"  SKIPPED: model has 0 free parameters (all fixed to truth); "
+        f"vmap requires at least one array leaf."
+    )
 else:
     parameters = jax.tree_util.tree_map(
         lambda leaf: jnp.broadcast_to(leaf, (batch_size, *leaf.shape)),
@@ -967,6 +1037,7 @@ else:
 
 import json
 import matplotlib
+
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
@@ -996,7 +1067,9 @@ for i, (label, per_call) in enumerate(likelihood_steps, 1):
 
 print("-" * 70)
 print(f"      {'TOTAL (step-by-step)':<{max_label}}  {step_total:>12.6f} s")
-print(f"      {'Full pipeline (single JIT)':<{max_label}}  {full_pipeline_per_call:>12.6f} s")
+print(
+    f"      {'Full pipeline (single JIT)':<{max_label}}  {full_pipeline_per_call:>12.6f} s"
+)
 if vmap_per_call is not None:
     print(f"      {'vmap batch (per call)':<{max_label}}  {vmap_per_call:>12.6f} s")
     print(f"      {'vmap speedup vs single JIT':<{max_label}}  {vmap_speedup:>11.1f}x")
@@ -1041,10 +1114,14 @@ likelihood_summary = {
     "total_step_by_step": step_total,
     "full_pipeline_single_jit": full_pipeline_per_call,
     "vmap": vmap_payload,
-    "memory_mb": None if memory_analysis is None else {
-        "output": memory_analysis.output_size_in_bytes / 1024**2,
-        "temp": memory_analysis.temp_size_in_bytes / 1024**2,
-    },
+    "memory_mb": (
+        None
+        if memory_analysis is None
+        else {
+            "output": memory_analysis.output_size_in_bytes / 1024**2,
+            "temp": memory_analysis.temp_size_in_bytes / 1024**2,
+        }
+    ),
 }
 
 results_dir = _workspace_root / "jax_profiling" / "results" / "jit" / "interferometer"
@@ -1098,7 +1175,7 @@ fig.suptitle(
     fontweight="bold",
 )
 ax.set_title(
-    f"AutoLens v{al_version}  |  {pixel_scale}\"/px  |  "
+    f'AutoLens v{al_version}  |  {pixel_scale}"/px  |  '
     f"{real_space_shape[0]}x{real_space_shape[1]} real-space  |  "
     f"{n_visibilities} visibilities  |  {n_mesh_vertices} Delaunay verts  |  "
     f"total: {step_total:.6f} s",

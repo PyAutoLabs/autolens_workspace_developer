@@ -8,7 +8,7 @@
         "nvidia_smi": "NVIDIA A100 80GB PCIe, 8873 MiB, 81920 MiB"
       },
       "instrument": "sma",
-      "model": "delaunay",
+      "model": "pixelization",
       "configuration": {
         "pixel_scale_arcsec": 0.1,
         "mask_radius_arcsec": 3.5,
@@ -17,26 +17,28 @@
           256
         ],
         "visibilities": 190,
-        "hilbert_pixels": 1000,
-        "delaunay_vertices": 1000,
-        "edge_zeroed_pixels": 0,
+        "mesh_shape": [
+          32,
+          32
+        ],
+        "source_pixels": 1024,
         "regularization_coefficient": 1.0
       },
-      "log_likelihood_eager": -3151.535505246139,
-      "figure_of_merit_eager": -3171.5177323743937,
-      "log_evidence_jit": -3171.5177323654534,
-      "full_pipeline_single_jit": 0.033145065209828316,
+      "log_likelihood_eager": -3153.283375540206,
+      "figure_of_merit_eager": -3167.970738092102,
+      "log_evidence_jit": -3167.971757878794,
+      "full_pipeline_single_jit": 0.01949069951660931,
       "vmap": {
         "batch_size": 64,
-        "batch_time": 1.3132457043975592,
-        "per_call": 0.020519464131211862,
-        "speedup_vs_single_jit": 1.6
+        "batch_time": 0.4432522461982444,
+        "per_call": 0.0069258163468475685,
+        "speedup_vs_single_jit": 2.8
       },
       "memory_mb": {
         "output": 0.00048828125,
-        "temp": 5424.988510131836
+        "temp": 5935.851783752441
       },
-      "full_pipeline_per_call": 0.033145065209828316,
+      "full_pipeline_per_call": 0.01949069951660931,
       "config_name": "hpc_a100_fp64"
     },
     "hpc_a100_mp": {
@@ -47,7 +49,7 @@
         "nvidia_smi": "NVIDIA A100 80GB PCIe, 8873 MiB, 81920 MiB"
       },
       "instrument": "sma",
-      "model": "delaunay",
+      "model": "pixelization",
       "configuration": {
         "pixel_scale_arcsec": 0.1,
         "mask_radius_arcsec": 3.5,
@@ -56,26 +58,28 @@
           256
         ],
         "visibilities": 190,
-        "hilbert_pixels": 1000,
-        "delaunay_vertices": 1000,
-        "edge_zeroed_pixels": 0,
+        "mesh_shape": [
+          32,
+          32
+        ],
+        "source_pixels": 1024,
         "regularization_coefficient": 1.0
       },
-      "log_likelihood_eager": -3151.5355052372984,
-      "figure_of_merit_eager": -3171.517732368591,
-      "log_evidence_jit": -3171.517732360109,
-      "full_pipeline_single_jit": 0.033413262502290306,
+      "log_likelihood_eager": -3153.2833755460088,
+      "figure_of_merit_eager": -3167.9707380953614,
+      "log_evidence_jit": -3167.9717578820464,
+      "full_pipeline_single_jit": 0.019369735312648118,
       "vmap": {
         "batch_size": 64,
-        "batch_time": 1.311351602105424,
-        "per_call": 0.02048986878289725,
-        "speedup_vs_single_jit": 1.6
+        "batch_time": 0.4442412555916235,
+        "per_call": 0.006941269618619117,
+        "speedup_vs_single_jit": 2.8
       },
       "memory_mb": {
         "output": 0.00048828125,
-        "temp": 6400.395149230957
+        "temp": 5935.851783752441
       },
-      "full_pipeline_per_call": 0.033413262502290306,
+      "full_pipeline_per_call": 0.019369735312648118,
       "config_name": "hpc_a100_mp"
     }
   }

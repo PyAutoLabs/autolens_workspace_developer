@@ -33,9 +33,14 @@ _workspace_root = _script_dir.parents[1]
 dataset_path = Path("jax_profiling") / "dataset" / "imaging" / instrument
 if al.util.dataset.should_simulate(str(dataset_path)):
     subprocess.run(
-        [sys.executable, str(_workspace_root / "jax_profiling" / "dataset_setup" / "imaging.py"),
-         "--instrument", instrument],
-        cwd=str(_workspace_root), check=True,
+        [
+            sys.executable,
+            str(_workspace_root / "jax_profiling" / "dataset_setup" / "imaging.py"),
+            "--instrument",
+            instrument,
+        ],
+        cwd=str(_workspace_root),
+        check=True,
     )
 
 dataset = al.Imaging.from_fits(
@@ -51,7 +56,8 @@ mask = al.Mask2D.circular(
 )
 dataset = dataset.apply_mask(mask=mask)
 dataset = dataset.apply_over_sampling(
-    over_sample_size_lp=4, over_sample_size_pixelization=1,
+    over_sample_size_lp=4,
+    over_sample_size_pixelization=1,
 )
 
 mass = al.mp.Isothermal(
@@ -84,10 +90,16 @@ print(f"# x gaps <= 1e-8            = {int(np.sum(dx <= 1e-8))}")
 
 np.random.seed(0)
 pert_data = jnp.array(
-    (np.random.randn(*data_grid0.shape) / np.linalg.norm(np.random.randn(*data_grid0.shape))).astype(np.float64)
+    (
+        np.random.randn(*data_grid0.shape)
+        / np.linalg.norm(np.random.randn(*data_grid0.shape))
+    ).astype(np.float64)
 )
 pert_over = jnp.array(
-    (np.random.randn(*over_grid0.shape) / np.linalg.norm(np.random.randn(*over_grid0.shape))).astype(np.float64)
+    (
+        np.random.randn(*over_grid0.shape)
+        / np.linalg.norm(np.random.randn(*over_grid0.shape))
+    ).astype(np.float64)
 )
 
 
@@ -103,26 +115,26 @@ def _stage(eps, which):
     scale = data_grid.std(axis=0).min()
     source_grid_scaled = (data_grid - mu) / scale
     if which == "source_grid_scaled":
-        return jnp.sum(source_grid_scaled ** 2)
+        return jnp.sum(source_grid_scaled**2)
 
     transform, _ = create_transforms(source_grid_scaled, mesh_weight_map=None, xp=jnp)
 
     if which == "sort_points":
         # internal access: replicate what create_transforms does
         sort_points = jnp.sort(source_grid_scaled, axis=0)
-        return jnp.sum(sort_points ** 2)
+        return jnp.sum(sort_points**2)
 
     grid_over_scaled = (data_grid_over - mu) / scale
     if which == "grid_over_scaled":
-        return jnp.sum(grid_over_scaled ** 2)
+        return jnp.sum(grid_over_scaled**2)
 
     grid_over_transformed = transform(grid_over_scaled)
     if which == "grid_over_transformed":
-        return jnp.sum(grid_over_transformed ** 2)
+        return jnp.sum(grid_over_transformed**2)
 
     grid_over_index = (SRC_GRID_SIZE - 3) * grid_over_transformed + 1
     if which == "grid_over_index":
-        return jnp.sum(grid_over_index ** 2)
+        return jnp.sum(grid_over_index**2)
 
     ix_down = jnp.floor(grid_over_index[:, 0])
     ix_up = jnp.ceil(grid_over_index[:, 0])
@@ -132,7 +144,7 @@ def _stage(eps, which):
     t_row = (grid_over_index[:, 0] - ix_down) / (ix_up - ix_down + 1e-12)
     t_col = (grid_over_index[:, 1] - iy_down) / (iy_up - iy_down + 1e-12)
     if which == "t_row_t_col":
-        return jnp.sum(t_row ** 2) + jnp.sum(t_col ** 2)
+        return jnp.sum(t_row**2) + jnp.sum(t_col**2)
 
     w_tl = (1 - t_row) * (1 - t_col)
     w_tr = (1 - t_row) * t_col
@@ -140,7 +152,7 @@ def _stage(eps, which):
     w_br = t_row * t_col
     weights = jnp.stack([w_tl, w_tr, w_bl, w_br], axis=1)
     if which == "weights":
-        return jnp.sum(weights ** 2)
+        return jnp.sum(weights**2)
 
     # Full mapping-matrix loss -- use the shared utility to be safe
     flat_idx, weights = adaptive_rectangular_mappings_weights_via_interpolation_from(
@@ -151,7 +163,7 @@ def _stage(eps, which):
         xp=jnp,
     )
     if which == "weights_util":
-        return jnp.sum(weights ** 2)
+        return jnp.sum(weights**2)
 
     raise ValueError(which)
 
@@ -167,7 +179,11 @@ STAGES = [
     "weights_util",
 ]
 
-print("\n{:>24s}   {:>14s}   {:>14s}   {:>10s}".format("stage", "JAX grad", "FD grad", "ratio"))
+print(
+    "\n{:>24s}   {:>14s}   {:>14s}   {:>10s}".format(
+        "stage", "JAX grad", "FD grad", "ratio"
+    )
+)
 print("-" * 70)
 
 h = 1e-5
@@ -178,6 +194,8 @@ for stage in STAGES:
     fd = (val_plus - val_minus) / (2 * h)
     val, g = jax.value_and_grad(fn)(jnp.float64(0.0))
     g = float(g)
-    ratio = g / fd if abs(fd) > 1e-20 else float('nan')
-    tag = "  <-- BLOWUP" if abs(ratio) > 1e6 or (np.isnan(ratio) and abs(g) > 1e6) else ""
+    ratio = g / fd if abs(fd) > 1e-20 else float("nan")
+    tag = (
+        "  <-- BLOWUP" if abs(ratio) > 1e6 or (np.isnan(ratio) and abs(g) > 1e6) else ""
+    )
     print(f"{stage:>24s}   {g:>14.4e}   {fd:>14.4e}   {ratio:>10.3e}{tag}")

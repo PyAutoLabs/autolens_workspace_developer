@@ -160,6 +160,7 @@ print(f"  Found {len(positions)} image positions")
 
 print("\n--- PART 3: solver.solve (JIT) ---")
 
+
 # Close over `tracer` so it does not cross the JIT boundary — avoids needing
 # pytree registration for a one-tracer profiler.
 @jax.jit
@@ -170,6 +171,7 @@ def jitted_solve(source_plane_coordinate):
         xp=jnp,
         remove_infinities=False,
     ).array
+
 
 src_coord = jnp.asarray(source_galaxy.point_0.centre)
 
@@ -306,7 +308,7 @@ ax.invert_yaxis()
 ax.set_xlabel("Time (s)", fontsize=11)
 fig.suptitle("Simulator Profiling: Point Source", fontsize=12, fontweight="bold")
 ax.set_title(
-    f"AutoLens v{al_version}  |  200×200 @ 0.05\"/px  |  {len(positions)} images found",
+    f'AutoLens v{al_version}  |  200×200 @ 0.05"/px  |  {len(positions)} images found',
     fontsize=9,
 )
 ax.margins(x=0.22)

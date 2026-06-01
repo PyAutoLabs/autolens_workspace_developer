@@ -71,7 +71,9 @@ INSTRUMENTS = {
 }
 
 
-def _synthetic_uv_wavelengths(n_visibilities: int, uv_scale: float, seed: int) -> np.ndarray:
+def _synthetic_uv_wavelengths(
+    n_visibilities: int, uv_scale: float, seed: int
+) -> np.ndarray:
     """Generate a reproducible synthetic (u, v) baseline distribution.
 
     The baselines are drawn from a 2D isotropic Gaussian in the uv-plane whose
@@ -80,7 +82,9 @@ def _synthetic_uv_wavelengths(n_visibilities: int, uv_scale: float, seed: int) -
     coverage when the goal is profiling, not imaging fidelity.
     """
     rng = np.random.default_rng(seed)
-    return rng.normal(loc=0.0, scale=uv_scale / 3.0, size=(n_visibilities, 2)).astype(np.float64)
+    return rng.normal(loc=0.0, scale=uv_scale / 3.0, size=(n_visibilities, 2)).astype(
+        np.float64
+    )
 
 
 def simulate(instrument: str):

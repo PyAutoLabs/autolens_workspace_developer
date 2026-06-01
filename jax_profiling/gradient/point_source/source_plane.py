@@ -126,16 +126,16 @@ print(f"\n--- Dataset loading [{dataset_name}] ---")
 
 _script_dir = Path(__file__).resolve().parent
 _workspace_root = _script_dir.parents[2]
-dataset_path = (
-    Path("jax_profiling") / "dataset" / "point_source" / dataset_name
-)
+dataset_path = Path("jax_profiling") / "dataset" / "point_source" / dataset_name
 
 if al.util.dataset.should_simulate(str(dataset_path)):
     print(f"  Simulating {dataset_name} dataset...")
     subprocess.run(
         [
             sys.executable,
-            str(_workspace_root / "jax_profiling" / "dataset_setup" / "point_source.py"),
+            str(
+                _workspace_root / "jax_profiling" / "dataset_setup" / "point_source.py"
+            ),
             "--name",
             dataset_name,
         ],
@@ -248,6 +248,7 @@ print("=" * 70)
 # Grid2DIrregular.grid_2d_via_deflection_grid_from is avoided.
 # ---------------------------------------------------------------------------
 
+
 def step_ray_trace_to_source(params):
     inst = model.instance_from_vector(vector=params, xp=jnp)
     t = al.Tracer(galaxies=list(inst.galaxies))
@@ -272,6 +273,7 @@ test_grad(
 # source-position prior leaf as well as the lens mass parameters.
 # ---------------------------------------------------------------------------
 
+
 def step_source_plane_residual(params):
     inst = model.instance_from_vector(vector=params, xp=jnp)
     t = al.Tracer(galaxies=list(inst.galaxies))
@@ -281,7 +283,7 @@ def step_source_plane_residual(params):
     centre = inst.galaxies.source.point_0.centre
     source_centre = jnp.array([centre[0], centre[1]])
     residuals = source_positions - source_centre
-    return jnp.sum(residuals ** 2)
+    return jnp.sum(residuals**2)
 
 
 test_grad(
@@ -316,6 +318,7 @@ test_grad(
 # of that LensCalc bug.
 # ---------------------------------------------------------------------------
 
+
 def step_positions_chi_squared(params):
     inst = model.instance_from_vector(vector=params, xp=jnp)
     t = al.Tracer(galaxies=list(inst.galaxies))
@@ -328,7 +331,7 @@ def step_positions_chi_squared(params):
     source_centre = jnp.array([centre[0], centre[1]])
     residual_sq = jnp.sum((source_positions - source_centre) ** 2, axis=1)
 
-    sigma_squared = positions_noise_map_raw ** 2
+    sigma_squared = positions_noise_map_raw**2
     chi_squared = jnp.sum(residual_sq / sigma_squared)
     noise_normalization = jnp.sum(jnp.log(2 * jnp.pi * sigma_squared))
     return -0.5 * (chi_squared + noise_normalization)

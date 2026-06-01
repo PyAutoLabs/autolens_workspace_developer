@@ -93,7 +93,7 @@ _workspace_root = _script_dir.parents[1]
 pixel_scale = INSTRUMENTS[instrument]["pixel_scale"]
 dataset_path = Path("jax_profiling") / "dataset" / "imaging" / instrument
 
-_print(f"--- Dataset load ({instrument}, {pixel_scale}\"/px) ---")
+_print(f'--- Dataset load ({instrument}, {pixel_scale}"/px) ---')
 if al.util.dataset.should_simulate(str(dataset_path)):
     import subprocess
 
@@ -158,8 +158,12 @@ _adapt_lens_bulge = af.Model(al.lp.Sersic)
 _adapt_lens_bulge.centre.centre_0 = af.GaussianPrior(mean=0.0, sigma=0.005)
 _adapt_lens_bulge.centre.centre_1 = af.GaussianPrior(mean=0.0, sigma=0.005)
 _adapt_lens_bulge_ell = al.convert.ell_comps_from(axis_ratio=0.9, angle=45.0)
-_adapt_lens_bulge.ell_comps.ell_comps_0 = af.GaussianPrior(mean=_adapt_lens_bulge_ell[0], sigma=0.01)
-_adapt_lens_bulge.ell_comps.ell_comps_1 = af.GaussianPrior(mean=_adapt_lens_bulge_ell[1], sigma=0.01)
+_adapt_lens_bulge.ell_comps.ell_comps_0 = af.GaussianPrior(
+    mean=_adapt_lens_bulge_ell[0], sigma=0.01
+)
+_adapt_lens_bulge.ell_comps.ell_comps_1 = af.GaussianPrior(
+    mean=_adapt_lens_bulge_ell[1], sigma=0.01
+)
 _adapt_lens_bulge.intensity = af.GaussianPrior(mean=2.0, sigma=0.1)
 _adapt_lens_bulge.effective_radius = af.GaussianPrior(mean=0.6, sigma=0.05)
 _adapt_lens_bulge.sersic_index = af.GaussianPrior(mean=3.0, sigma=0.2)
@@ -168,8 +172,12 @@ _adapt_mass.centre.centre_0 = af.GaussianPrior(mean=0.0, sigma=0.005)
 _adapt_mass.centre.centre_1 = af.GaussianPrior(mean=0.0, sigma=0.005)
 _adapt_mass.einstein_radius = af.GaussianPrior(mean=1.6, sigma=0.05)
 _adapt_mass_ell = al.convert.ell_comps_from(axis_ratio=0.9, angle=45.0)
-_adapt_mass.ell_comps.ell_comps_0 = af.GaussianPrior(mean=_adapt_mass_ell[0], sigma=0.01)
-_adapt_mass.ell_comps.ell_comps_1 = af.GaussianPrior(mean=_adapt_mass_ell[1], sigma=0.01)
+_adapt_mass.ell_comps.ell_comps_0 = af.GaussianPrior(
+    mean=_adapt_mass_ell[0], sigma=0.01
+)
+_adapt_mass.ell_comps.ell_comps_1 = af.GaussianPrior(
+    mean=_adapt_mass_ell[1], sigma=0.01
+)
 _adapt_shear = af.Model(al.mp.ExternalShear)
 _adapt_shear.gamma_1 = af.GaussianPrior(mean=0.05, sigma=0.005)
 _adapt_shear.gamma_2 = af.GaussianPrior(mean=0.05, sigma=0.005)
@@ -181,7 +189,9 @@ _adapt_lens = af.Model(
     shear=_adapt_shear,
 )
 _adapt_source = af.Model(al.Galaxy, redshift=1.0, pixelization=adapt_pix)
-_adapt_model = af.Collection(galaxies=af.Collection(lens=_adapt_lens, source=_adapt_source))
+_adapt_model = af.Collection(
+    galaxies=af.Collection(lens=_adapt_lens, source=_adapt_source)
+)
 _adapt_inst = _adapt_model.instance_from_vector(
     vector=_adapt_model.physical_values_from_prior_medians
 )
@@ -212,8 +222,12 @@ def build_model(mesh_factory, adapt_image_array=None):
     lens_bulge.centre.centre_0 = af.GaussianPrior(mean=0.0, sigma=0.005)
     lens_bulge.centre.centre_1 = af.GaussianPrior(mean=0.0, sigma=0.005)
     _lens_bulge_ell = al.convert.ell_comps_from(axis_ratio=0.9, angle=45.0)
-    lens_bulge.ell_comps.ell_comps_0 = af.GaussianPrior(mean=_lens_bulge_ell[0], sigma=0.01)
-    lens_bulge.ell_comps.ell_comps_1 = af.GaussianPrior(mean=_lens_bulge_ell[1], sigma=0.01)
+    lens_bulge.ell_comps.ell_comps_0 = af.GaussianPrior(
+        mean=_lens_bulge_ell[0], sigma=0.01
+    )
+    lens_bulge.ell_comps.ell_comps_1 = af.GaussianPrior(
+        mean=_lens_bulge_ell[1], sigma=0.01
+    )
     lens_bulge.intensity = af.GaussianPrior(mean=2.0, sigma=0.1)
     lens_bulge.effective_radius = af.GaussianPrior(mean=0.6, sigma=0.05)
     lens_bulge.sersic_index = af.GaussianPrior(mean=3.0, sigma=0.2)
@@ -427,7 +441,7 @@ def bench_mesh(name: str, mesh_factory, adapt_image):
     # integrated gradient descent for HMC) and large variance in the second
     # difference. The spline should give a smoother curve of both.
     fd1 = (ll_sweep[2:] - ll_sweep[:-2]) / (2 * dtheta)
-    fd2 = (ll_sweep[2:] - 2 * ll_sweep[1:-1] + ll_sweep[:-2]) / (dtheta ** 2)
+    fd2 = (ll_sweep[2:] - 2 * ll_sweep[1:-1] + ll_sweep[:-2]) / (dtheta**2)
     # Some meshes (notably AdaptImage at large θ perturbations) produce an
     # isolated NaN log_L where the weighted inversion degenerates. Use
     # nan-safe reductions so a single bad sweep point doesn't collapse the
@@ -559,7 +573,7 @@ for r in results:
     axes[0].plot(theta, ll, "-", label=r["name"], color=color)
     dtheta = theta[1] - theta[0]
     fd1 = (ll[2:] - ll[:-2]) / (2 * dtheta)
-    fd2 = (ll[2:] - 2 * ll[1:-1] + ll[:-2]) / (dtheta ** 2)
+    fd2 = (ll[2:] - 2 * ll[1:-1] + ll[:-2]) / (dtheta**2)
     axes[1].plot(theta[1:-1], fd1, "-", label=r["name"], color=color)
     axes[2].plot(theta[1:-1], fd2, "-", label=r["name"], color=color)
 

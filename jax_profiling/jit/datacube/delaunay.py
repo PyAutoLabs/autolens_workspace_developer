@@ -126,6 +126,7 @@ regularization_coefficient = 1.0
 # Profiling helpers
 # ---------------------------------------------------------------------------
 
+
 class Timer:
     """Accumulates named timing measurements and prints a summary."""
 
@@ -195,8 +196,14 @@ if al.util.dataset.should_simulate(str(dataset_path)):
     subprocess.run(
         [
             sys.executable,
-            str(_workspace_root / "jax_profiling" / "dataset_setup" / "interferometer.py"),
-            "--instrument", instrument,
+            str(
+                _workspace_root
+                / "jax_profiling"
+                / "dataset_setup"
+                / "interferometer.py"
+            ),
+            "--instrument",
+            instrument,
         ],
         cwd=str(_workspace_root),
         check=True,
@@ -347,7 +354,9 @@ print(f"  Reg. coefficient:        {regularization_coefficient}")
 # 6. Per-channel eager FitInterferometer baseline
 # ---------------------------------------------------------------------------
 
-print(f"\n--- Per-channel eager FitInterferometer baselines ({n_channels} channels) ---")
+print(
+    f"\n--- Per-channel eager FitInterferometer baselines ({n_channels} channels) ---"
+)
 
 fit_list = []
 log_evidence_per_channel = []
@@ -411,9 +420,7 @@ def ray_trace_data_raw(grid_raw):
 
 _, _ = jit_profile(ray_trace_data_raw, "ray_trace_data_jit", grid_pix_raw)
 ray_trace_data_per_call = timer.records[-1][1] / 10
-likelihood_steps.append(
-    ("Ray-trace data grid (shared)", ray_trace_data_per_call)
-)
+likelihood_steps.append(("Ray-trace data grid (shared)", ray_trace_data_per_call))
 
 # ---------------------------------------------------------------------------
 # Step 2: Ray-trace mesh grid (channel-invariant)
@@ -430,9 +437,7 @@ def ray_trace_mesh_raw(mesh_raw):
 
 _, _ = jit_profile(ray_trace_mesh_raw, "ray_trace_mesh_jit", mesh_grid_raw)
 ray_trace_mesh_per_call = timer.records[-1][1] / 10
-likelihood_steps.append(
-    ("Ray-trace mesh grid (shared)", ray_trace_mesh_per_call)
-)
+likelihood_steps.append(("Ray-trace mesh grid (shared)", ray_trace_mesh_per_call))
 
 # ---------------------------------------------------------------------------
 # Extract inversion matrices from channel 0
@@ -521,11 +526,15 @@ print("\n--- Step 4: Data vector D (per channel) ---")
 
 
 def compute_data_vector(
-    transformed_mm_real, transformed_mm_imag, data_real, data_imag,
-    noise_real, noise_imag,
+    transformed_mm_real,
+    transformed_mm_imag,
+    data_real,
+    data_imag,
+    noise_real,
+    noise_imag,
 ):
-    weighted_data_real = data_real / (noise_real ** 2)
-    weighted_data_imag = data_imag / (noise_imag ** 2)
+    weighted_data_real = data_real / (noise_real**2)
+    weighted_data_imag = data_imag / (noise_imag**2)
     return jnp.matmul(transformed_mm_real.T, weighted_data_real) + jnp.matmul(
         transformed_mm_imag.T, weighted_data_imag
     )
@@ -533,15 +542,24 @@ def compute_data_vector(
 
 with timer.section("data_vector_eager"):
     data_vector = compute_data_vector(
-        transformed_mm_real_jnp, transformed_mm_imag_jnp,
-        data_real_jnp, data_imag_jnp, noise_real_jnp, noise_imag_jnp,
+        transformed_mm_real_jnp,
+        transformed_mm_imag_jnp,
+        data_real_jnp,
+        data_imag_jnp,
+        noise_real_jnp,
+        noise_imag_jnp,
     )
     block(data_vector)
 
 _, data_vector = jit_profile(
-    compute_data_vector, "data_vector_jit",
-    transformed_mm_real_jnp, transformed_mm_imag_jnp,
-    data_real_jnp, data_imag_jnp, noise_real_jnp, noise_imag_jnp,
+    compute_data_vector,
+    "data_vector_jit",
+    transformed_mm_real_jnp,
+    transformed_mm_imag_jnp,
+    data_real_jnp,
+    data_imag_jnp,
+    noise_real_jnp,
+    noise_imag_jnp,
 )
 data_vector_per_channel = timer.records[-1][1] / 10
 likelihood_steps.append(
@@ -561,7 +579,10 @@ no_reg_list = list(inversion.no_regularization_index_list)
 
 
 def compute_curvature_matrix(
-    transformed_mm_real, transformed_mm_imag, noise_real, noise_imag,
+    transformed_mm_real,
+    transformed_mm_imag,
+    noise_real,
+    noise_imag,
 ):
     real_curv = al.util.inversion.curvature_matrix_via_mapping_matrix_from(
         mapping_matrix=transformed_mm_real,
@@ -584,13 +605,20 @@ def compute_curvature_matrix(
 
 with timer.section("curvature_matrix_eager"):
     curvature_matrix = compute_curvature_matrix(
-        transformed_mm_real_jnp, transformed_mm_imag_jnp, noise_real_jnp, noise_imag_jnp,
+        transformed_mm_real_jnp,
+        transformed_mm_imag_jnp,
+        noise_real_jnp,
+        noise_imag_jnp,
     )
     block(curvature_matrix)
 
 _, curvature_matrix = jit_profile(
-    compute_curvature_matrix, "curvature_matrix_jit",
-    transformed_mm_real_jnp, transformed_mm_imag_jnp, noise_real_jnp, noise_imag_jnp,
+    compute_curvature_matrix,
+    "curvature_matrix_jit",
+    transformed_mm_real_jnp,
+    transformed_mm_imag_jnp,
+    noise_real_jnp,
+    noise_imag_jnp,
 )
 curvature_matrix_per_channel = timer.records[-1][1] / 10
 likelihood_steps.append(
@@ -610,9 +638,7 @@ with timer.section("regularization_matrix_eager"):
     regularization_matrix = jnp.array(inversion.regularization_matrix)
     block(regularization_matrix)
 
-likelihood_steps.append(
-    ("Regularization matrix H (shared)", timer.records[-1][1])
-)
+likelihood_steps.append(("Regularization matrix H (shared)", timer.records[-1][1]))
 
 # ---------------------------------------------------------------------------
 # Step 7: Reconstruction NNLS (per channel)
@@ -639,8 +665,11 @@ with timer.section("reconstruction_eager"):
     block(reconstruction)
 
 _, reconstruction = jit_profile(
-    compute_reconstruction, "reconstruction_jit",
-    jnp.array(data_vector), jnp.array(curvature_matrix), jnp.array(regularization_matrix),
+    compute_reconstruction,
+    "reconstruction_jit",
+    jnp.array(data_vector),
+    jnp.array(curvature_matrix),
+    jnp.array(regularization_matrix),
 )
 reconstruction_per_channel = timer.records[-1][1] / 10
 likelihood_steps.append(
@@ -658,9 +687,16 @@ print("\n--- Step 8: Mapped recon + log evidence (per channel) ---")
 
 
 def compute_log_evidence(
-    data_real, data_imag, noise_real, noise_imag,
-    transformed_mm_real, transformed_mm_imag,
-    reconstruction, curvature_matrix, regularization_matrix, mapper_indices,
+    data_real,
+    data_imag,
+    noise_real,
+    noise_imag,
+    transformed_mm_real,
+    transformed_mm_imag,
+    reconstruction,
+    curvature_matrix,
+    regularization_matrix,
+    mapper_indices,
 ):
     mapped_real = jnp.matmul(transformed_mm_real, reconstruction)
     mapped_imag = jnp.matmul(transformed_mm_imag, reconstruction)
@@ -683,14 +719,16 @@ def compute_log_evidence(
         jnp.log(jnp.diag(jnp.linalg.cholesky(reg_reduced)))
     )
 
-    noise_normalization = (
-        jnp.sum(jnp.log(2 * jnp.pi * noise_real ** 2))
-        + jnp.sum(jnp.log(2 * jnp.pi * noise_imag ** 2))
+    noise_normalization = jnp.sum(jnp.log(2 * jnp.pi * noise_real**2)) + jnp.sum(
+        jnp.log(2 * jnp.pi * noise_imag**2)
     )
 
     return -0.5 * (
-        chi_squared + regularization_term + log_det_curvature_reg
-        - log_det_regularization + noise_normalization
+        chi_squared
+        + regularization_term
+        + log_det_curvature_reg
+        - log_det_regularization
+        + noise_normalization
     )
 
 
@@ -701,17 +739,32 @@ reg_jnp = jnp.array(regularization_matrix)
 
 with timer.section("log_evidence_eager"):
     log_evidence_one_channel = compute_log_evidence(
-        data_real_jnp, data_imag_jnp, noise_real_jnp, noise_imag_jnp,
-        transformed_mm_real_jnp, transformed_mm_imag_jnp,
-        reconstruction, curvature_matrix, reg_jnp, mapper_indices_jnp,
+        data_real_jnp,
+        data_imag_jnp,
+        noise_real_jnp,
+        noise_imag_jnp,
+        transformed_mm_real_jnp,
+        transformed_mm_imag_jnp,
+        reconstruction,
+        curvature_matrix,
+        reg_jnp,
+        mapper_indices_jnp,
     )
     block(log_evidence_one_channel)
 
 _, log_evidence_one_channel = jit_profile(
-    compute_log_evidence, "log_evidence_jit",
-    data_real_jnp, data_imag_jnp, noise_real_jnp, noise_imag_jnp,
-    transformed_mm_real_jnp, transformed_mm_imag_jnp,
-    reconstruction, curvature_matrix, reg_jnp, mapper_indices_jnp,
+    compute_log_evidence,
+    "log_evidence_jit",
+    data_real_jnp,
+    data_imag_jnp,
+    noise_real_jnp,
+    noise_imag_jnp,
+    transformed_mm_real_jnp,
+    transformed_mm_imag_jnp,
+    reconstruction,
+    curvature_matrix,
+    reg_jnp,
+    mapper_indices_jnp,
 )
 log_evidence_per_channel_cost = timer.records[-1][1] / 10
 likelihood_steps.append(
@@ -736,7 +789,8 @@ for c, f in enumerate(fit_list):
         jnp.array(dataset_list[c].data.imag),
         jnp.array(dataset_list[c].noise_map.real),
         jnp.array(dataset_list[c].noise_map.imag),
-        tm_real, tm_imag,
+        tm_real,
+        tm_imag,
         jnp.asarray(inv_c.reconstruction),
         jnp.asarray(inv_c.curvature_matrix),
         jnp.array(inv_c.regularization_matrix),
@@ -745,9 +799,7 @@ for c, f in enumerate(fit_list):
     log_evidence_check_per_channel.append(float(le_c))
 
 cube_log_evidence_check = float(sum(log_evidence_check_per_channel))
-print(
-    f"\n  cube log_evidence (per-step recompute) = {cube_log_evidence_check:.6f}"
-)
+print(f"\n  cube log_evidence (per-step recompute) = {cube_log_evidence_check:.6f}")
 print(f"  cube log_evidence (reference)          = {cube_log_evidence_ref:.6f}")
 
 np.testing.assert_allclose(
@@ -847,13 +899,16 @@ print(
 
 import json
 import matplotlib
+
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
 al_version = al.__version__
 
 print("\n" + "=" * 70)
-print(f"JAX LIKELIHOOD FUNCTION SUMMARY — CUBE {instrument.upper()} × {n_channels} — v{al_version}")
+print(
+    f"JAX LIKELIHOOD FUNCTION SUMMARY — CUBE {instrument.upper()} × {n_channels} — v{al_version}"
+)
 print("=" * 70)
 print(f"  Instrument:              {instrument}")
 print(f"  Channels:                {n_channels}")
@@ -885,10 +940,14 @@ shared_lwl_savings = (n_channels - 1) * curvature_matrix_per_channel
 print("-" * 70)
 print(f"      {'TOTAL (step-by-step cube cost)':<{max_label}}  {step_total:>12.6f} s")
 if np.isfinite(full_pipeline_per_call):
-    print(f"      {'Full pipeline cube (single JIT)':<{max_label}}  {full_pipeline_per_call:>12.6f} s")
+    print(
+        f"      {'Full pipeline cube (single JIT)':<{max_label}}  {full_pipeline_per_call:>12.6f} s"
+    )
 else:
     print(f"      {'Full pipeline cube (single JIT)':<{max_label}}  SKIPPED")
-print(f"      {f'Shared-Lᵀ W̃ L savings (curvature only, est.)':<{max_label}}  {shared_lwl_savings:>12.6f} s")
+print(
+    f"      {f'Shared-Lᵀ W̃ L savings (curvature only, est.)':<{max_label}}  {shared_lwl_savings:>12.6f} s"
+)
 print("=" * 70)
 
 # --- Save results dictionary ---
@@ -981,7 +1040,7 @@ fig.suptitle(
     fontweight="bold",
 )
 ax.set_title(
-    f"AutoLens v{al_version}  |  {pixel_scale}\"/px  |  "
+    f'AutoLens v{al_version}  |  {pixel_scale}"/px  |  '
     f"{real_space_shape[0]}x{real_space_shape[1]} real-space  |  "
     f"{n_visibilities} visibilities/chan  |  {n_mesh_vertices} Delaunay verts  |  "
     f"step-by-step total: {step_total:.6f} s",

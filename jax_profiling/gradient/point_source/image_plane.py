@@ -140,16 +140,16 @@ print(f"\n--- Dataset loading [{dataset_name}] ---")
 
 _script_dir = Path(__file__).resolve().parent
 _workspace_root = _script_dir.parents[2]
-dataset_path = (
-    Path("jax_profiling") / "dataset" / "point_source" / dataset_name
-)
+dataset_path = Path("jax_profiling") / "dataset" / "point_source" / dataset_name
 
 if al.util.dataset.should_simulate(str(dataset_path)):
     print(f"  Simulating {dataset_name} dataset...")
     subprocess.run(
         [
             sys.executable,
-            str(_workspace_root / "jax_profiling" / "dataset_setup" / "point_source.py"),
+            str(
+                _workspace_root / "jax_profiling" / "dataset_setup" / "point_source.py"
+            ),
             "--name",
             dataset_name,
         ],
@@ -259,6 +259,7 @@ print("=" * 70)
 # required for any chance at JIT/grad tracing.
 # ---------------------------------------------------------------------------
 
+
 def step_solver(params):
     inst = model.instance_from_vector(vector=params, xp=jnp)
     t = al.Tracer(galaxies=list(inst.galaxies))
@@ -295,6 +296,7 @@ test_grad(
 # fail with the solver if Step 1 fails.
 # ---------------------------------------------------------------------------
 
+
 def step_image_plane_residual(params):
     inst = model.instance_from_vector(vector=params, xp=jnp)
     t = al.Tracer(galaxies=list(inst.galaxies))
@@ -311,7 +313,7 @@ def step_image_plane_residual(params):
     # model image position. inf-padded model rows contribute inf to
     # the sum, so we mask them out before reducing.
     diffs = observed_positions_raw[:, None, :] - model_data[None, :, :]
-    sq_distances = jnp.sum(diffs ** 2, axis=-1)
+    sq_distances = jnp.sum(diffs**2, axis=-1)
     finite_mask = jnp.isfinite(sq_distances)
     return jnp.sum(jnp.where(finite_mask, sq_distances, 0.0))
 
@@ -337,6 +339,7 @@ test_grad(
 # Chains through the solver -- expected to fail with Step 1.
 # ---------------------------------------------------------------------------
 
+
 def step_positions_chi_squared(params):
     inst = model.instance_from_vector(vector=params, xp=jnp)
     t = al.Tracer(galaxies=list(inst.galaxies))
@@ -351,10 +354,10 @@ def step_positions_chi_squared(params):
     model_data = arrivals.array
 
     diffs = observed_positions_raw[:, None, :] - model_data[None, :, :]
-    sq_distances = jnp.sum(diffs ** 2, axis=-1)
+    sq_distances = jnp.sum(diffs**2, axis=-1)
 
     sigma = positions_noise_map_raw[:, None]
-    log_p = -jnp.log(jnp.sqrt(2 * jnp.pi * sigma ** 2)) - 0.5 * sq_distances / sigma ** 2
+    log_p = -jnp.log(jnp.sqrt(2 * jnp.pi * sigma**2)) - 0.5 * sq_distances / sigma**2
 
     # Mask inf-padded model rows out of the log-sum-exp.
     finite_mask = jnp.isfinite(model_data).all(axis=1)
@@ -363,7 +366,7 @@ def step_positions_chi_squared(params):
 
     n_finite_model = jnp.sum(finite_mask)
     n_observed = observed_positions_raw.shape[0]
-    n_perm = n_finite_model ** n_observed
+    n_perm = n_finite_model**n_observed
 
     chi_squared = -2.0 * (-jnp.log(n_perm) + jnp.sum(per_data_logL))
     return -0.5 * chi_squared

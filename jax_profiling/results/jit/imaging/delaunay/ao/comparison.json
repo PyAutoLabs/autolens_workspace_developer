@@ -5,20 +5,25 @@
       "device": {
         "backend": "gpu",
         "device": "cuda:0",
-        "nvidia_smi": "NVIDIA A100 80GB PCIe, 2585 MiB, 81920 MiB"
+        "nvidia_smi": "NVIDIA A100 80GB PCIe, 33355 MiB, 81920 MiB"
       },
-      "instrument": "hst",
+      "instrument": "ao",
       "configuration": {
-        "pixel_scale_arcsec": 0.05,
+        "pixel_scale_arcsec": 0.01,
         "mask_radius_arcsec": 3.5,
-        "image_pixels_masked": 15361,
-        "over_sampled_pixels": 17980,
+        "image_pixels_masked": 384753,
+        "over_sampled_pixels": 452472,
         "delaunay_vertices": 1500,
         "edge_zeroed_pixels": 0
       },
-      "full_pipeline_single_jit": 0.0849043281050399,
-      "vmap": "SKIPPED \u2014 compilation takes 20+ minutes (set DELAUNAY_VMAP=1)",
-      "full_pipeline_per_call": 0.0849043281050399,
+      "full_pipeline_single_jit": 0.5583647419931367,
+      "vmap": {
+        "batch_size": 1,
+        "batch_time": 1.307781772594899,
+        "per_call": 1.307781772594899,
+        "speedup_vs_single_jit": 0.4
+      },
+      "full_pipeline_per_call": 0.5583647419931367,
       "config_name": "hpc_a100_fp64"
     },
     "hpc_a100_mp": {
@@ -26,20 +31,25 @@
       "device": {
         "backend": "gpu",
         "device": "cuda:0",
-        "nvidia_smi": "NVIDIA A100 80GB PCIe, 2585 MiB, 81920 MiB"
+        "nvidia_smi": "NVIDIA A100 80GB PCIe, 33355 MiB, 81920 MiB"
       },
-      "instrument": "hst",
+      "instrument": "ao",
       "configuration": {
-        "pixel_scale_arcsec": 0.05,
+        "pixel_scale_arcsec": 0.01,
         "mask_radius_arcsec": 3.5,
-        "image_pixels_masked": 15361,
-        "over_sampled_pixels": 17980,
+        "image_pixels_masked": 384753,
+        "over_sampled_pixels": 452472,
         "delaunay_vertices": 1500,
         "edge_zeroed_pixels": 0
       },
-      "full_pipeline_single_jit": 0.0801867697853595,
-      "vmap": "SKIPPED \u2014 compilation takes 20+ minutes (set DELAUNAY_VMAP=1)",
-      "full_pipeline_per_call": 0.0801867697853595,
+      "full_pipeline_single_jit": 0.5672070970991626,
+      "vmap": {
+        "batch_size": 1,
+        "batch_time": 1.2602241156855598,
+        "per_call": 1.2602241156855598,
+        "speedup_vs_single_jit": 0.5
+      },
+      "full_pipeline_per_call": 0.5672070970991626,
       "config_name": "hpc_a100_mp"
     }
   }

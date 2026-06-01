@@ -209,7 +209,9 @@ for band, tracer, grid in zip(waveband_list, tracer_list, grid_list):
     _, image_jit = jit_profile(_image_fn, f"image_2d_jit_{band}", jnp_grid)
 
     np.testing.assert_allclose(
-        np.asarray(image_eager.array), np.asarray(image_jit), rtol=1e-4,
+        np.asarray(image_eager.array),
+        np.asarray(image_jit),
+        rtol=1e-4,
         err_msg=f"multi/{band}: eager vs JIT image_2d_from mismatch",
     )
     print(f"  {band}-band: eager ≡ JIT assertion PASSED")
@@ -244,9 +246,7 @@ with timer.section("output_fits"):
 
 with timer.section("output_json"):
     for band, tracer in zip(waveband_list, tracer_list):
-        al.output_to_json(
-            obj=tracer, file_path=dataset_path / f"{band}_tracer.json"
-        )
+        al.output_to_json(obj=tracer, file_path=dataset_path / f"{band}_tracer.json")
 
 
 # === Summary ===
@@ -296,7 +296,9 @@ ax.set_yticks(y_pos)
 ax.set_yticklabels(labels, fontsize=9)
 ax.invert_yaxis()
 ax.set_xlabel("Time (s)", fontsize=11)
-fig.suptitle("Simulator Profiling: Multi-Wavelength Imaging", fontsize=12, fontweight="bold")
+fig.suptitle(
+    "Simulator Profiling: Multi-Wavelength Imaging", fontsize=12, fontweight="bold"
+)
 ax.set_title(f"AutoLens v{al_version}  |  150×150  |  g+r bands", fontsize=9)
 ax.margins(x=0.22)
 fig.tight_layout()

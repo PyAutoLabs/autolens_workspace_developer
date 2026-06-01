@@ -129,16 +129,16 @@ print(f"\n--- Dataset loading [{dataset_name}] ---")
 
 _script_dir = Path(__file__).resolve().parent
 _workspace_root = _script_dir.parents[2]
-dataset_path = (
-    Path("jax_profiling") / "dataset" / "point_source" / dataset_name
-)
+dataset_path = Path("jax_profiling") / "dataset" / "point_source" / dataset_name
 
 if al.util.dataset.should_simulate(str(dataset_path)):
     print(f"  Simulating {dataset_name} dataset...")
     subprocess.run(
         [
             sys.executable,
-            str(_workspace_root / "jax_profiling" / "dataset_setup" / "point_source.py"),
+            str(
+                _workspace_root / "jax_profiling" / "dataset_setup" / "point_source.py"
+            ),
             "--name",
             dataset_name,
         ],
@@ -347,9 +347,13 @@ print(f"  Dataset:                    {dataset_name}")
 print(f"  Observed image positions:   {n_observed_positions}")
 print(f"  Position noise sigma:       {positions_noise_sigma}")
 print(f"  Free parameters:            {model.total_free_parameters}")
-print(f"  fit_positions_cls:          FitPositionsImagePairAll (image-plane chi-squared)")
+print(
+    f"  fit_positions_cls:          FitPositionsImagePairAll (image-plane chi-squared)"
+)
 print("-" * 70)
-print(f"  Eager full likelihood:      {eager_per_call:.6f} s/call  ({log_likelihood_ref:.6f})")
+print(
+    f"  Eager full likelihood:      {eager_per_call:.6f} s/call  ({log_likelihood_ref:.6f})"
+)
 print(f"  Full pipeline (JIT):        {full_pipeline_per_call:.6f} s/call")
 print(f"  vmap per-call (batch={batch_size}):    {vmap_per_call:.6f} s")
 print(f"  vmap speedup vs single JIT:           {vmap_speedup:.1f}x")

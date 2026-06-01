@@ -169,14 +169,18 @@ print("\n--- PART 2: tracer.image_2d_from (eager + JIT) ---")
 with timer.section("image_2d_eager"):
     image_eager = tracer.image_2d_from(grid=grid)
 
+
 def _image_fn(grid_array):
     return tracer.image_2d_from(grid=grid, xp=jnp).array
+
 
 jnp_grid = jnp.asarray(grid.array)
 _, image_jit = jit_profile(_image_fn, "image_2d_jit", jnp_grid)
 
 np.testing.assert_allclose(
-    np.asarray(image_eager.array), np.asarray(image_jit), rtol=1e-4,
+    np.asarray(image_eager.array),
+    np.asarray(image_jit),
+    rtol=1e-4,
     err_msg="imaging: eager vs JIT image_2d_from mismatch",
 )
 print("  eager ≡ JIT assertion PASSED")
@@ -274,7 +278,7 @@ ax.set_yticklabels(labels, fontsize=9)
 ax.invert_yaxis()
 ax.set_xlabel("Time (s)", fontsize=11)
 fig.suptitle("Simulator Profiling: Imaging", fontsize=12, fontweight="bold")
-ax.set_title(f"AutoLens v{al_version}  |  100×100 @ 0.1\"/px", fontsize=9)
+ax.set_title(f'AutoLens v{al_version}  |  100×100 @ 0.1"/px', fontsize=9)
 ax.margins(x=0.22)
 fig.tight_layout()
 chart_path = results_dir / f"imaging_summary_v{al_version}.png"

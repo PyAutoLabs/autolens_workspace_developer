@@ -3,7 +3,7 @@
   "device": {
     "backend": "gpu",
     "device": "cuda:0",
-    "nvidia_smi": "NVIDIA A100 80GB PCIe, 33441 MiB, 81920 MiB"
+    "nvidia_smi": "NVIDIA A100 80GB PCIe, 61477 MiB, 81920 MiB"
   },
   "instrument": "alma_high",
   "model": "delaunay",
@@ -23,7 +23,15 @@
   "log_likelihood_eager": -60238977.636567496,
   "figure_of_merit_eager": -60243535.85638879,
   "log_evidence_jit": -60243535.85638878,
-  "full_pipeline_single_jit": 0.09768839629832655,
-  "vmap": "SKIPPED \u2014 opt-in via DELAUNAY_VMAP=1",
-  "memory_mb": null
+  "full_pipeline_single_jit": 0.09813291549216956,
+  "vmap": {
+    "batch_size": 16,
+    "batch_time": 1.7410066992975772,
+    "per_call": 0.10881291870609858,
+    "speedup_vs_single_jit": 0.9
+  },
+  "memory_mb": {
+    "output": 0.0001220703125,
+    "temp": 19881.86483001709
+  }
 }

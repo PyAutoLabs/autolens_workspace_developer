@@ -76,6 +76,7 @@ regularization_coefficient = 1.0
 # Profiling helpers
 # ---------------------------------------------------------------------------
 
+
 class Timer:
     """Accumulates named timing measurements and prints a summary."""
 
@@ -145,8 +146,14 @@ if al.util.dataset.should_simulate(str(dataset_path)):
     subprocess.run(
         [
             sys.executable,
-            str(_workspace_root / "jax_profiling" / "dataset_setup" / "interferometer.py"),
-            "--instrument", instrument,
+            str(
+                _workspace_root
+                / "jax_profiling"
+                / "dataset_setup"
+                / "interferometer.py"
+            ),
+            "--instrument",
+            instrument,
         ],
         cwd=str(_workspace_root),
         check=True,
@@ -275,6 +282,7 @@ print("=" * 70)
 
 analysis = al.AnalysisInterferometer(dataset=dataset, use_jax=True)
 
+
 def full_pipeline_from_params(params_tree):
     """Full interferometer likelihood from a pytree-shaped ``ModelInstance``.
 
@@ -283,6 +291,7 @@ def full_pipeline_from_params(params_tree):
     ``aux_data`` partition set up by ``autofit.jax.register_model``.
     """
     return analysis.log_likelihood_function(instance=params_tree)
+
 
 _, full_result = jit_profile(full_pipeline_from_params, "full_pipeline", params_tree)
 full_pipeline_per_call = timer.records[-1][1] / 10
@@ -307,8 +316,10 @@ result_vmap = None
 
 _n_leaves = len(jax.tree_util.tree_leaves(params_tree))
 if _n_leaves == 0:
-    print(f"  SKIPPED: model has 0 free parameters (all fixed to truth); "
-          f"vmap requires at least one array leaf.")
+    print(
+        f"  SKIPPED: model has 0 free parameters (all fixed to truth); "
+        f"vmap requires at least one array leaf."
+    )
 else:
     parameters = jax.tree_util.tree_map(
         lambda leaf: jnp.broadcast_to(leaf, (batch_size, *leaf.shape)),
@@ -386,6 +397,7 @@ else:
 
 import json
 import matplotlib
+
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
@@ -433,22 +445,32 @@ likelihood_summary = {
     "figure_of_merit_eager": float(figure_of_merit_ref),
     "log_evidence_jit": float(full_result),
     "full_pipeline_single_jit": full_pipeline_per_call,
-    "vmap": "SKIPPED — model has 0 free parameters (all fixed to truth)" if vmap_per_call is None else {
-        "batch_size": batch_size,
-        "batch_time": vmap_batch_time,
-        "per_call": vmap_per_call,
-        "speedup_vs_single_jit": round(vmap_speedup, 1),
-    },
-    "memory_mb": None if memory_analysis is None else {
-        "output": memory_analysis.output_size_in_bytes / 1024**2,
-        "temp": memory_analysis.temp_size_in_bytes / 1024**2,
-    },
+    "vmap": (
+        "SKIPPED — model has 0 free parameters (all fixed to truth)"
+        if vmap_per_call is None
+        else {
+            "batch_size": batch_size,
+            "batch_time": vmap_batch_time,
+            "per_call": vmap_per_call,
+            "speedup_vs_single_jit": round(vmap_speedup, 1),
+        }
+    ),
+    "memory_mb": (
+        None
+        if memory_analysis is None
+        else {
+            "output": memory_analysis.output_size_in_bytes / 1024**2,
+            "temp": memory_analysis.temp_size_in_bytes / 1024**2,
+        }
+    ),
 }
 
 results_dir = _workspace_root / "jax_profiling" / "results" / "jit" / "interferometer"
 results_dir.mkdir(parents=True, exist_ok=True)
 
-dict_path = results_dir / f"pixelization_likelihood_summary_{instrument}_v{al_version}.json"
+dict_path = (
+    results_dir / f"pixelization_likelihood_summary_{instrument}_v{al_version}.json"
+)
 dict_path.write_text(json.dumps(likelihood_summary, indent=2))
 print(f"\n  Results dict saved to: {dict_path}")
 
@@ -484,9 +506,13 @@ fig.suptitle(
     fontsize=12,
     fontweight="bold",
 )
-_vmap_title = f"vmap speedup: {vmap_speedup:.1f}x" if vmap_speedup is not None else "vmap: SKIPPED"
+_vmap_title = (
+    f"vmap speedup: {vmap_speedup:.1f}x"
+    if vmap_speedup is not None
+    else "vmap: SKIPPED"
+)
 ax.set_title(
-    f"AutoLens v{al_version}  |  {pixel_scale}\"/px  |  "
+    f'AutoLens v{al_version}  |  {pixel_scale}"/px  |  '
     f"{real_space_shape[0]}x{real_space_shape[1]} real-space  |  "
     f"{n_visibilities} visibilities  |  {mesh_shape[0]}x{mesh_shape[1]} mesh  |  "
     f"{_vmap_title}",
@@ -495,7 +521,9 @@ ax.set_title(
 ax.margins(x=0.2)
 fig.tight_layout()
 
-chart_path = results_dir / f"pixelization_likelihood_summary_{instrument}_v{al_version}.png"
+chart_path = (
+    results_dir / f"pixelization_likelihood_summary_{instrument}_v{al_version}.png"
+)
 fig.savefig(chart_path, dpi=150)
 plt.close(fig)
 print(f"  Bar chart saved to:    {chart_path}")
@@ -534,4 +562,6 @@ np.testing.assert_allclose(
     rtol=1e-4,
     err_msg=f"interferometer/pixelization[{instrument}]: regression — vmap log_evidence drifted",
 )
-print(f"  Regression assertion PASSED: log_evidence matches {EXPECTED_LOG_EVIDENCE_SMA:.6f}")
+print(
+    f"  Regression assertion PASSED: log_evidence matches {EXPECTED_LOG_EVIDENCE_SMA:.6f}"
+)

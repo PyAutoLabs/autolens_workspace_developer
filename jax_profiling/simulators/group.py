@@ -168,9 +168,7 @@ with timer.section("setup_galaxies"):
     )
 
 with timer.section("setup_tracer"):
-    tracer = al.Tracer(
-        galaxies=[lens_0, extra_galaxy_0, extra_galaxy_1, source_galaxy]
-    )
+    tracer = al.Tracer(galaxies=[lens_0, extra_galaxy_0, extra_galaxy_1, source_galaxy])
 
 
 # === PART 2 — image_2d_from: eager + JIT ===
@@ -180,14 +178,18 @@ print("\n--- PART 2: tracer.image_2d_from (eager + JIT) ---")
 with timer.section("image_2d_eager"):
     image_eager = tracer.image_2d_from(grid=grid)
 
+
 def _image_fn(grid_array):
     return tracer.image_2d_from(grid=grid, xp=jnp).array
+
 
 jnp_grid = jnp.asarray(grid.array)
 _, image_jit = jit_profile(_image_fn, "image_2d_jit", jnp_grid)
 
 np.testing.assert_allclose(
-    np.asarray(image_eager.array), np.asarray(image_jit), rtol=1e-4,
+    np.asarray(image_eager.array),
+    np.asarray(image_jit),
+    rtol=1e-4,
     err_msg="group: eager vs JIT image_2d_from mismatch",
 )
 print("  eager ≡ JIT assertion PASSED")
@@ -219,6 +221,7 @@ with timer.section("solver_solve_eager"):
 
 print(f"  Found {len(positions)} image positions (eager)")
 
+
 # Close over `tracer` so it does not cross the JIT boundary — avoids needing
 # pytree registration for a one-tracer profiler.
 @jax.jit
@@ -229,6 +232,7 @@ def jitted_solve(coord):
         xp=jnp,
         remove_infinities=False,
     ).array
+
 
 src_coord = jnp.asarray(source_galaxy.bulge.centre)
 _, raw_jit = jit_profile(jitted_solve, "solver_jit", src_coord, n_repeats=5)

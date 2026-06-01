@@ -151,7 +151,8 @@ if al.util.dataset.should_simulate(str(dataset_path)):
         [
             sys.executable,
             str(_workspace_root / "jax_profiling" / "dataset_setup" / "imaging.py"),
-            "--instrument", instrument,
+            "--instrument",
+            instrument,
         ],
         cwd=str(_workspace_root),
         check=True,
@@ -211,9 +212,7 @@ shear = af.Model(al.mp.ExternalShear)
 shear.gamma_1 = af.GaussianPrior(mean=0.05, sigma=0.005)
 shear.gamma_2 = af.GaussianPrior(mean=0.05, sigma=0.005)
 
-lens = af.Model(
-    al.Galaxy, redshift=0.5, bulge=lens_bulge, mass=mass, shear=shear
-)
+lens = af.Model(al.Galaxy, redshift=0.5, bulge=lens_bulge, mass=mass, shear=shear)
 
 source_bulge = al.model_util.mge_model_from(
     mask_radius=mask_radius, total_gaussians=20, centre_prior_is_uniform=False
@@ -235,9 +234,7 @@ jnp_params = jnp.array(model.physical_values_from_prior_medians)
 
 # Perturb ell_comps away from (0,0) to avoid degenerate arctan2 gradients.
 key = jax.random.PRNGKey(42)
-perturbation = jax.random.uniform(
-    key, shape=jnp_params.shape, minval=0.01, maxval=0.05
-)
+perturbation = jax.random.uniform(key, shape=jnp_params.shape, minval=0.01, maxval=0.05)
 jnp_params = jnp_params + perturbation
 
 print(f"  param_vector shape: {jnp_params.shape}")
@@ -287,6 +284,7 @@ noise_map_array = jnp.array(dataset.noise_map.array)
 # tree directly rather than rebuilding the instance from a flat vector inside
 # the trace. Matches the pattern used by mge.py and pixelization.py.
 from autofit.jax import register_model as _register_model_pytrees
+
 _register_model_pytrees(model)
 params_tree = jax.tree_util.tree_map(jnp.asarray, instance)
 
@@ -303,6 +301,7 @@ print("=" * 70)
 # Step 1: Ray-trace grids
 # ---------------------------------------------------------------------------
 
+
 def step_ray_trace(params):
     t = al.Tracer(galaxies=list(params.galaxies))
     grid_raw = jnp.array(grid_lp.array)
@@ -310,11 +309,13 @@ def step_ray_trace(params):
     traced = t.traced_grid_2d_list_from(grid=grid, xp=jnp)
     return jnp.sum(jnp.stack([tg.array for tg in traced]))
 
+
 test_grad("Step 1: Ray-trace grids", step_ray_trace, params_tree)
 
 # ---------------------------------------------------------------------------
 # Step 2: Mapping matrix (linear profile images)
 # ---------------------------------------------------------------------------
+
 
 def step_mapping_matrix(params):
     t = al.Tracer(galaxies=list(params.galaxies))
@@ -335,11 +336,13 @@ def step_mapping_matrix(params):
     mm = jnp.hstack(matrices) if len(matrices) > 1 else matrices[0]
     return jnp.sum(mm)
 
+
 test_grad("Step 2: Mapping matrix", step_mapping_matrix, params_tree)
 
 # ---------------------------------------------------------------------------
 # Step 3: Blurred mapping matrix (PSF convolution of each profile)
 # ---------------------------------------------------------------------------
+
 
 def step_blurred_mapping_matrix(params):
     t = al.Tracer(galaxies=list(params.galaxies))
@@ -360,11 +363,13 @@ def step_blurred_mapping_matrix(params):
     bmm = jnp.hstack(matrices) if len(matrices) > 1 else matrices[0]
     return jnp.sum(bmm)
 
+
 test_grad("Step 3: Blurred mapping matrix", step_blurred_mapping_matrix, params_tree)
 
 # ---------------------------------------------------------------------------
 # Step 4: Data vector (D)
 # ---------------------------------------------------------------------------
+
 
 def step_data_vector(params):
     t = al.Tracer(galaxies=list(params.galaxies))
@@ -392,11 +397,13 @@ def step_data_vector(params):
     )
     return jnp.sum(data_vector)
 
+
 test_grad("Step 4: Data vector (D)", step_data_vector, params_tree)
 
 # ---------------------------------------------------------------------------
 # Step 5: Curvature matrix (F)
 # ---------------------------------------------------------------------------
+
 
 def step_curvature_matrix(params):
     t = al.Tracer(galaxies=list(params.galaxies))
@@ -426,11 +433,13 @@ def step_curvature_matrix(params):
     )
     return jnp.sum(curvature)
 
+
 test_grad("Step 5: Curvature matrix (F)", step_curvature_matrix, params_tree)
 
 # ---------------------------------------------------------------------------
 # Step 6: Reconstruction (NNLS)
 # ---------------------------------------------------------------------------
+
 
 def step_reconstruction(params):
     t = al.Tracer(galaxies=list(params.galaxies))
@@ -473,11 +482,13 @@ def step_reconstruction(params):
     )
     return jnp.sum(reconstruction)
 
+
 test_grad("Step 6: Reconstruction (NNLS)", step_reconstruction, params_tree)
 
 # ---------------------------------------------------------------------------
 # Step 7: Mapped reconstructed image
 # ---------------------------------------------------------------------------
+
 
 def step_mapped_recon(params):
     t = al.Tracer(galaxies=list(params.galaxies))
@@ -526,11 +537,13 @@ def step_mapped_recon(params):
     )
     return jnp.sum(mapped_recon)
 
+
 test_grad("Step 7: Mapped reconstructed image", step_mapped_recon, params_tree)
 
 # ---------------------------------------------------------------------------
 # Step 8: Log likelihood (chi-squared)
 # ---------------------------------------------------------------------------
+
 
 def step_log_likelihood(params):
     t = al.Tracer(galaxies=list(params.galaxies))
@@ -580,8 +593,9 @@ def step_log_likelihood(params):
 
     residual = data_array - mapped_recon
     chi_squared = jnp.sum((residual / noise_map_array) ** 2)
-    noise_norm = jnp.sum(jnp.log(2 * jnp.pi * noise_map_array ** 2))
+    noise_norm = jnp.sum(jnp.log(2 * jnp.pi * noise_map_array**2))
     return -0.5 * (chi_squared + noise_norm)
+
 
 test_grad("Step 8: Log likelihood", step_log_likelihood, params_tree)
 
@@ -690,8 +704,10 @@ def _diagnose_kappa(Q, q, target_kappa, precondition=False):
     prod = sr_np * zr_np
     if np.any(np.isfinite(prod)):
         fprod = prod[np.isfinite(prod)]
-        print(f"  sr*zr min/max (fin): {fprod.min():.6g} / {fprod.max():.6g} "
-              f"(target: {target_kappa:g})")
+        print(
+            f"  sr*zr min/max (fin): {fprod.min():.6g} / {fprod.max():.6g} "
+            f"(target: {target_kappa:g})"
+        )
 
     # factorize_kkt returns (P_inv_vec, (chol_factor, lower_flag)) for cho_factor.
     try:
@@ -786,8 +802,10 @@ print("=" * 70)
 
 analysis = al.AnalysisImaging(dataset=dataset, use_jax=True)
 
+
 def full_pipeline_from_params(params_tree):
     return analysis.log_likelihood_function(instance=params_tree)
+
 
 test_grad(
     "Full pipeline (AnalysisImaging.log_likelihood)",
@@ -814,7 +832,9 @@ n_fail = sum(1 for _, s, _ in results if s == "FAIL")
 n_error = sum(1 for _, s, _ in results if s == "ERROR")
 
 print("-" * 70)
-print(f"  {n_pass} passed, {n_fail} failed, {n_error} errors out of {len(results)} tests")
+print(
+    f"  {n_pass} passed, {n_fail} failed, {n_error} errors out of {len(results)} tests"
+)
 print("=" * 70)
 
 assert n_error == 0, (
@@ -830,4 +850,6 @@ assert n_pass == len(results), (
     f"Regression: expected all {len(results)} gradient steps to PASS on stock "
     f"library defaults, got {n_pass}."
 )
-print(f"  Regression assertion PASSED: all {n_pass}/{len(results)} gradient steps finite")
+print(
+    f"  Regression assertion PASSED: all {n_pass}/{len(results)} gradient steps finite"
+)

@@ -68,6 +68,7 @@ instrument = "sma"  # <-- change this to profile a different instrument
 # Profiling helpers (copied verbatim from imaging/mge.py)
 # ---------------------------------------------------------------------------
 
+
 class Timer:
     """Accumulates named timing measurements and prints a summary."""
 
@@ -137,8 +138,14 @@ if al.util.dataset.should_simulate(str(dataset_path)):
     subprocess.run(
         [
             sys.executable,
-            str(_workspace_root / "jax_profiling" / "dataset_setup" / "interferometer.py"),
-            "--instrument", instrument,
+            str(
+                _workspace_root
+                / "jax_profiling"
+                / "dataset_setup"
+                / "interferometer.py"
+            ),
+            "--instrument",
+            instrument,
         ],
         cwd=str(_workspace_root),
         check=True,
@@ -231,6 +238,7 @@ print(f"  Tracer planes: {tracer.total_planes}")
 # ---------------------------------------------------------------------------
 
 from autogalaxy.profiles.basis import Basis as _Basis
+
 _basis_list = [b for g in instance.galaxies for b in g.cls_list_from(cls=_Basis)]
 n_linear_gaussians = sum(len(b.profile_list) for b in _basis_list)
 
@@ -271,6 +279,7 @@ print("=" * 70)
 
 analysis = al.AnalysisInterferometer(dataset=dataset, use_jax=True)
 
+
 def full_pipeline_from_params(params_tree):
     """Full interferometer likelihood from a pytree-shaped ``ModelInstance``.
 
@@ -279,6 +288,7 @@ def full_pipeline_from_params(params_tree):
     ``aux_data`` partition set up by ``autofit.jax.register_model``.
     """
     return analysis.log_likelihood_function(instance=params_tree)
+
 
 _, full_result = jit_profile(full_pipeline_from_params, "full_pipeline", params_tree)
 full_pipeline_per_call = timer.records[-1][1] / 10
@@ -363,6 +373,7 @@ print(
 
 import json
 import matplotlib
+
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
@@ -431,7 +442,9 @@ times = [full_pipeline_per_call, vmap_per_call]
 
 fig, ax = plt.subplots(figsize=(10, 3.5))
 y_pos = range(len(labels))
-bars = ax.barh(y_pos, times, color=["#4C72B0", "#55A868"], edgecolor="white", height=0.55)
+bars = ax.barh(
+    y_pos, times, color=["#4C72B0", "#55A868"], edgecolor="white", height=0.55
+)
 
 for bar, t in zip(bars, times):
     ax.text(
@@ -452,7 +465,7 @@ fig.suptitle(
     fontweight="bold",
 )
 ax.set_title(
-    f"AutoLens v{al_version}  |  {pixel_scale}\"/px  |  "
+    f'AutoLens v{al_version}  |  {pixel_scale}"/px  |  '
     f"{real_space_shape[0]}x{real_space_shape[1]} real-space  |  "
     f"{n_visibilities} visibilities  |  {n_linear_gaussians} Gaussians  |  "
     f"vmap speedup: {vmap_speedup:.1f}x",
@@ -500,4 +513,6 @@ np.testing.assert_allclose(
     rtol=1e-4,
     err_msg=f"interferometer/mge[{instrument}]: regression — vmap log_likelihood drifted",
 )
-print(f"  Regression assertion PASSED: log_likelihood matches {EXPECTED_LOG_LIKELIHOOD_SMA:.6f}")
+print(
+    f"  Regression assertion PASSED: log_likelihood matches {EXPECTED_LOG_LIKELIHOOD_SMA:.6f}"
+)

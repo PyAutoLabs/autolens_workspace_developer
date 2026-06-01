@@ -128,8 +128,14 @@ if al.util.dataset.should_simulate(str(dataset_path)):
     subprocess.run(
         [
             sys.executable,
-            str(_workspace_root / "jax_profiling" / "dataset_setup" / "interferometer.py"),
-            "--instrument", instrument,
+            str(
+                _workspace_root
+                / "jax_profiling"
+                / "dataset_setup"
+                / "interferometer.py"
+            ),
+            "--instrument",
+            instrument,
         ],
         cwd=str(_workspace_root),
         check=True,
@@ -206,9 +212,7 @@ instance = model.instance_from_vector(vector=param_vector)
 # Done at the flat-vector layer so downstream tree structure is preserved.
 jnp_params = jnp.array(param_vector)
 key = jax.random.PRNGKey(42)
-perturbation = jax.random.uniform(
-    key, shape=jnp_params.shape, minval=0.01, maxval=0.05
-)
+perturbation = jax.random.uniform(key, shape=jnp_params.shape, minval=0.01, maxval=0.05)
 jnp_params = jnp_params + perturbation
 instance = model.instance_from_vector(vector=np.array(jnp_params))
 
@@ -253,7 +257,7 @@ print(
 
 # Raw arrays for intermediate-step tests.
 grid_lp = dataset.grids.lp
-data_array = jnp.array(dataset.data.array)           # complex128
+data_array = jnp.array(dataset.data.array)  # complex128
 noise_map_array = jnp.array(dataset.noise_map.array)  # complex128
 
 
@@ -292,9 +296,7 @@ def _funcs_and_mm(params):
 
 def _transformed_mm(params):
     _, mm = _funcs_and_mm(params)
-    return dataset.transformer.transform_mapping_matrix(
-        mapping_matrix=mm, xp=jnp
-    )
+    return dataset.transformer.transform_mapping_matrix(mapping_matrix=mm, xp=jnp)
 
 
 DIAG_VALUE_OVERRIDE = None  # set to a float to override settings default
@@ -341,6 +343,7 @@ def _curvature_and_data_vector(params):
 # Step 1: Ray-trace grids
 # ---------------------------------------------------------------------------
 
+
 def step_ray_trace(params):
     t = al.Tracer(galaxies=list(params.galaxies))
     grid_raw = jnp.array(grid_lp.array)
@@ -348,15 +351,18 @@ def step_ray_trace(params):
     traced = t.traced_grid_2d_list_from(grid=grid, xp=jnp)
     return jnp.sum(jnp.stack([tg.array for tg in traced]))
 
+
 test_grad("Step 1: Ray-trace grids", step_ray_trace, params_tree)
 
 # ---------------------------------------------------------------------------
 # Step 2: Mapping matrix (real space, linear profile images)
 # ---------------------------------------------------------------------------
 
+
 def step_mapping_matrix(params):
     _, mm = _funcs_and_mm(params)
     return jnp.sum(mm)
+
 
 test_grad("Step 2: Mapping matrix (real space)", step_mapping_matrix, params_tree)
 
@@ -364,15 +370,20 @@ test_grad("Step 2: Mapping matrix (real space)", step_mapping_matrix, params_tre
 # Step 3: Transformed mapping matrix (DFT / NUFFT -> visibilities)
 # ---------------------------------------------------------------------------
 
+
 def step_transformed_mapping_matrix(params):
     tm = _transformed_mm(params)
     return jnp.sum(tm.real) + jnp.sum(tm.imag)
 
-test_grad("Step 3: Transformed mapping matrix", step_transformed_mapping_matrix, params_tree)
+
+test_grad(
+    "Step 3: Transformed mapping matrix", step_transformed_mapping_matrix, params_tree
+)
 
 # ---------------------------------------------------------------------------
 # Step 4: Data vector D (visibilities space)
 # ---------------------------------------------------------------------------
+
 
 def step_data_vector(params):
     tm = _transformed_mm(params)
@@ -383,15 +394,18 @@ def step_data_vector(params):
     )
     return jnp.sum(data_vector)
 
+
 test_grad("Step 4: Data vector (D, visibilities)", step_data_vector, params_tree)
 
 # ---------------------------------------------------------------------------
 # Step 5: Curvature matrix F (real + imag summed)
 # ---------------------------------------------------------------------------
 
+
 def step_curvature_matrix(params):
     _, F, _ = _curvature_and_data_vector(params)
     return jnp.sum(F)
+
 
 test_grad("Step 5: Curvature matrix (F)", step_curvature_matrix, params_tree)
 
@@ -407,6 +421,7 @@ DIAG_VALUE_OVERRIDE = None
 # Step 6: Reconstruction (NNLS)
 # ---------------------------------------------------------------------------
 
+
 def step_reconstruction(params):
     data_vector, F, _ = _curvature_and_data_vector(params)
     reconstruction = al.util.inversion.reconstruction_positive_only_from(
@@ -416,11 +431,13 @@ def step_reconstruction(params):
     )
     return jnp.sum(reconstruction)
 
+
 test_grad("Step 6: Reconstruction (NNLS)", step_reconstruction, params_tree)
 
 # ---------------------------------------------------------------------------
 # Step 7: Mapped reconstructed visibilities
 # ---------------------------------------------------------------------------
+
 
 def step_mapped_recon(params):
     data_vector, F, tm = _curvature_and_data_vector(params)
@@ -435,11 +452,13 @@ def step_mapped_recon(params):
     )
     return jnp.sum(model_vis.real) + jnp.sum(model_vis.imag)
 
+
 test_grad("Step 7: Mapped reconstructed visibilities", step_mapped_recon, params_tree)
 
 # ---------------------------------------------------------------------------
 # Step 8: Log likelihood (visibilities chi-squared)
 # ---------------------------------------------------------------------------
+
 
 def step_log_likelihood(params):
     data_vector, F, tm = _curvature_and_data_vector(params)
@@ -457,9 +476,11 @@ def step_log_likelihood(params):
     chi_real = jnp.sum((residual.real / noise_map_array.real) ** 2)
     chi_imag = jnp.sum((residual.imag / noise_map_array.imag) ** 2)
     chi_squared = chi_real + chi_imag
-    noise_norm = jnp.sum(jnp.log(2 * jnp.pi * noise_map_array.real ** 2)) + \
-                 jnp.sum(jnp.log(2 * jnp.pi * noise_map_array.imag ** 2))
+    noise_norm = jnp.sum(jnp.log(2 * jnp.pi * noise_map_array.real**2)) + jnp.sum(
+        jnp.log(2 * jnp.pi * noise_map_array.imag**2)
+    )
     return -0.5 * (chi_squared + noise_norm)
+
 
 test_grad("Step 8: Log likelihood", step_log_likelihood, params_tree)
 
@@ -529,8 +550,10 @@ def _diagnose_kappa(Q, q, target_kappa, precondition=False):
     prod = sr_np * zr_np
     if np.any(np.isfinite(prod)):
         fprod = prod[np.isfinite(prod)]
-        print(f"  sr*zr min/max (fin): {fprod.min():.6g} / {fprod.max():.6g} "
-              f"(target: {target_kappa:g})")
+        print(
+            f"  sr*zr min/max (fin): {fprod.min():.6g} / {fprod.max():.6g} "
+            f"(target: {target_kappa:g})"
+        )
 
     try:
         P_inv_vec_j, L_H_pack = factorize_kkt(Q, sr, zr)
@@ -673,7 +696,9 @@ n_fail = sum(1 for _, s, _ in results if s == "FAIL")
 n_error = sum(1 for _, s, _ in results if s == "ERROR")
 
 print("-" * 70)
-print(f"  {n_pass} passed, {n_fail} failed, {n_error} errors out of {len(results)} tests")
+print(
+    f"  {n_pass} passed, {n_fail} failed, {n_error} errors out of {len(results)} tests"
+)
 print("=" * 70)
 
 
@@ -681,13 +706,15 @@ print("=" * 70)
 # Regression assertion — all gradient steps must produce finite, non-zero
 # gradients under stock library defaults (κ=1e-11, diag=1e-3).
 # ===================================================================
-assert n_error == 0, (
-    f"interferometer/mge_gradients: {n_error} steps raised exceptions under stock defaults"
+assert (
+    n_error == 0
+), f"interferometer/mge_gradients: {n_error} steps raised exceptions under stock defaults"
+assert (
+    n_fail == 0
+), f"interferometer/mge_gradients: {n_fail} steps produced NaN/zero gradients under stock defaults"
+assert n_pass == len(
+    results
+), f"interferometer/mge_gradients: only {n_pass}/{len(results)} steps passed"
+print(
+    f"  Regression assertion PASSED: all {n_pass}/{len(results)} gradient steps finite"
 )
-assert n_fail == 0, (
-    f"interferometer/mge_gradients: {n_fail} steps produced NaN/zero gradients under stock defaults"
-)
-assert n_pass == len(results), (
-    f"interferometer/mge_gradients: only {n_pass}/{len(results)} steps passed"
-)
-print(f"  Regression assertion PASSED: all {n_pass}/{len(results)} gradient steps finite")

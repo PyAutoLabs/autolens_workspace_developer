@@ -5,7 +5,7 @@
       "device": {
         "backend": "gpu",
         "device": "cuda:0",
-        "nvidia_smi": "NVIDIA A100 80GB PCIe, 2585 MiB, 81920 MiB"
+        "nvidia_smi": "NVIDIA A100 80GB PCIe, 35361 MiB, 81920 MiB"
       },
       "instrument": "hst",
       "configuration": {
@@ -16,9 +16,14 @@
         "delaunay_vertices": 1500,
         "edge_zeroed_pixels": 0
       },
-      "full_pipeline_single_jit": 0.08628864418715239,
-      "vmap": "SKIPPED \u2014 compilation takes 20+ minutes (set DELAUNAY_VMAP=1)",
-      "full_pipeline_per_call": 0.08628864418715239,
+      "full_pipeline_single_jit": 0.08254214639309794,
+      "vmap": {
+        "batch_size": 16,
+        "batch_time": 1.7095175630878656,
+        "per_call": 0.1068448476929916,
+        "speedup_vs_single_jit": 0.8
+      },
+      "full_pipeline_per_call": 0.08254214639309794,
       "config_name": "hpc_a100_fp64"
     },
     "hpc_a100_mp": {
@@ -26,7 +31,7 @@
       "device": {
         "backend": "gpu",
         "device": "cuda:0",
-        "nvidia_smi": "NVIDIA A100 80GB PCIe, 2585 MiB, 81920 MiB"
+        "nvidia_smi": "NVIDIA A100 80GB PCIe, 35361 MiB, 81920 MiB"
       },
       "instrument": "hst",
       "configuration": {
@@ -37,9 +42,14 @@
         "delaunay_vertices": 1500,
         "edge_zeroed_pixels": 0
       },
-      "full_pipeline_single_jit": 0.09011738649569452,
-      "vmap": "SKIPPED \u2014 compilation takes 20+ minutes (set DELAUNAY_VMAP=1)",
-      "full_pipeline_per_call": 0.09011738649569452,
+      "full_pipeline_single_jit": 0.08076603850349784,
+      "vmap": {
+        "batch_size": 16,
+        "batch_time": 1.6999017813941464,
+        "per_call": 0.10624386133713415,
+        "speedup_vs_single_jit": 0.8
+      },
+      "full_pipeline_per_call": 0.08076603850349784,
       "config_name": "hpc_a100_mp"
     }
   }

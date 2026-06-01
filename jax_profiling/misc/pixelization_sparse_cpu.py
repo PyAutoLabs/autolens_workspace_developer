@@ -52,6 +52,7 @@ instrument = "hst"  # <-- change this to profile a different instrument
 # Profiling helpers
 # ---------------------------------------------------------------------------
 
+
 class Timer:
     """Accumulates named timing measurements and prints a summary."""
 
@@ -135,7 +136,8 @@ if al.util.dataset.should_simulate(str(dataset_path)):
         [
             sys.executable,
             str(_workspace_root / "jax_profiling" / "dataset_setup" / "imaging.py"),
-            "--instrument", instrument,
+            "--instrument",
+            instrument,
         ],
         cwd=str(_workspace_root),
         check=True,
@@ -190,8 +192,12 @@ with timer.section("model_build"):
     lens_bulge.centre.centre_0 = af.GaussianPrior(mean=0.0, sigma=0.005)
     lens_bulge.centre.centre_1 = af.GaussianPrior(mean=0.0, sigma=0.005)
     _lens_bulge_ell = al.convert.ell_comps_from(axis_ratio=0.9, angle=45.0)
-    lens_bulge.ell_comps.ell_comps_0 = af.GaussianPrior(mean=_lens_bulge_ell[0], sigma=0.01)
-    lens_bulge.ell_comps.ell_comps_1 = af.GaussianPrior(mean=_lens_bulge_ell[1], sigma=0.01)
+    lens_bulge.ell_comps.ell_comps_0 = af.GaussianPrior(
+        mean=_lens_bulge_ell[0], sigma=0.01
+    )
+    lens_bulge.ell_comps.ell_comps_1 = af.GaussianPrior(
+        mean=_lens_bulge_ell[1], sigma=0.01
+    )
     lens_bulge.intensity = af.GaussianPrior(mean=2.0, sigma=0.1)
     lens_bulge.effective_radius = af.GaussianPrior(mean=0.6, sigma=0.05)
     lens_bulge.sersic_index = af.GaussianPrior(mean=3.0, sigma=0.2)
@@ -208,9 +214,7 @@ with timer.section("model_build"):
     shear.gamma_1 = af.GaussianPrior(mean=0.05, sigma=0.005)
     shear.gamma_2 = af.GaussianPrior(mean=0.05, sigma=0.005)
 
-    lens = af.Model(
-        al.Galaxy, redshift=0.5, bulge=lens_bulge, mass=mass, shear=shear
-    )
+    lens = af.Model(al.Galaxy, redshift=0.5, bulge=lens_bulge, mass=mass, shear=shear)
 
     pixelization = al.Pixelization(
         mesh=al.mesh.RectangularAdaptDensity(shape=mesh_shape),
@@ -287,11 +291,16 @@ with timer.section("fit_no_sparse_build_and_eval"):
 # compiled (the build_and_eval block above is each kernel's first call), so
 # the steady-state timing is pure compute, not JIT overhead.
 
+
 def _build_fit_no_sparse_full():
     fit = al.FitImaging(
-        dataset=dataset, tracer=tracer, settings=settings, xp=np,
+        dataset=dataset,
+        tracer=tracer,
+        settings=settings,
+        xp=np,
     )
     return fit.figure_of_merit
+
 
 eager_profile("fit_no_sparse_full_likelihood", _build_fit_no_sparse_full)
 fit_no_sparse_per_call = timer.records[-1][1] / 10
@@ -336,12 +345,18 @@ print("\n--- Three-way comparison ---")
 print(f"  log_evidence (CPU non-sparse)  = {log_evidence_no_sparse}")
 print(f"  log_evidence (CPU sparse op)   = {log_evidence_sparse}")
 print(f"  log_evidence (JAX expected)    = {EXPECTED_LOG_EVIDENCE_HST}")
-print(f"  delta sparse - non_sparse      = "
-      f"{log_evidence_sparse - log_evidence_no_sparse:+.6e}")
-print(f"  delta sparse - JAX expected    = "
-      f"{log_evidence_sparse - EXPECTED_LOG_EVIDENCE_HST:+.6e}")
-print(f"  delta non_sparse - JAX expected= "
-      f"{log_evidence_no_sparse - EXPECTED_LOG_EVIDENCE_HST:+.6e}")
+print(
+    f"  delta sparse - non_sparse      = "
+    f"{log_evidence_sparse - log_evidence_no_sparse:+.6e}"
+)
+print(
+    f"  delta sparse - JAX expected    = "
+    f"{log_evidence_sparse - EXPECTED_LOG_EVIDENCE_HST:+.6e}"
+)
+print(
+    f"  delta non_sparse - JAX expected= "
+    f"{log_evidence_no_sparse - EXPECTED_LOG_EVIDENCE_HST:+.6e}"
+)
 
 # Whether the sparse and non-sparse paths agree: a quick boolean for the JSON.
 sparse_vs_non_sparse_rtol = abs(
@@ -377,8 +392,10 @@ grid_pix = dataset.grids.pixelization
 grid_lp = dataset.grids.lp
 grid_blurring = dataset.grids.blurring
 
+
 def _ray_trace():
     return tracer.traced_grid_2d_list_from(grid=grid_pix, xp=np)
+
 
 eager_profile("ray_trace", _ray_trace)
 likelihood_steps.append(("Ray-trace grids", timer.records[-1][1] / 10))
@@ -389,10 +406,12 @@ likelihood_steps.append(("Ray-trace grids", timer.records[-1][1] / 10))
 
 print("\n--- Step 2: Lens light images (pre-PSF) ---")
 
+
 def _lens_light():
     img = tracer.image_2d_from(grid=grid_lp, xp=np)
     blur = tracer.image_2d_from(grid=grid_blurring, xp=np)
     return img, blur
+
 
 eager_profile("lens_light_images", _lens_light)
 likelihood_steps.append(("Lens light images (pre-PSF)", timer.records[-1][1] / 10))
@@ -403,10 +422,15 @@ likelihood_steps.append(("Lens light images (pre-PSF)", timer.records[-1][1] / 1
 
 print("\n--- Step 3: Blurred image (PSF convolution) ---")
 
+
 def _blurred_image():
     return tracer.blurred_image_2d_from(
-        grid=grid_lp, psf=dataset.psf, blurring_grid=grid_blurring, xp=np,
+        grid=grid_lp,
+        psf=dataset.psf,
+        blurring_grid=grid_blurring,
+        xp=np,
     )
+
 
 blurred_image = eager_profile("blurred_image", _blurred_image)
 likelihood_steps.append(("Blurred image (PSF convolution)", timer.records[-1][1] / 10))
@@ -420,8 +444,10 @@ print("\n--- Step 4: Profile-subtracted image ---")
 data_array = np.asarray(dataset.data.array)
 blurred_array = np.asarray(blurred_image.array)
 
+
 def _profile_subtract():
     return data_array - blurred_array
+
 
 eager_profile("profile_subtract", _profile_subtract)
 likelihood_steps.append(("Profile-subtracted image", timer.records[-1][1] / 10))
@@ -439,10 +465,15 @@ likelihood_steps.append(("Profile-subtracted image", timer.records[-1][1] / 10))
 
 print("\n--- Step 5: Inversion setup (border + mesh + mapper + preloads) ---")
 
+
 def _build_fit_sparse():
     return al.FitImaging(
-        dataset=dataset_sparse, tracer=tracer, settings=settings, xp=np,
+        dataset=dataset_sparse,
+        tracer=tracer,
+        settings=settings,
+        xp=np,
     )
+
 
 eager_profile("inversion_setup", _build_fit_sparse)
 likelihood_steps.append(
@@ -455,11 +486,16 @@ likelihood_steps.append(
 
 print("\n--- Step 6: Data vector D (sparse path) ---")
 
+
 def _data_vector():
     fit = al.FitImaging(
-        dataset=dataset_sparse, tracer=tracer, settings=settings, xp=np,
+        dataset=dataset_sparse,
+        tracer=tracer,
+        settings=settings,
+        xp=np,
     )
     return fit.inversion.data_vector
+
 
 data_vector = eager_profile("data_vector", _data_vector)
 likelihood_steps.append(("Data vector (D)", timer.records[-1][1] / 10))
@@ -472,11 +508,16 @@ print(f"  data_vector shape: {data_vector.shape}")
 
 print("\n--- Step 7: Curvature matrix F (sparse path) ---")
 
+
 def _curvature_matrix():
     fit = al.FitImaging(
-        dataset=dataset_sparse, tracer=tracer, settings=settings, xp=np,
+        dataset=dataset_sparse,
+        tracer=tracer,
+        settings=settings,
+        xp=np,
     )
     return fit.inversion.curvature_matrix
+
 
 curvature_matrix = eager_profile("curvature_matrix", _curvature_matrix)
 likelihood_steps.append(("Curvature matrix (F)", timer.records[-1][1] / 10))
@@ -489,11 +530,16 @@ print(f"  curvature_matrix shape: {curvature_matrix.shape}")
 
 print("\n--- Step 8: Regularization matrix H ---")
 
+
 def _regularization_matrix():
     fit = al.FitImaging(
-        dataset=dataset_sparse, tracer=tracer, settings=settings, xp=np,
+        dataset=dataset_sparse,
+        tracer=tracer,
+        settings=settings,
+        xp=np,
     )
     return fit.inversion.regularization_matrix
+
 
 regularization_matrix = eager_profile("regularization_matrix", _regularization_matrix)
 likelihood_steps.append(("Regularization matrix (H)", timer.records[-1][1] / 10))
@@ -506,11 +552,16 @@ print(f"  regularization_matrix shape: {regularization_matrix.shape}")
 
 print("\n--- Step 9: Reconstruction ---")
 
+
 def _reconstruction():
     fit = al.FitImaging(
-        dataset=dataset_sparse, tracer=tracer, settings=settings, xp=np,
+        dataset=dataset_sparse,
+        tracer=tracer,
+        settings=settings,
+        xp=np,
     )
     return fit.inversion.reconstruction
+
 
 reconstruction = eager_profile("reconstruction", _reconstruction)
 likelihood_steps.append(("Regularized reconstruction", timer.records[-1][1] / 10))
@@ -523,11 +574,16 @@ print(f"  reconstruction shape: {reconstruction.shape}")
 
 print("\n--- Step 10: Mapped recon + log evidence (figure_of_merit) ---")
 
+
 def _log_evidence():
     fit = al.FitImaging(
-        dataset=dataset_sparse, tracer=tracer, settings=settings, xp=np,
+        dataset=dataset_sparse,
+        tracer=tracer,
+        settings=settings,
+        xp=np,
     )
     return fit.figure_of_merit
+
 
 log_evidence_step = eager_profile("log_evidence", _log_evidence)
 likelihood_steps.append(("Mapped recon + log evidence", timer.records[-1][1] / 10))
@@ -541,6 +597,7 @@ print(f"  log_evidence (sparse) = {log_evidence_step}")
 
 import json
 import matplotlib
+
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
@@ -576,8 +633,10 @@ print("\n--- Three-way log_evidence ---")
 print(f"      {'CPU non-sparse':<28}  {log_evidence_no_sparse:>20.10f}")
 print(f"      {'CPU sparse op':<28}  {log_evidence_sparse:>20.10f}")
 print(f"      {'JAX expected':<28}  {EXPECTED_LOG_EVIDENCE_HST:>20.10f}")
-print(f"      {'delta sparse - non_sparse':<28}  "
-      f"{log_evidence_sparse - log_evidence_no_sparse:>+20.6e}")
+print(
+    f"      {'delta sparse - non_sparse':<28}  "
+    f"{log_evidence_sparse - log_evidence_no_sparse:>+20.6e}"
+)
 print("=" * 70)
 
 # --- Save results dictionary -------------------------------------------------
@@ -599,9 +658,7 @@ likelihood_summary = {
     "log_evidence_no_sparse": float(log_evidence_no_sparse),
     "log_evidence_sparse": float(log_evidence_sparse),
     "log_evidence_jax_expected": EXPECTED_LOG_EVIDENCE_HST,
-    "delta_sparse_minus_no_sparse": float(
-        log_evidence_sparse - log_evidence_no_sparse
-    ),
+    "delta_sparse_minus_no_sparse": float(log_evidence_sparse - log_evidence_no_sparse),
     "delta_sparse_minus_jax_expected": float(
         log_evidence_sparse - EXPECTED_LOG_EVIDENCE_HST
     ),
@@ -646,7 +703,7 @@ fig.suptitle(
     fontweight="bold",
 )
 ax.set_title(
-    f"AutoLens v{al_version}  |  {pixel_scale}\"/px  |  {n_image_pixels} pixels  |  "
+    f'AutoLens v{al_version}  |  {pixel_scale}"/px  |  {n_image_pixels} pixels  |  '
     f"{n_over_sampled_pixels} over-sampled  |  {mesh_shape[0]}x{mesh_shape[1]} mesh  |  "
     f"total: {step_total:.6f} s",
     fontsize=9,

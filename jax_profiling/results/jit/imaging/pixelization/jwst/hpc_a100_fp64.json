@@ -3,25 +3,25 @@
   "device": {
     "backend": "gpu",
     "device": "cuda:0",
-    "nvidia_smi": "NVIDIA A100 80GB PCIe, 6687 MiB, 81920 MiB"
+    "nvidia_smi": "NVIDIA A100 80GB PCIe, 37411 MiB, 81920 MiB"
   },
-  "instrument": "hst",
+  "instrument": "jwst",
   "configuration": {
-    "pixel_scale_arcsec": 0.05,
+    "pixel_scale_arcsec": 0.03,
     "mask_radius_arcsec": 3.5,
-    "image_pixels_masked": 15361,
-    "over_sampled_pixels": 17980,
+    "image_pixels_masked": 42737,
+    "over_sampled_pixels": 50312,
     "mesh_shape": [
       39,
       39
     ],
     "source_pixels": 1521
   },
-  "full_pipeline_single_jit": 0.052561685093678534,
+  "full_pipeline_single_jit": 0.07439370988868177,
   "vmap": {
-    "batch_size": 3,
-    "batch_time": 0.2573488470865414,
-    "per_call": 0.08578294902884713,
-    "speedup_vs_single_jit": 0.6
+    "batch_size": 8,
+    "batch_time": 0.5544786788057536,
+    "per_call": 0.0693098348507192,
+    "speedup_vs_single_jit": 1.1
   }
 }

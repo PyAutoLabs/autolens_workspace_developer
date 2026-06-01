@@ -112,7 +112,10 @@ def test_grad(label, func, params):
             status, detail = "FAIL", "value is not finite"
         elif not np.all(np.isfinite(grad_np)):
             n_bad = np.count_nonzero(~np.isfinite(grad_np))
-            status, detail = "FAIL", f"{n_bad}/{grad_np.size} gradient entries are non-finite"
+            status, detail = (
+                "FAIL",
+                f"{n_bad}/{grad_np.size} gradient entries are non-finite",
+            )
         elif np.all(grad_np == 0.0):
             status, detail = "FAIL", "gradient is all zeros"
         else:
@@ -150,7 +153,8 @@ if al.util.dataset.should_simulate(str(dataset_path)):
         [
             sys.executable,
             str(_workspace_root / "jax_profiling" / "dataset_setup" / "imaging.py"),
-            "--instrument", instrument,
+            "--instrument",
+            instrument,
         ],
         cwd=str(_workspace_root),
         check=True,
@@ -172,7 +176,8 @@ mask = al.Mask2D.circular(
 
 dataset = dataset.apply_mask(mask=mask)
 dataset = dataset.apply_over_sampling(
-    over_sample_size_lp=4, over_sample_size_pixelization=1,
+    over_sample_size_lp=4,
+    over_sample_size_pixelization=1,
 )
 
 over_sample_size = al.util.over_sample.over_sample_size_via_radial_bins_from(
@@ -183,7 +188,8 @@ over_sample_size = al.util.over_sample.over_sample_size_via_radial_bins_from(
 )
 
 dataset = dataset.apply_over_sampling(
-    over_sample_size_lp=over_sample_size, over_sample_size_pixelization=1,
+    over_sample_size_lp=over_sample_size,
+    over_sample_size_pixelization=1,
 )
 
 print(f"  Image pixels (masked): {dataset.data.shape[0]}")
@@ -220,7 +226,11 @@ shear.gamma_1 = af.GaussianPrior(mean=0.05, sigma=0.005)
 shear.gamma_2 = af.GaussianPrior(mean=0.05, sigma=0.005)
 
 lens = af.Model(
-    al.Galaxy, redshift=0.5, bulge=lens_bulge, mass=mass, shear=shear,
+    al.Galaxy,
+    redshift=0.5,
+    bulge=lens_bulge,
+    mass=mass,
+    shear=shear,
 )
 
 pixelization = al.Pixelization(
@@ -240,9 +250,7 @@ print(f"  Mesh shape: {mesh_shape}, source pixels: {mesh_pixels_yx ** 2}")
 
 jnp_params = jnp.array(model.physical_values_from_prior_medians)
 key = jax.random.PRNGKey(42)
-perturbation = jax.random.uniform(
-    key, shape=jnp_params.shape, minval=0.01, maxval=0.05
-)
+perturbation = jax.random.uniform(key, shape=jnp_params.shape, minval=0.01, maxval=0.05)
 jnp_params = jnp_params + perturbation
 print(f"  param_vector shape: {jnp_params.shape}")
 
@@ -303,6 +311,7 @@ print("=" * 70)
 # Step 1: Ray-trace pixelization grid
 # ---------------------------------------------------------------------------
 
+
 def step_ray_trace(params):
     inst = model.instance_from_vector(vector=params, xp=jnp)
     t = al.Tracer(galaxies=list(inst.galaxies))
@@ -311,6 +320,7 @@ def step_ray_trace(params):
     traced = t.traced_grid_2d_list_from(grid=grid, xp=jnp)
     return jnp.sum(jnp.stack([tg.array for tg in traced]))
 
+
 test_grad("Step 1: Ray-trace grids", step_ray_trace, jnp_params)
 
 
@@ -318,13 +328,18 @@ test_grad("Step 1: Ray-trace grids", step_ray_trace, jnp_params)
 # Step 2: Blurred lens light image (Sersic through PSF)
 # ---------------------------------------------------------------------------
 
+
 def step_blurred_image(params):
     inst = model.instance_from_vector(vector=params, xp=jnp)
     t = al.Tracer(galaxies=list(inst.galaxies))
     blurred = t.blurred_image_2d_from(
-        grid=grid_lp, psf=dataset.psf, blurring_grid=grid_blurring, xp=jnp,
+        grid=grid_lp,
+        psf=dataset.psf,
+        blurring_grid=grid_blurring,
+        xp=jnp,
     )
     return jnp.sum(blurred.array)
+
 
 test_grad("Step 2: Blurred lens light image", step_blurred_image, jnp_params)
 
@@ -333,13 +348,18 @@ test_grad("Step 2: Blurred lens light image", step_blurred_image, jnp_params)
 # Step 3: Profile-subtracted image
 # ---------------------------------------------------------------------------
 
+
 def step_profile_subtracted(params):
     inst = model.instance_from_vector(vector=params, xp=jnp)
     t = al.Tracer(galaxies=list(inst.galaxies))
     blurred = t.blurred_image_2d_from(
-        grid=grid_lp, psf=dataset.psf, blurring_grid=grid_blurring, xp=jnp,
+        grid=grid_lp,
+        psf=dataset.psf,
+        blurring_grid=grid_blurring,
+        xp=jnp,
     )
     return jnp.sum(data_array - blurred.array)
+
 
 test_grad("Step 3: Profile-subtracted image", step_profile_subtracted, jnp_params)
 
@@ -351,12 +371,15 @@ test_grad("Step 3: Profile-subtracted image", step_profile_subtracted, jnp_param
 # border relocation + mapper construction + PSF convolution.
 # ---------------------------------------------------------------------------
 
+
 def _fit_jax(params):
     inst = model.instance_from_vector(vector=params, xp=jnp)
     t = al.Tracer(galaxies=list(inst.galaxies))
     return al.FitImaging(
-        dataset=dataset, tracer=t,
-        settings=al.Settings(use_border_relocator=True), xp=jnp,
+        dataset=dataset,
+        tracer=t,
+        settings=al.Settings(use_border_relocator=True),
+        xp=jnp,
     )
 
 
@@ -365,10 +388,12 @@ def _fit_jax(params):
 # + mapping matrix + PSF convolution)
 # ---------------------------------------------------------------------------
 
+
 def step_blurred_mapping_matrix(params):
     fj = _fit_jax(params)
     bmm = jnp.array(fj.inversion.operated_mapping_matrix)
     return jnp.sum(bmm)
+
 
 test_grad("Step 4: Blurred mapping matrix", step_blurred_mapping_matrix, jnp_params)
 
@@ -376,6 +401,7 @@ test_grad("Step 4: Blurred mapping matrix", step_blurred_mapping_matrix, jnp_par
 # ---------------------------------------------------------------------------
 # Step 5: Data vector (D)
 # ---------------------------------------------------------------------------
+
 
 def step_data_vector(params):
     fj = _fit_jax(params)
@@ -388,12 +414,14 @@ def step_data_vector(params):
     )
     return jnp.sum(D)
 
+
 test_grad("Step 5: Data vector (D)", step_data_vector, jnp_params)
 
 
 # ---------------------------------------------------------------------------
 # Step 6: Curvature matrix (F)
 # ---------------------------------------------------------------------------
+
 
 def step_curvature_matrix(params):
     fj = _fit_jax(params)
@@ -407,6 +435,7 @@ def step_curvature_matrix(params):
     )
     return jnp.sum(F)
 
+
 test_grad("Step 6: Curvature matrix (F)", step_curvature_matrix, jnp_params)
 
 
@@ -414,10 +443,12 @@ test_grad("Step 6: Curvature matrix (F)", step_curvature_matrix, jnp_params)
 # Step 7: Regularization matrix (H)
 # ---------------------------------------------------------------------------
 
+
 def step_regularization_matrix(params):
     fj = _fit_jax(params)
     H = fj.inversion.regularization_matrix
     return jnp.sum(jnp.array(H))
+
 
 test_grad("Step 7: Regularization matrix (H)", step_regularization_matrix, jnp_params)
 
@@ -425,6 +456,7 @@ test_grad("Step 7: Regularization matrix (H)", step_regularization_matrix, jnp_p
 # ---------------------------------------------------------------------------
 # Step 8: Reconstruction (NNLS on F + H)
 # ---------------------------------------------------------------------------
+
 
 def step_reconstruction(params):
     fj = _fit_jax(params)
@@ -450,12 +482,14 @@ def step_reconstruction(params):
     )
     return jnp.sum(s)
 
+
 test_grad("Step 8: Reconstruction (NNLS)", step_reconstruction, jnp_params)
 
 
 # ---------------------------------------------------------------------------
 # Step 9: Mapped reconstructed image
 # ---------------------------------------------------------------------------
+
 
 def step_mapped_recon(params):
     fj = _fit_jax(params)
@@ -485,6 +519,7 @@ def step_mapped_recon(params):
         xp=jnp,
     )
     return jnp.sum(mapped)
+
 
 test_grad("Step 9: Mapped reconstructed image", step_mapped_recon, jnp_params)
 
@@ -528,5 +563,7 @@ n_fail = sum(1 for _, s, _ in results if s == "FAIL")
 n_error = sum(1 for _, s, _ in results if s == "ERROR")
 
 print("-" * 70)
-print(f"  {n_pass} passed, {n_fail} failed, {n_error} errors out of {len(results)} tests")
+print(
+    f"  {n_pass} passed, {n_fail} failed, {n_error} errors out of {len(results)} tests"
+)
 print("=" * 70)

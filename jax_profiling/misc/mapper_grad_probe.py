@@ -30,9 +30,14 @@ _workspace_root = _script_dir.parents[1]
 dataset_path = Path("jax_profiling") / "dataset" / "imaging" / instrument
 if al.util.dataset.should_simulate(str(dataset_path)):
     subprocess.run(
-        [sys.executable, str(_workspace_root / "jax_profiling" / "dataset_setup" / "imaging.py"),
-         "--instrument", instrument],
-        cwd=str(_workspace_root), check=True,
+        [
+            sys.executable,
+            str(_workspace_root / "jax_profiling" / "dataset_setup" / "imaging.py"),
+            "--instrument",
+            instrument,
+        ],
+        cwd=str(_workspace_root),
+        check=True,
     )
 
 dataset = al.Imaging.from_fits(
@@ -48,7 +53,8 @@ mask = al.Mask2D.circular(
 )
 dataset = dataset.apply_mask(mask=mask)
 dataset = dataset.apply_over_sampling(
-    over_sample_size_lp=4, over_sample_size_pixelization=1,
+    over_sample_size_lp=4,
+    over_sample_size_pixelization=1,
 )
 
 mass = al.mp.Isothermal(
@@ -67,7 +73,9 @@ src_grid_raw = jnp.array(src_grid.array)
 src_over_raw = jnp.array(src_grid.over_sampled.array)
 
 print(f"src_grid_raw shape           = {src_grid_raw.shape}")
-print(f"src_grid_raw range           = [{jnp.min(src_grid_raw):.4f}, {jnp.max(src_grid_raw):.4f}]")
+print(
+    f"src_grid_raw range           = [{jnp.min(src_grid_raw):.4f}, {jnp.max(src_grid_raw):.4f}]"
+)
 print(f"src_over_raw shape           = {src_over_raw.shape}")
 
 # Fixed perturbation direction (unit vector in (N, 2) space)
@@ -113,7 +121,7 @@ def loss(eps):
     M = mapper.mapping_matrix
     # Non-degenerate loss: bilinear sum-of-row is always 1, so sum(M) is constant.
     # Use sum of squares to actually see row-to-row weight movements.
-    return jnp.sum(M ** 2)
+    return jnp.sum(M**2)
 
 
 eps0 = jnp.float64(0.0)
@@ -126,7 +134,9 @@ h = 1e-4
 fd = (float(loss(jnp.float64(h))) - float(loss(jnp.float64(-h)))) / (2 * h)
 print(f"d loss / d eps (finite diff) = {fd:.6g}")
 
-print(f"\nratio JAX/FD                 = {float(grad) / fd if fd != 0 else float('nan'):.6g}")
+print(
+    f"\nratio JAX/FD                 = {float(grad) / fd if fd != 0 else float('nan'):.6g}"
+)
 if abs(float(grad)) < 1e-10 and abs(fd) > 1e-6:
     print("=> JAX grad is dead while FD is alive: gradient chain broken inside mapper.")
 elif abs(float(grad) - fd) / max(abs(fd), 1e-30) > 1e-2:

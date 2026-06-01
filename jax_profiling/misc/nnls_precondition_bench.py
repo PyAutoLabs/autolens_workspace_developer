@@ -35,9 +35,14 @@ dataset_path = Path("jax_profiling") / "dataset" / "imaging" / instrument
 
 if al.util.dataset.should_simulate(str(dataset_path)):
     subprocess.run(
-        [sys.executable, str(_workspace_root / "jax_profiling" / "dataset_setup" / "imaging.py"),
-         "--instrument", instrument],
-        cwd=str(_workspace_root), check=True,
+        [
+            sys.executable,
+            str(_workspace_root / "jax_profiling" / "dataset_setup" / "imaging.py"),
+            "--instrument",
+            instrument,
+        ],
+        cwd=str(_workspace_root),
+        check=True,
     )
 
 dataset = al.Imaging.from_fits(
@@ -100,7 +105,8 @@ jnp_params = jnp_params + perturbation
 instance = model.instance_from_vector(vector=jnp_params)
 tracer = al.Tracer(galaxies=list(instance.galaxies))
 fit = al.FitImaging(
-    dataset=dataset, tracer=tracer,
+    dataset=dataset,
+    tracer=tracer,
     settings=al.Settings(use_border_relocator=True),
 )
 
@@ -127,12 +133,17 @@ def _build_Q_q(params):
     matrices = [f.operated_mapping_matrix_override for f in funcs]
     bmm = jnp.hstack(matrices) if len(matrices) > 1 else matrices[0]
     q = al.util.inversion_imaging.data_vector_via_blurred_mapping_matrix_from(
-        blurred_mapping_matrix=bmm, image=data_array, noise_map=noise_map_array,
+        blurred_mapping_matrix=bmm,
+        image=data_array,
+        noise_map=noise_map_array,
     )
     n_linear = bmm.shape[1]
     Q = al.util.inversion.curvature_matrix_via_mapping_matrix_from(
-        mapping_matrix=bmm, noise_map=noise_map_array, add_to_curvature_diag=True,
-        no_regularization_index_list=list(range(n_linear)), xp=jnp,
+        mapping_matrix=bmm,
+        noise_map=noise_map_array,
+        add_to_curvature_diag=True,
+        no_regularization_index_list=list(range(n_linear)),
+        xp=jnp,
     )
     return Q, q
 
@@ -144,6 +155,7 @@ print(f"cond(Q)  = {np.linalg.cond(np.array(Q_eval)):.3g}")
 # ---------------------------------------------------------------------------
 # Solver variants
 # ---------------------------------------------------------------------------
+
 
 def solve_raw(Q, q):
     return jaxnnls.solve_nnls_primal(Q, q)
@@ -171,7 +183,9 @@ def time_fn(label, fn, args, n_warmup=3, n_iters=50):
         out = fn(*args)
         jax.block_until_ready(out)
     dt = (time.perf_counter() - t0) / n_iters
-    print(f"  {label:<35s} {dt*1e3:8.3f} ms / call   result sum = {float(jnp.sum(out)):.6g}")
+    print(
+        f"  {label:<35s} {dt*1e3:8.3f} ms / call   result sum = {float(jnp.sum(out)):.6g}"
+    )
     return dt
 
 
@@ -202,6 +216,7 @@ print(f"  speedup (raw / pc) = {t_raw_v/t_pc_v:.2f}x")
 # Note: raw version returns NaN gradients; we still time it to report cost.
 # ---------------------------------------------------------------------------
 
+
 def solve_loss_raw(Q, q):
     return jnp.sum(jaxnnls.solve_nnls_primal(Q, q))
 
@@ -220,9 +235,11 @@ vg_pc = jax.jit(jax.value_and_grad(solve_loss_pc, argnums=(0, 1)))
 
 print("\n--- solver value_and_grad (JIT) ---")
 for _ in range(3):
-    v, g = vg_raw(Q_eval, q_eval); jax.block_until_ready(v)
+    v, g = vg_raw(Q_eval, q_eval)
+    jax.block_until_ready(v)
 for _ in range(3):
-    v, g = vg_pc(Q_eval, q_eval); jax.block_until_ready(v)
+    v, g = vg_pc(Q_eval, q_eval)
+    jax.block_until_ready(v)
 
 
 def time_vg(label, fn, args, n_iters=30):
@@ -235,7 +252,9 @@ def time_vg(label, fn, args, n_iters=30):
     dt = (time.perf_counter() - t0) / n_iters
     dQ = np.array(g[0])
     n_nan = int(np.sum(~np.isfinite(dQ)))
-    print(f"  {label:<35s} {dt*1e3:8.3f} ms / call   dQ NaN entries = {n_nan}/{dQ.size}")
+    print(
+        f"  {label:<35s} {dt*1e3:8.3f} ms / call   dQ NaN entries = {n_nan}/{dQ.size}"
+    )
     return dt
 
 

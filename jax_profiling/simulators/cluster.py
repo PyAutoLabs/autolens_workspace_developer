@@ -276,6 +276,7 @@ with timer.section("solver_build"):
 
 print("\n--- PART 4: jitted_solve per source ---")
 
+
 @jax.jit
 def jitted_solve(tracer, source_plane_coordinate):
     return solver.solve(
@@ -353,9 +354,7 @@ with timer.section("output_point_datasets"):
             redshift=source_redshifts[i],
         )
         dataset_list.append(ds)
-        al.output_to_json(
-            obj=ds, file_path=dataset_path / f"point_dataset_{i}.json"
-        )
+        al.output_to_json(obj=ds, file_path=dataset_path / f"point_dataset_{i}.json")
     al.output_to_csv(
         datasets=dataset_list,
         file_path=dataset_path / "point_datasets.csv",
@@ -389,9 +388,7 @@ phases = dict(timer.records)
 solver_compile_total = sum(
     v for k, v in phases.items() if "compile" in k and "solve" in k
 )
-solver_lower_total = sum(
-    v for k, v in phases.items() if "lower" in k and "solve" in k
-)
+solver_lower_total = sum(v for k, v in phases.items() if "lower" in k and "solve" in k)
 solver_steady_total = sum(
     v for k, v in phases.items() if "steady" in k and "solve" in k
 )
@@ -406,7 +403,9 @@ print(f"  solver_compile_total (both sources): {solver_compile_total:.4f} s")
 print(f"  solver_steady_total  (both sources): {solver_steady_total:.4f} s")
 print(f"  via_tracer_from:                     {via_tracer_time:.4f} s")
 if via_tracer_time > 0:
-    ratio = solver_compile_total / via_tracer_time if via_tracer_time > 0 else float("inf")
+    ratio = (
+        solver_compile_total / via_tracer_time if via_tracer_time > 0 else float("inf")
+    )
     print(f"  compile / via_tracer ratio:          {ratio:.2f}x")
 print("=" * 70)
 
@@ -435,9 +434,7 @@ results_summary = {
             else None
         ),
     },
-    "positions_found": {
-        f"src{i}": len(p) for i, p in enumerate(positions_list)
-    },
+    "positions_found": {f"src{i}": len(p) for i, p in enumerate(positions_list)},
 }
 
 json_path = results_dir / f"cluster_summary_v{al_version}.json"

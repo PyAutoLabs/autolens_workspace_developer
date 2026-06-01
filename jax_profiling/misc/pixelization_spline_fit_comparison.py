@@ -32,7 +32,9 @@ MESH_SHAPE = (28, 28)
 _script_dir = Path(__file__).resolve().parent
 _workspace_root = _script_dir.parents[1]
 _dataset_path = Path("jax_profiling") / "dataset" / "imaging" / INSTRUMENT
-_results_dir = _workspace_root / "jax_profiling" / "results" / "misc" / "spline_vs_linear_fit"
+_results_dir = (
+    _workspace_root / "jax_profiling" / "results" / "misc" / "spline_vs_linear_fit"
+)
 _results_dir.mkdir(parents=True, exist_ok=True)
 
 # ---------------------------------------------------------------------------
@@ -150,7 +152,12 @@ for name, mesh in mesh_configs:
     print(f"  subplot saved to {png_path}")
 
     results.append(
-        {"name": name, "figure_of_merit": fom, "log_likelihood": loglike, "time_s": elapsed}
+        {
+            "name": name,
+            "figure_of_merit": fom,
+            "log_likelihood": loglike,
+            "time_s": elapsed,
+        }
     )
 
 
@@ -159,7 +166,9 @@ for name, mesh in mesh_configs:
 # ---------------------------------------------------------------------------
 
 print("\n" + "=" * 84)
-print(f"COMPARISON — {INSTRUMENT.upper()} HST, {MESH_SHAPE[0]}×{MESH_SHAPE[1]} mesh, prior-median model")
+print(
+    f"COMPARISON — {INSTRUMENT.upper()} HST, {MESH_SHAPE[0]}×{MESH_SHAPE[1]} mesh, prior-median model"
+)
 print("=" * 84)
 print(f"{'mesh':<34} {'figure_of_merit':>18} {'log_likelihood':>18} {'time_s':>8}")
 print("-" * 84)

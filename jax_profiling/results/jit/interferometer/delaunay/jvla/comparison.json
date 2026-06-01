@@ -5,7 +5,7 @@
       "device": {
         "backend": "gpu",
         "device": "cuda:0",
-        "nvidia_smi": "NVIDIA A100 80GB PCIe, 33973 MiB, 81920 MiB"
+        "nvidia_smi": "NVIDIA A100 80GB PCIe, 61817 MiB, 81920 MiB"
       },
       "instrument": "jvla",
       "model": "delaunay",
@@ -25,10 +25,18 @@
       "log_likelihood_eager": -301289778.094006,
       "figure_of_merit_eager": -301296857.98251384,
       "log_evidence_jit": -301296857.9825139,
-      "full_pipeline_single_jit": 0.6358319016871974,
-      "vmap": "SKIPPED \u2014 opt-in via DELAUNAY_VMAP=1",
-      "memory_mb": null,
-      "full_pipeline_per_call": 0.6358319016871974,
+      "full_pipeline_single_jit": 0.6354982249904424,
+      "vmap": {
+        "batch_size": 3,
+        "batch_time": 2.6463756861165164,
+        "per_call": 0.8821252287055055,
+        "speedup_vs_single_jit": 0.7
+      },
+      "memory_mb": {
+        "output": 2.288818359375e-05,
+        "temp": 23054.42734527588
+      },
+      "full_pipeline_per_call": 0.6354982249904424,
       "config_name": "hpc_a100_fp64"
     },
     "hpc_a100_mp": {
@@ -36,7 +44,7 @@
       "device": {
         "backend": "gpu",
         "device": "cuda:0",
-        "nvidia_smi": "NVIDIA A100 80GB PCIe, 33973 MiB, 81920 MiB"
+        "nvidia_smi": "NVIDIA A100 80GB PCIe, 61817 MiB, 81920 MiB"
       },
       "instrument": "jvla",
       "model": "delaunay",
@@ -54,12 +62,20 @@
         "regularization_coefficient": 1.0
       },
       "log_likelihood_eager": -301289778.0940019,
-      "figure_of_merit_eager": -301296857.9642824,
+      "figure_of_merit_eager": -301296857.96428233,
       "log_evidence_jit": -301296857.96428245,
-      "full_pipeline_single_jit": 0.6040740417083725,
-      "vmap": "SKIPPED \u2014 opt-in via DELAUNAY_VMAP=1",
-      "memory_mb": null,
-      "full_pipeline_per_call": 0.6040740417083725,
+      "full_pipeline_single_jit": 0.6262741663958877,
+      "vmap": {
+        "batch_size": 3,
+        "batch_time": 2.5978884235024453,
+        "per_call": 0.8659628078341485,
+        "speedup_vs_single_jit": 0.7
+      },
+      "memory_mb": {
+        "output": 2.288818359375e-05,
+        "temp": 23054.42734527588
+      },
+      "full_pipeline_per_call": 0.6262741663958877,
       "config_name": "hpc_a100_mp"
     }
   }

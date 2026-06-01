@@ -3,7 +3,7 @@
   "device": {
     "backend": "gpu",
     "device": "cuda:0",
-    "nvidia_smi": "NVIDIA A100 80GB PCIe, 6687 MiB, 81920 MiB"
+    "nvidia_smi": "NVIDIA A100 80GB PCIe, 35361 MiB, 81920 MiB"
   },
   "instrument": "hst",
   "configuration": {
@@ -17,11 +17,11 @@
     ],
     "source_pixels": 1521
   },
-  "full_pipeline_single_jit": 0.05277317338623107,
+  "full_pipeline_single_jit": 0.05273454980924726,
   "vmap": {
-    "batch_size": 3,
-    "batch_time": 0.2592874558875337,
-    "per_call": 0.08642915196251123,
-    "speedup_vs_single_jit": 0.6
+    "batch_size": 16,
+    "batch_time": 0.5245965991169215,
+    "per_call": 0.03278728744480759,
+    "speedup_vs_single_jit": 1.6
   }
 }
