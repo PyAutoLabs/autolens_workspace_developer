@@ -94,9 +94,7 @@ def source_cumulative_flux(
     r_pixel = np.sqrt(yx[:, 0] ** 2 + yx[:, 1] ** 2)
 
     radii = np.linspace(0.0, r_max, n)
-    cumulative = np.array(
-        [float(np.sum(brightness[r_pixel <= r])) for r in radii]
-    )
+    cumulative = np.array([float(np.sum(brightness[r_pixel <= r])) for r in radii])
     return radii, cumulative
 
 

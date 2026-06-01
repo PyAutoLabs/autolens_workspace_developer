@@ -108,9 +108,7 @@ def main():
     analysis = al.AnalysisImaging(dataset=dataset, use_jax=True)
     result = search.fit(model=make_model(), analysis=analysis)
 
-    fit = al.FitImaging(
-        dataset=dataset, tracer=result.max_log_likelihood_tracer
-    )
+    fit = al.FitImaging(dataset=dataset, tracer=result.max_log_likelihood_tracer)
     solved_tracer = fit.tracer_linear_light_profiles_to_light_profiles
     source_galaxy = solved_tracer.galaxies[1]
 
@@ -124,9 +122,7 @@ def main():
     # Brightness check: compose a trivial tracer to use source_radial_profile.
     fake_lens = al.Galaxy(redshift=0.5)
     sanity_tracer = al.Tracer(galaxies=[fake_lens, reloaded])
-    radii, brightness = source_radial_profile(
-        tracer=sanity_tracer, r_max=0.5, n=600
-    )
+    radii, brightness = source_radial_profile(tracer=sanity_tracer, r_max=0.5, n=600)
     fig, ax = plt.subplots(figsize=(8, 5))
     ax.plot(radii, brightness, color="tab:red", lw=1.5, label="MGE truth source")
     ax.set_yscale("log")

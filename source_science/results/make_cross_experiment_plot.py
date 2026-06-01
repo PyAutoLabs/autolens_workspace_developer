@@ -185,37 +185,51 @@ def main():
     # LEFT — 1D radial profile (log y)
     ax_l.plot(radii, truth_b, "k-", lw=2.5, label="Truth (SersicCore)")
     ax_l.plot(
-        radii, test1_b, color="tab:red", lw=1.7,
+        radii,
+        test1_b,
+        color="tab:red",
+        lw=1.7,
         label="Test 1 — MGE source (WITH lens light)",
     )
     ax_l.plot(
-        radii, test2_b, color="tab:blue", lw=1.7,
+        radii,
+        test2_b,
+        color="tab:blue",
+        lw=1.7,
         label="Test 2 — MGE source (NO lens light)",
     )
     ax_l.set_yscale("log")
     ax_l.set_xlabel("Source-plane radius (arcsec, along x-axis)")
     ax_l.set_ylabel("Source surface brightness (e⁻ s⁻¹ arcsec⁻²)")
-    ax_l.set_title("MGE source radial profile — diffuse halo collapses without lens light")
+    ax_l.set_title(
+        "MGE source radial profile — diffuse halo collapses without lens light"
+    )
     ax_l.legend(loc="upper right", fontsize=10)
     ax_l.set_xlim(0, PROFILE_R_MAX)
     ax_l.grid(True, alpha=0.3, which="both")
 
     # RIGHT — cumulative flux
-    ax_r.axhline(
-        y=float(truth_c[-1]), color="k", linestyle="--", lw=1.0, alpha=0.4
-    )
+    ax_r.axhline(y=float(truth_c[-1]), color="k", linestyle="--", lw=1.0, alpha=0.4)
     ax_r.plot(cum_radii, truth_c, "k-", lw=2.5, label="Truth")
     ax_r.plot(
-        cum_radii, test1_c, color="tab:red", lw=1.7,
+        cum_radii,
+        test1_c,
+        color="tab:red",
+        lw=1.7,
         label="Test 1 — MGE source (WITH lens light)",
     )
     ax_r.plot(
-        cum_radii, test2_c, color="tab:blue", lw=1.7,
+        cum_radii,
+        test2_c,
+        color="tab:blue",
+        lw=1.7,
         label="Test 2 — MGE source (NO lens light)",
     )
     ax_r.set_xlabel("Aperture radius (arcsec)")
     ax_r.set_ylabel("Cumulative source-plane flux inside aperture")
-    ax_r.set_title("Cumulative flux — test-1 MGE keeps growing past truth into the halo")
+    ax_r.set_title(
+        "Cumulative flux — test-1 MGE keeps growing past truth into the halo"
+    )
     ax_r.legend(loc="lower right", fontsize=10)
     ax_r.set_xlim(0, CUMULATIVE_R_MAX)
     ax_r.grid(True, alpha=0.3)

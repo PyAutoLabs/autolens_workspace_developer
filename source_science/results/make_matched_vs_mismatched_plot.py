@@ -160,8 +160,11 @@ def _load_dataset(dataset_name: str) -> al.Imaging:
 
 
 def _resume(
-    dataset_name: str, path_prefix_dir: str, unique_tag: str,
-    fit_name: str, model_factory,
+    dataset_name: str,
+    path_prefix_dir: str,
+    unique_tag: str,
+    fit_name: str,
+    model_factory,
 ) -> al.Tracer:
     dataset = _load_dataset(dataset_name)
     search = af.Nautilus(
@@ -180,51 +183,99 @@ def _resume(
 CELLS = [
     # (row, col, title, truth_dataset, fits[list of (label, dataset, path_prefix, unique_tag, name, model_factory)])
     (
-        0, 0, "Sersic truth · no lens light",
+        0,
+        0,
+        "Sersic truth · no lens light",
         "no_lens_light",
         [
-            ("Sersic source fit", "no_lens_light", "source_science_no_lens_v1",
-             "no_lens_light_v1", "sersic_source", _model_no_lens_sersic_source),
-            ("MGE source fit", "no_lens_light", "source_science_no_lens_v1",
-             "no_lens_light_v1", "mge_source", _model_no_lens_mge_source),
+            (
+                "Sersic source fit",
+                "no_lens_light",
+                "source_science_no_lens_v1",
+                "no_lens_light_v1",
+                "sersic_source",
+                _model_no_lens_sersic_source,
+            ),
+            (
+                "MGE source fit",
+                "no_lens_light",
+                "source_science_no_lens_v1",
+                "no_lens_light_v1",
+                "mge_source",
+                _model_no_lens_mge_source,
+            ),
         ],
     ),
     (
-        0, 1, "Sersic truth · with lens light",
+        0,
+        1,
+        "Sersic truth · with lens light",
         "simple",
         [
-            ("Sersic source fit", "simple", "source_science_v3",
-             "simple_v3", "mge_lens__sersic_source", _model_with_lens_sersic_source),
-            ("MGE source fit", "simple", "source_science_v3",
-             "simple_v3", "mge_lens__mge_source", _model_with_lens_mge_source),
+            (
+                "Sersic source fit",
+                "simple",
+                "source_science_v3",
+                "simple_v3",
+                "mge_lens__sersic_source",
+                _model_with_lens_sersic_source,
+            ),
+            (
+                "MGE source fit",
+                "simple",
+                "source_science_v3",
+                "simple_v3",
+                "mge_lens__mge_source",
+                _model_with_lens_mge_source,
+            ),
         ],
     ),
     (
-        1, 0, "MGE truth · no lens light",
+        1,
+        0,
+        "MGE truth · no lens light",
         "mge_truth_no_lens_light",
         [
-            ("Sersic source fit", "mge_truth_no_lens_light",
-             "source_science_mge_truth_no_lens_v1",
-             "mge_truth_no_lens_light_v1", "sersic_source",
-             _model_no_lens_sersic_source),
-            ("MGE source fit", "mge_truth_no_lens_light",
-             "source_science_mge_truth_no_lens_v1",
-             "mge_truth_no_lens_light_v1", "mge_source",
-             _model_no_lens_mge_source),
+            (
+                "Sersic source fit",
+                "mge_truth_no_lens_light",
+                "source_science_mge_truth_no_lens_v1",
+                "mge_truth_no_lens_light_v1",
+                "sersic_source",
+                _model_no_lens_sersic_source,
+            ),
+            (
+                "MGE source fit",
+                "mge_truth_no_lens_light",
+                "source_science_mge_truth_no_lens_v1",
+                "mge_truth_no_lens_light_v1",
+                "mge_source",
+                _model_no_lens_mge_source,
+            ),
         ],
     ),
     (
-        1, 1, "MGE truth · with lens light",
+        1,
+        1,
+        "MGE truth · with lens light",
         "mge_truth_with_lens_light",
         [
-            ("Sersic source fit", "mge_truth_with_lens_light",
-             "source_science_mge_truth_with_lens_v1",
-             "mge_truth_with_lens_light_v1", "mge_lens__sersic_source",
-             _model_with_lens_sersic_source),
-            ("MGE source fit", "mge_truth_with_lens_light",
-             "source_science_mge_truth_with_lens_v1",
-             "mge_truth_with_lens_light_v1", "mge_lens__mge_source",
-             _model_with_lens_mge_source),
+            (
+                "Sersic source fit",
+                "mge_truth_with_lens_light",
+                "source_science_mge_truth_with_lens_v1",
+                "mge_truth_with_lens_light_v1",
+                "mge_lens__sersic_source",
+                _model_with_lens_sersic_source,
+            ),
+            (
+                "MGE source fit",
+                "mge_truth_with_lens_light",
+                "source_science_mge_truth_with_lens_v1",
+                "mge_truth_with_lens_light_v1",
+                "mge_lens__mge_source",
+                _model_with_lens_mge_source,
+            ),
         ],
     ),
 ]
@@ -247,14 +298,20 @@ def main():
         for label, dname, pp, ut, fit_name, model_factory in fits:
             print(f"[{title}] loading {label} ...")
             mle_tracer = _resume(
-                dataset_name=dname, path_prefix_dir=pp,
-                unique_tag=ut, fit_name=fit_name, model_factory=model_factory,
+                dataset_name=dname,
+                path_prefix_dir=pp,
+                unique_tag=ut,
+                fit_name=fit_name,
+                model_factory=model_factory,
             )
             _, brightness = source_radial_profile(
                 tracer=mle_tracer, r_max=PROFILE_R_MAX, n=PROFILE_N
             )
             ax.plot(
-                radii, brightness, color=FIT_COLORS[label], lw=1.6,
+                radii,
+                brightness,
+                color=FIT_COLORS[label],
+                lw=1.6,
                 label=label,
             )
 
@@ -270,7 +327,8 @@ def main():
 
     fig.suptitle(
         "Matched vs mismatched: source-fit class × source-truth class × lens-light condition",
-        fontsize=12, y=0.995,
+        fontsize=12,
+        y=0.995,
     )
     fig.tight_layout()
     out = Path("source_science") / "results" / "matched_vs_mismatched_2x2.png"

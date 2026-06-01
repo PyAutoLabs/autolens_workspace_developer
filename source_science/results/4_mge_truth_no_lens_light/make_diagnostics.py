@@ -258,7 +258,9 @@ def main():
         ax.set_xlabel("x (arcsec)")
     axes[0].set_ylabel("y (arcsec)")
     fig.colorbar(im, ax=axes, fraction=0.025, pad=0.02)
-    fig.suptitle("Test 4 — Source-plane brightness (MGE truth, no lens light)", fontsize=12)
+    fig.suptitle(
+        "Test 4 — Source-plane brightness (MGE truth, no lens light)", fontsize=12
+    )
     fig.savefig(out_dir / "source_2d_brightness_panel.png", dpi=140)
     plt.close(fig)
 

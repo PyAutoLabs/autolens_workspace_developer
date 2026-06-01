@@ -229,9 +229,7 @@ def main():
 
     # --- Plot 1: 1D radial source-plane brightness ---
     fig, ax = plt.subplots(figsize=(8, 6))
-    ax.plot(
-        truth_radii, truth_brightness, "k-", lw=2.0, label="Truth (MGE)"
-    )
+    ax.plot(truth_radii, truth_brightness, "k-", lw=2.0, label="Truth (MGE)")
     for model_name in MODEL_NAMES:
         p = fit_profiles[model_name]
         ax.fill_between(

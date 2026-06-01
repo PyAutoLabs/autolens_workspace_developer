@@ -249,7 +249,9 @@ def posterior_source_science_from(
                 instance=instance, dataset=dataset, has_linear_lp=has_linear_lp
             )
             values = source_science_from(tracer=tracer)
-        except Exception as e:  # noqa: BLE001 - sample-level failures should not abort the sweep
+        except (
+            Exception
+        ) as e:  # noqa: BLE001 - sample-level failures should not abort the sweep
             n_failed += 1
             print(f"  posterior draw failed: {e}")
             continue
@@ -445,7 +447,9 @@ def main():
         try:
             fit_image_path = save_fit_subplot(result=result, model_name=model_name)
             print(f"  wrote fit subplot: {fit_image_path}")
-        except Exception as e:  # noqa: BLE001 - plotting failures should not abort the sweep
+        except (
+            Exception
+        ) as e:  # noqa: BLE001 - plotting failures should not abort the sweep
             print(f"  WARNING failed to save fit subplot for {model_name}: {e}")
 
         summary["fits"][model_name] = {

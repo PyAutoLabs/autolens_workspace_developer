@@ -229,9 +229,7 @@ def main():
 
     # --- Plot 1: 1D radial source-plane brightness ---
     fig, ax = plt.subplots(figsize=(8, 6))
-    ax.plot(
-        truth_radii, truth_brightness, "k-", lw=2.0, label="Truth (SersicCore)"
-    )
+    ax.plot(truth_radii, truth_brightness, "k-", lw=2.0, label="Truth (SersicCore)")
     for model_name in MODEL_NAMES:
         p = fit_profiles[model_name]
         ax.fill_between(
@@ -302,9 +300,7 @@ def main():
         ax.set_xlabel("x (arcsec)")
     axes[0].set_ylabel("y (arcsec)")
     fig.colorbar(im, ax=axes, fraction=0.025, pad=0.02)
-    fig.suptitle(
-        "Test 1 — Source-plane brightness (with lens light)", fontsize=12
-    )
+    fig.suptitle("Test 1 — Source-plane brightness (with lens light)", fontsize=12)
     fig.savefig(out_dir / "source_2d_brightness_panel.png", dpi=140)
     plt.close(fig)
 

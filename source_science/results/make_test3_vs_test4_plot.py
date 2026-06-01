@@ -71,11 +71,15 @@ def _mge_model(centre_prior_is_uniform: bool) -> af.Model:
 def _model_test3_mge_mge() -> af.Collection:
     mass, shear = _mass_model()
     lens = af.Model(
-        al.Galaxy, redshift=0.5, bulge=_mge_model(centre_prior_is_uniform=True),
-        mass=mass, shear=shear,
+        al.Galaxy,
+        redshift=0.5,
+        bulge=_mge_model(centre_prior_is_uniform=True),
+        mass=mass,
+        shear=shear,
     )
     source = af.Model(
-        al.Galaxy, redshift=1.0,
+        al.Galaxy,
+        redshift=1.0,
         bulge=_mge_model(centre_prior_is_uniform=False),
     )
     return af.Collection(galaxies=af.Collection(lens=lens, source=source))
@@ -85,7 +89,8 @@ def _model_test4_mge() -> af.Collection:
     mass, shear = _mass_model()
     lens = af.Model(al.Galaxy, redshift=0.5, mass=mass, shear=shear)
     source = af.Model(
-        al.Galaxy, redshift=1.0,
+        al.Galaxy,
+        redshift=1.0,
         bulge=_mge_model(centre_prior_is_uniform=False),
     )
     return af.Collection(galaxies=af.Collection(lens=lens, source=source))
@@ -149,7 +154,9 @@ def main():
     # to ensure correct lens for the lensed comparison; for the source-plane
     # radial profile we just need the source galaxy which is identical.
     truth_tracer = al.from_json(
-        file_path=Path("dataset") / "imaging" / "mge_truth_no_lens_light"
+        file_path=Path("dataset")
+        / "imaging"
+        / "mge_truth_no_lens_light"
         / "tracer.json"
     )
 
@@ -182,31 +189,43 @@ def main():
 
     ax_l.plot(radii, truth_b, "k-", lw=2.5, label="Truth (MGE source)")
     ax_l.plot(
-        radii, test3_b, color="tab:red", lw=1.7,
+        radii,
+        test3_b,
+        color="tab:red",
+        lw=1.7,
         label="Test 3 — MGE+MGE fit (WITH lens light)",
     )
     ax_l.plot(
-        radii, test4_b, color="tab:blue", lw=1.7,
+        radii,
+        test4_b,
+        color="tab:blue",
+        lw=1.7,
         label="Test 4 — MGE source fit (NO lens light)",
     )
     ax_l.set_yscale("log")
     ax_l.set_xlabel("Source-plane radius (arcsec, along x-axis)")
     ax_l.set_ylabel("Source surface brightness (e⁻ s⁻¹ arcsec⁻²)")
-    ax_l.set_title("MGE source radial profile — does the halo come back when truth is MGE?")
+    ax_l.set_title(
+        "MGE source radial profile — does the halo come back when truth is MGE?"
+    )
     ax_l.legend(loc="upper right", fontsize=10)
     ax_l.set_xlim(0, PROFILE_R_MAX)
     ax_l.grid(True, alpha=0.3, which="both")
 
-    ax_r.axhline(
-        y=float(truth_c[-1]), color="k", linestyle="--", lw=1.0, alpha=0.4
-    )
+    ax_r.axhline(y=float(truth_c[-1]), color="k", linestyle="--", lw=1.0, alpha=0.4)
     ax_r.plot(cum_radii, truth_c, "k-", lw=2.5, label="Truth")
     ax_r.plot(
-        cum_radii, test3_c, color="tab:red", lw=1.7,
+        cum_radii,
+        test3_c,
+        color="tab:red",
+        lw=1.7,
         label="Test 3 — MGE+MGE fit (WITH lens light)",
     )
     ax_r.plot(
-        cum_radii, test4_c, color="tab:blue", lw=1.7,
+        cum_radii,
+        test4_c,
+        color="tab:blue",
+        lw=1.7,
         label="Test 4 — MGE source fit (NO lens light)",
     )
     ax_r.set_xlabel("Aperture radius (arcsec)")
@@ -218,7 +237,8 @@ def main():
 
     fig.suptitle(
         "Tests 3+4 (MGE source truth): is the lens-light degeneracy general or Sersic-truth-specific?",
-        fontsize=13, y=1.02,
+        fontsize=13,
+        y=1.02,
     )
     fig.tight_layout()
     out = Path("source_science") / "results" / "test3_vs_test4_mge_source.png"
