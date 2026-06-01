@@ -8,6 +8,16 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Dependencies: `autolens`, `autogalaxy`, `autofit`, `autoarray`, `jax`, `numba`. Python version: 3.11.
 
+## Scientific Context
+
+For the science behind the pipelines being profiled here — concepts,
+named entities, per-topic bibliography — see the lensing sub-wiki at
+[`PyAutoLabs/PyAutoPaper`](https://github.com/PyAutoLabs/PyAutoPaper),
+locally at `../PyAutoPaper/lensing_wiki/`. Most directly useful here:
+`concepts/source-reconstruction.md`, `concepts/mass-models.md`,
+`concepts/bayesian-inference-lensing.md`, and
+`entities/slam-pipeline.md`.
+
 ## Workspace Structure
 
 ```
