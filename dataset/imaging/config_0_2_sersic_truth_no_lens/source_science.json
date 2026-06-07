@@ -1,0 +1,8 @@
+{
+    "type": "dict",
+    "arguments": {
+        "image_plane_flux": 5473.963135628589,
+        "source_plane_flux": 156.725331383583,
+        "source_magnification": 34.92711157350271
+    }
+}
