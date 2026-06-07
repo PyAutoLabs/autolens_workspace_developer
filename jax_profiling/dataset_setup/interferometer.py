@@ -5,8 +5,9 @@ Simulator: Instrument-Based Interferometer Datasets
 Simulates interferometer datasets for different observatories, each with a
 characteristic (u, v)-coverage and pixel scale:
 
-    sma    — ~190 visibilities, 0.1  arcsec/pixel  (low resolution)
-    alma   — ~1000 visibilities, 0.05 arcsec/pixel (high resolution)
+    sma           — ~190 visibilities,   0.1   arcsec/pixel  (low resolution)
+    alma          — ~1000 visibilities,  0.05  arcsec/pixel  (high resolution)
+    alma_high_res — ~5000 visibilities,  0.025 arcsec/pixel  (ALMA-scale fine grid, 512x512)
 
 Synthetic (u, v)-coverage is generated procedurally from a Gaussian blob in
 the uv-plane with a seeded RNG, so runs are reproducible without requiring
@@ -58,6 +59,21 @@ INSTRUMENTS = {
         "noise_sigma": 100.0,
         "seed": 1,
         "transformer_class": "dft",
+    },
+    "alma_high_res": {
+        # ALMA-style 5000-vis coverage at 0.025"/px on a 512x512 real-space
+        # grid. Simulator uses pynufft because (a) DFT would need a dense
+        # (n_vis x n_real_space) matrix = ~20GB and OOM on a 15GB laptop,
+        # and (b) nufftax requires Python >= 3.12 (PyAutoGPU venv is 3.10).
+        # Likelihood scripts can still use TransformerDFT downstream — they
+        # only read uv_wavelengths from this file.
+        "n_visibilities": 5000,
+        "uv_scale": 4.0e6,
+        "pixel_scale": 0.025,
+        "shape_native": (512, 512),
+        "noise_sigma": 100.0,
+        "seed": 1,
+        "transformer_class": "nufft_pynufft",
     },
     "hannah": {
         "n_visibilities": 16984,
@@ -121,6 +137,7 @@ def simulate(instrument: str):
     transformer_class = {
         "dft": al.TransformerDFT,
         "nufft": al.TransformerNUFFT,
+        "nufft_pynufft": al.TransformerNUFFTPyNUFFT,
     }[transformer_choice]
 
     simulator = al.SimulatorInterferometer(
