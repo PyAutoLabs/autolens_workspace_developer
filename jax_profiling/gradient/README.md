@@ -19,7 +19,8 @@ finite and non-zero.
 | Interferometer, MGE | **works** (re-confirmed 2026-07-09: probe 9/9 PASS) | not yet | probe: `interferometer/mge.py` (NUFFT/DFT visibility space) |
 | Imaging, `RectangularUniform` | **works** | **yes** (2026-07-09: AD = FD to 7 s.f., FD-step-stable, all 14 params; `jax_grad/imaging_pixelization.py` variant A) | non-adaptive mesh: fully smooth likelihood, ready for gradient-based inference |
 | Imaging, `RectangularAdaptDensity` (pixelization over-sampling 1) | **autodiff correct — likelihood is a staircase in mass/shear** | **yes** (see below) | lens-light params FD-matched (≤2e-8); mass/shear: LL is *bit-identical* under ≤1e-6 parameter shifts, so AD's ~zero is the true a.e. derivative and larger-step FD only measures discrete rank-reordering jumps. Gradient-based **mass** inference impossible in this config — a likelihood-design property, not an AD bug (see "Rectangular adaptive mesh" section) |
-| Imaging, `RectangularAdaptDensity` (pixelization over-sampling 4) | works — smooth mass signal restored | spot-checked (AD ≈ FD(h=1e-7) within ~3% on einstein_radius) | sub-pixel strain between interp queries and knots carries smooth mass information; staircase jumps still superimpose at larger scales |
+| Imaging, `RectangularAdaptDensity` (pixelization over-sampling 4) | **works** | **yes** (2026-07-09: all 14 params live, AD ≈ FD(h=1e-7) ≤ ~3%, FD converges to AD as h→0; variant D of `jax_grad/imaging_pixelization.py`) | sub-pixel strain between interp queries and knots carries smooth mass information; residual AD-FD gap is micro-staircase contamination of FD, not AD error |
+| Imaging, `RectangularAdaptImage` + `reg.Adapt` + adapt images + border relocator (pixelization over-sampling 4 — **the production config**) | **works** | **yes** (2026-07-09: all 14 params live, AD ≈ FD(h=1e-7) ≤ ~1%, lens light to 6 digits; variant C of `jax_grad/imaging_pixelization.py`) | full production shape incl. `AdaptImages` weight map and border relocator; mixed precision off in the test (FD needs float64) |
 | Imaging, Delaunay pixelization | **hard error** (re-confirmed 2026-07-09: 3 PASS / 8 ERROR) | n/a | `jax.pure_callback` → `scipy.spatial.Delaunay` has no JVP rule (`PyAutoArray .../interpolator/delaunay.py:126`); see "Why Delaunay gradients are infeasible today" below (phase 2) |
 | Point source, source-plane χ² (`FitPositionsSource`) | **works** (probe 4/4 PASS; forward `jax.jit` still blocked by the `Grid2DIrregular` xp gap) | **yes** (2026-07-09, rel err ≤ 5e-6; `jax_grad/point_source.py`) | includes magnification-via-Hessian term (3rd derivatives of the potential); flux/H0 legitimately zero in positions-only fits |
 | Point source, image-plane (`FitPositionsImagePairAll`) | prior probe: **not differentiable** | n/a | `PointSolver` triangle-tiling forward solve uses `jnp.where` masking + integer neighbour lookups |
@@ -64,13 +65,21 @@ interpolator refactor). On the refactored main there is no explosion and no
   re-ordering scale). Smooth mass information is *destroyed by the discretisation*,
   not lost by autodiff.
 - With over-sampling > 1 the sub-pixel queries sit between knots and pick up local
-  strain, restoring a genuine smooth mass gradient that autodiff tracks.
+  strain, restoring a genuine smooth mass gradient that autodiff tracks. Full
+  14-parameter FD sweeps at os_pix=4 (2026-07-09): `RectangularAdaptImage` in the
+  production shape (`reg.Adapt`, `AdaptImages`, border relocator) agrees with
+  FD(h=1e-7) to ≤ ~1% on mass/shear and 6 digits on lens light;
+  `RectangularAdaptDensity` to ≤ ~3% (worst: einstein_radius). In both cases the
+  FD values drift with step size while AD is h-consistent — the residual gap is
+  micro-staircase contamination of the finite differences, not an autodiff error.
 - The uniform mesh has no transform and is exactly smooth-differentiable.
 
-**Implications**: (1) HMC/NUTS over mass parameters requires `RectangularUniform`,
-over-sampled `AdaptDensity`, or a continuous density transform (the paper's actual
-formulation — it builds the CDF from a *smooth* GP-weighted density rather than the
-empirical point ranks, which is what keeps their formulation fully differentiable);
+**Implications**: (1) HMC/NUTS over mass parameters works with `RectangularUniform`
+or with either adaptive mesh at pixelization over-sampling > 1 — which is the
+production configuration (`RectangularAdaptImage`, os_pix=4, validated ≤ ~1%); only
+the os_pix=1 adaptive corner is unusable. A continuous density transform (the
+paper's actual formulation — CDF from a *smooth* GP-weighted density rather than
+empirical point ranks) would remove the micro-staircase entirely;
 (2) even non-gradient samplers see a micro-staircase surface with os_pix=1 —
 worth keeping in mind for evidence estimates; (3) PR #281's fix is moot on the
 refactored code — do not re-land it.
