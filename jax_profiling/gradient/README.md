@@ -17,6 +17,10 @@ finite and non-zero.
 | Imaging, `lp_linear.Sersic` | **works** | **yes** (2026-07-09, rel err ≤ 3e-9 over 20 params) | linear intensities via positive-only NNLS solve; gradient flows through the solve, including source-shape params |
 | Imaging, MGE (`lp_linear.Gaussian`) | **works** | **yes** (2026-07-09, rel err ≤ 5e-7 over 10 params) | probe `imaging/mge.py` 9/9 PASS on current mains; `lmp_linear.GaussianGradient` (light+mass) has known unresolved autodiff issues — excluded from models here |
 | Interferometer, MGE | **works** (re-confirmed 2026-07-09: probe 9/9 PASS) | not yet | probe: `interferometer/mge.py` (NUFFT/DFT visibility space) |
+| Interferometer, standard `lp.Sersic` | **works** | **yes** (2026-07-09, rel err ≤ ~1e-7 over 14 params; `jax_grad/interferometer.py` variant A) | gradient flows through the DFT visibility transform |
+| Interferometer, `lp_linear.Sersic` | **works** | **yes** (2026-07-09, rel err ≤ ~1e-6 over 13 params) | linear source through NNLS in visibility space |
+| Interferometer, `RectangularUniform` (sparse operator) | **works** | **yes** (2026-07-09, strict FD match, all 7 mass/shear params live; `jax_grad/interferometer.py` variant C) | `TransformerDFT` + `apply_sparse_operator(use_jax=True)`; the gradient-capable mesh for interferometer |
+| Interferometer, `RectangularAdaptDensity` + `reg.Adapt` (sparse operator — **the production config**) | **autodiff correct — but zero everywhere: the staircase, with no escape hatch** | **yes** (2026-07-09; `jax_grad/interferometer.py` variant B) | interferometer pixelization has **no over-sampling**, so mesh queries always coincide with the rank-transform knots — the imaging os_pix=1 staircase applies in full. With no lens light in the model, *every* parameter's gradient is (correctly) ~zero: no usable gradients at all. Fix requires `RectangularUniform` or a smooth-density transform (see below) |
 | Imaging, `RectangularUniform` | **works** | **yes** (2026-07-09: AD = FD to 7 s.f., FD-step-stable, all 14 params; `jax_grad/imaging_pixelization.py` variant A) | non-adaptive mesh: fully smooth likelihood, ready for gradient-based inference |
 | Imaging, `RectangularAdaptDensity` (pixelization over-sampling 1) | **autodiff correct — likelihood is a staircase in mass/shear** | **yes** (see below) | lens-light params FD-matched (≤2e-8); mass/shear: LL is *bit-identical* under ≤1e-6 parameter shifts, so AD's ~zero is the true a.e. derivative and larger-step FD only measures discrete rank-reordering jumps. Gradient-based **mass** inference impossible in this config — a likelihood-design property, not an AD bug (see "Rectangular adaptive mesh" section) |
 | Imaging, `RectangularAdaptDensity` (pixelization over-sampling 4) | **works** | **yes** (2026-07-09: all 14 params live, AD ≈ FD(h=1e-7) ≤ ~3%, FD converges to AD as h→0; variant D of `jax_grad/imaging_pixelization.py`) | sub-pixel strain between interp queries and knots carries smooth mass information; residual AD-FD gap is micro-staircase contamination of FD, not AD error |
@@ -76,10 +80,15 @@ interpolator refactor). On the refactored main there is no explosion and no
 
 **Implications**: (1) HMC/NUTS over mass parameters works with `RectangularUniform`
 or with either adaptive mesh at pixelization over-sampling > 1 — which is the
-production configuration (`RectangularAdaptImage`, os_pix=4, validated ≤ ~1%); only
-the os_pix=1 adaptive corner is unusable. A continuous density transform (the
-paper's actual formulation — CDF from a *smooth* GP-weighted density rather than
-empirical point ranks) would remove the micro-staircase entirely;
+imaging production configuration (`RectangularAdaptImage`, os_pix=4, validated
+≤ ~1%); only the os_pix=1 adaptive corner is unusable. **Interferometer is that
+corner by construction**: its pixelization has no over-sampling, so the adaptive
+meshes carry no smooth mass information there at all (confirmed on the sparse-
+operator production path 2026-07-09) — interferometer gradient work must use
+`RectangularUniform` (validated) until a smooth transform exists. A continuous
+density transform (the paper's actual formulation — CDF from a *smooth*
+GP-weighted density rather than empirical point ranks) would remove the
+micro-staircase entirely and restore the adaptive meshes everywhere;
 (2) even non-gradient samplers see a micro-staircase surface with os_pix=1 —
 worth keeping in mind for evidence estimates; (3) PR #281's fix is moot on the
 refactored code — do not re-land it.
