@@ -188,9 +188,17 @@ __Visualize__
 
 Output a subplot of the simulated dataset, the image and the tracer's quantities to the dataset path as .png files.
 """
-aplt.plot_array(array=dataset.data, output=aplt.Output(path=dataset_path, format="png"))
+aplt.plot_array(
+    array=dataset.data,
+    output_path=str(dataset_path),
+    output_filename="data",
+    output_format="png",
+)
 aplt.subplot_tracer(
-    tracer=tracer, grid=grid, output=aplt.Output(path=dataset_path, format="png")
+    tracer=tracer,
+    grid=grid,
+    output_path=str(dataset_path),
+    output_format="png",
 )
 
 """
