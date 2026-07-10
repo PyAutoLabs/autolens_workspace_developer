@@ -97,15 +97,26 @@ the *linear* meshes at os_pix=1 — worth keeping in mind for evidence estimates
 the kernel meshes remove this too. (3) PR #281's fix is moot on the refactored
 code — do not re-land it.
 
-**Kernel-mesh caveats** (2026-07-10): (a) the exact kernel forward is O(M×N) in
-memory (over-sampled queries × traced points) — fine at the jax_test/certification
-scales, but a 15k-pixel imaging config at os_pix=4 allocates ~60 GB; production
-imaging use needs a chunked evaluation (follow-up). The interferometer sparse
-path (M = N) is unaffected. (b) FD probing of any pixelized-source likelihood is
-poisoned pseudo-randomly by measure-thin solver branch flips (width < 1e-15 in
-the parameter, ΔLL ~1.6e-3 on the 8×8 interferometer config up to ~14 on 28×28
+**Kernel-mesh caveats** (2026-07-10): (a) *resolved same day* (PyAutoArray#376):
+the exact kernel forward previously broadcast O(M×N) memory (~60 GB at the
+production imaging scale of M ≈ 246k over-sampled queries × N ≈ 15.4k traced
+points — observed OOM); it now evaluates in fixed 512-query blocks (`lax.map`
+under jax, block loop under numpy) with float-identical values — the same
+scale runs at ~1.1 GB peak RSS and the certification re-passes unchanged. CPU
+wall-time at that scale is ~10 min/eval (2×10⁹ erf evaluations — the
+arithmetic, not the blocking); GPU remains the production target for kernel
+meshes at scale. (b) FD probing of any pixelized-source likelihood is
+poisoned pseudo-randomly by measure-thin branch flips (width < 1e-15 in the
+parameter, ΔLL ~1.6e-3 on the 8×8 interferometer config up to ~14 on 28×28
 imaging; present under `reg.Constant` and `reg.Adapt`; pre-existing, exposed —
 not caused — by the kernel meshes making mass/shear FD certifiable at all).
+Investigated 2026-07-10 (PyAutoArray#377): the flips are **JIT-only** (eager is
+clean — an XLA-fusion ulp crossing a discrete threshold), the positive-only
+solver is **exonerated** (flips persist unconstrained and are
+solver-tolerance-invariant), and one amplifier is confirmed: the linear
+rank-CDF forward transform is genuinely discontinuous at the data
+bounding-box edge (U jumps by 1/(N+1) crossing the max point). Fix candidate
+and the remaining kernel-config localization live on #377.
 `jax_grad/util.py` therefore runs an FD-step-sweep for the kernel variants:
 per parameter, FD at rel steps {1e-8, 1e-7, 1e-6}, compared at the step closest
 to autodiff — clean steps converge to AD at 1e-6..1e-9 relative, so a wrong AD
