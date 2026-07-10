@@ -162,10 +162,19 @@ __Output__
 
 Output the simulated dataset to the dataset path as .fits files.
 """
-dataset.output_to_fits(
-    data_path=dataset_path / "data.fits",
-    psf_path=dataset_path / "psf.fits",
-    noise_map_path=dataset_path / "noise_map.fits",
+al.output_to_fits(
+    values=dataset.data.native,
+    file_path=dataset_path / "data.fits",
+    overwrite=True,
+)
+al.output_to_fits(
+    values=dataset.psf.kernel.native,
+    file_path=dataset_path / "psf.fits",
+    overwrite=True,
+)
+al.output_to_fits(
+    values=dataset.noise_map.native,
+    file_path=dataset_path / "noise_map.fits",
     overwrite=True,
 )
 
