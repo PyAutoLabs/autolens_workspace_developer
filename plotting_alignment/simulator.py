@@ -162,10 +162,19 @@ __Output__
 
 Output the simulated dataset to the dataset path as .fits files.
 """
-dataset.output_to_fits(
-    data_path=dataset_path / "data.fits",
-    psf_path=dataset_path / "psf.fits",
-    noise_map_path=dataset_path / "noise_map.fits",
+al.output_to_fits(
+    values=dataset.data.native,
+    file_path=dataset_path / "data.fits",
+    overwrite=True,
+)
+al.output_to_fits(
+    values=dataset.psf.kernel.native,
+    file_path=dataset_path / "psf.fits",
+    overwrite=True,
+)
+al.output_to_fits(
+    values=dataset.noise_map.native,
+    file_path=dataset_path / "noise_map.fits",
     overwrite=True,
 )
 
@@ -179,9 +188,17 @@ __Visualize__
 
 Output a subplot of the simulated dataset, the image and the tracer's quantities to the dataset path as .png files.
 """
-aplt.plot_array(array=dataset.data, output=aplt.Output(path=dataset_path, format="png"))
+aplt.plot_array(
+    array=dataset.data,
+    output_path=str(dataset_path),
+    output_filename="data",
+    output_format="png",
+)
 aplt.subplot_tracer(
-    tracer=tracer, grid=grid, output=aplt.Output(path=dataset_path, format="png")
+    tracer=tracer,
+    grid=grid,
+    output_path=str(dataset_path),
+    output_format="png",
 )
 
 """

@@ -25,6 +25,10 @@ finite and non-zero.
 | Imaging, `RectangularAdaptDensity` (pixelization over-sampling 1) | **autodiff correct — likelihood is a staircase in mass/shear** | **yes** (see below) | lens-light params FD-matched (≤2e-8); mass/shear: LL is *bit-identical* under ≤1e-6 parameter shifts, so AD's ~zero is the true a.e. derivative and larger-step FD only measures discrete rank-reordering jumps. Gradient-based **mass** inference impossible in this config — a likelihood-design property, not an AD bug (see "Rectangular adaptive mesh" section) |
 | Imaging, `RectangularAdaptDensity` (pixelization over-sampling 4) | **works** | **yes** (2026-07-09: all 14 params live, AD ≈ FD(h=1e-7) ≤ ~3%, FD converges to AD as h→0; variant D of `jax_grad/imaging_pixelization.py`) | sub-pixel strain between interp queries and knots carries smooth mass information; residual AD-FD gap is micro-staircase contamination of FD, not AD error |
 | Imaging, `RectangularAdaptImage` + `reg.Adapt` + adapt images + border relocator (pixelization over-sampling 4 — **the production config**) | **works** | **yes** (2026-07-09: all 14 params live, AD ≈ FD(h=1e-7) ≤ ~1%, lens light to 6 digits; variant C of `jax_grad/imaging_pixelization.py`) | full production shape incl. `AdaptImages` weight map and border relocator; mixed precision off in the test (FD needs float64) |
+| Imaging, `RectangularKernelAdaptDensity` (os_pix=1, bandwidth=0.1) | **works — the os_pix=1 staircase corner is fixed** | **yes** (2026-07-10: all 14 params incl. mass/shear at STRICT tolerances via FD-step-sweep; variant E of `jax_grad/imaging_pixelization.py`) | kernel-density CDF mesh (PyAutoArray#374): no ranks/sorts, C^∞ transform; FoM *beats* the linear `AdaptDensity` by 4.1e-2 relative at bandwidth 0.1 (value-parity is undefined at os_pix=1 — the linear mesh there is the staircase) |
+| Imaging, `RectangularKernelAdaptDensity` (os_pix=4) | **works** | **yes** (2026-07-10: strict FD-step-sweep, all 14 params; variant F) | FoM parity with linear `AdaptDensity` = 2.7e-5 relative at default bandwidth |
+| Imaging, `RectangularKernelAdaptImage` + `reg.Adapt` + adapt images + border relocator (os_pix=4, bandwidth=0.1) | **works** | **yes** (2026-07-10: strict FD-step-sweep, all 14 params; variant G) | full production shape; FoM parity floor 6.3e-4 relative (intrinsic: the kernel smooths the adapt-image weights over its bandwidth; swept bandwidth×n_knots 2026-07-10) |
+| Interferometer, `RectangularKernelAdaptDensity` + `reg.Adapt` (sparse operator) | **works — the interferometer staircase now has its escape hatch** | **yes** (2026-07-10: strict FD-step-sweep, all 7 mass/shear params live; variant D of `jax_grad/interferometer.py`) | the production-shape adaptive mesh with usable gradients on the no-over-sampling path; FoM parity 3.9e-5 relative at default bandwidth |
 | Imaging, Delaunay pixelization | **hard error** (re-confirmed 2026-07-09: 3 PASS / 8 ERROR) | n/a | `jax.pure_callback` → `scipy.spatial.Delaunay` has no JVP rule (`PyAutoArray .../interpolator/delaunay.py:126`); see "Why Delaunay gradients are infeasible today" below (phase 2) |
 | Point source, source-plane χ² (`FitPositionsSource`) | **works** (probe 4/4 PASS; forward `jax.jit` still blocked by the `Grid2DIrregular` xp gap) | **yes** (2026-07-09, rel err ≤ 5e-6; `jax_grad/point_source.py`) | includes magnification-via-Hessian term (3rd derivatives of the potential); flux/H0 legitimately zero in positions-only fits |
 | Point source, image-plane (`FitPositionsImagePairAll`) | prior probe: **not differentiable** | n/a | `PointSolver` triangle-tiling forward solve uses `jnp.where` masking + integer neighbour lookups |
@@ -78,20 +82,35 @@ interpolator refactor). On the refactored main there is no explosion and no
   micro-staircase contamination of the finite differences, not an autodiff error.
 - The uniform mesh has no transform and is exactly smooth-differentiable.
 
-**Implications**: (1) HMC/NUTS over mass parameters works with `RectangularUniform`
-or with either adaptive mesh at pixelization over-sampling > 1 — which is the
-imaging production configuration (`RectangularAdaptImage`, os_pix=4, validated
-≤ ~1%); only the os_pix=1 adaptive corner is unusable. **Interferometer is that
-corner by construction**: its pixelization has no over-sampling, so the adaptive
-meshes carry no smooth mass information there at all (confirmed on the sparse-
-operator production path 2026-07-09) — interferometer gradient work must use
-`RectangularUniform` (validated) until a smooth transform exists. A continuous
-density transform (the paper's actual formulation — CDF from a *smooth*
-GP-weighted density rather than empirical point ranks) would remove the
-micro-staircase entirely and restore the adaptive meshes everywhere;
-(2) even non-gradient samplers see a micro-staircase surface with os_pix=1 —
-worth keeping in mind for evidence estimates; (3) PR #281's fix is moot on the
-refactored code — do not re-land it.
+**Implications** *(updated 2026-07-10 — the continuous transform now exists)*:
+(1) HMC/NUTS over mass parameters works with `RectangularUniform`, with either
+linear adaptive mesh at pixelization over-sampling > 1 (imaging production
+config validated ≤ ~1%), **and now with the kernel-CDF meshes
+(`RectangularKernelAdaptDensity` / `RectangularKernelAdaptImage`,
+PyAutoArray#374) in every configuration** — the continuous density transform
+anticipated below shipped as opt-in mesh classes and is FD-certified at strict
+tolerances at os_pix=1, os_pix=4 and on the interferometer sparse path
+(variants E/F/G of `imaging_pixelization.py`, variant D of `interferometer.py`).
+The linear meshes' staircase documentation above remains accurate — they are
+unchanged. (2) even non-gradient samplers see a micro-staircase surface with
+the *linear* meshes at os_pix=1 — worth keeping in mind for evidence estimates;
+the kernel meshes remove this too. (3) PR #281's fix is moot on the refactored
+code — do not re-land it.
+
+**Kernel-mesh caveats** (2026-07-10): (a) the exact kernel forward is O(M×N) in
+memory (over-sampled queries × traced points) — fine at the jax_test/certification
+scales, but a 15k-pixel imaging config at os_pix=4 allocates ~60 GB; production
+imaging use needs a chunked evaluation (follow-up). The interferometer sparse
+path (M = N) is unaffected. (b) FD probing of any pixelized-source likelihood is
+poisoned pseudo-randomly by measure-thin solver branch flips (width < 1e-15 in
+the parameter, ΔLL ~1.6e-3 on the 8×8 interferometer config up to ~14 on 28×28
+imaging; present under `reg.Constant` and `reg.Adapt`; pre-existing, exposed —
+not caused — by the kernel meshes making mass/shear FD certifiable at all).
+`jax_grad/util.py` therefore runs an FD-step-sweep for the kernel variants:
+per parameter, FD at rel steps {1e-8, 1e-7, 1e-6}, compared at the step closest
+to autodiff — clean steps converge to AD at 1e-6..1e-9 relative, so a wrong AD
+fails every step. The flips deserve their own investigation (likely
+positive-only-solver / PDIP tie-breaks — NNLS-ledger territory).
 
 ## Why Delaunay gradients are infeasible today (phase 2a, 2026-07-09)
 
@@ -135,6 +154,14 @@ frozen-triangulation gradients the same way as the rectangular mesh.
 
 ## Findings log
 
+- **2026-07-10** (kernel-CDF certification, PyAutoArray#373/#374): the
+  kernel-density CDF meshes pass strict FD on ALL parameters in every
+  configuration, including the two previously-dead corners (imaging os_pix=1,
+  interferometer sparse). Two new cross-cutting findings: (i) measure-thin
+  solver branch flips poison single-step FD pseudo-randomly (see "Kernel-mesh
+  caveats" above; `util.compare_gradients` grew an FD-step-sweep mode);
+  (ii) the exact kernel forward is O(M×N) memory — production-scale imaging
+  needs chunking before the kernel meshes leave opt-in status.
 - **2026-07-09** (phase 1, setup): the `jax_grad` FD test scripts previously
   pointed at datasets that no longer exist (`imaging/simple`,
   `imaging/source_complex`) while their auto-simulate fallback writes
