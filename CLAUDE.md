@@ -23,7 +23,7 @@ locally at `../PyAutoMemory/lensing_wiki/`. Most directly useful here:
 ```
 jax_profiling/               JAX JIT profiling scripts for the imaging /
                              interferometer / point-source likelihood paths.
-searches_minimal/            Minimal direct-sampler examples (NSS, Nautilus,
+searches_minimal/            Minimal direct-sampler examples (Nautilus,
                              Dynesty, Emcee, LBFGS) that bypass the
                              NonLinearSearch wrapper, run on a real lens model.
 slam_pipeline/               SLaM pipeline prototypes.
