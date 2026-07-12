@@ -124,6 +124,8 @@ JIT-compiled functions after conversion to `jnp.array`.
 ## Line Endings -- Always Unix (LF)
 
 All files must use Unix line endings (LF, `\n`). Never write `\r\n`.
+
+<!-- repos_sync:history:begin -->
 ## Never rewrite history
 
 NEVER perform these operations on any repo with a remote:
@@ -147,3 +149,4 @@ and any other agent. The "Initial commit — fresh start for AI workflow" patter
 that appeared independently on origin and local for three workspace repos is
 exactly what this rule prevents — it costs ~40 commits of redundant local work
 every time it happens.
+<!-- repos_sync:history:end -->
