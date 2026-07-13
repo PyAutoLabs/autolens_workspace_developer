@@ -1,0 +1,108 @@
+# Next-wave fast optimizers — does *interaction* beat independent multi-start?
+
+Follow-up to `gradient_optimizer_findings.md` (#95). That run established the
+baseline: **independent multi-start Adam** recovers the truth
+(`einstein_radius = 1.600`, 2/12 starts in the basin) where every *single*
+cold-start method fails. This wave asks the sharper question the win implies:
+
+> The population principle is what buys robustness — but is it enough to have a
+> *population*, or must the population **maintain diversity** across basins?
+
+We test **interacting** population optimizers (which share information across the
+population) against the **independent** multi-start baseline. All are fast
+optimizers (MAP point estimates), JAX-native, open-source. Metric: fraction of
+starts/particles that reach the true basin (r_E ≈ 1.6), plus end-to-end
+wallclock and eval count.
+
+## Results
+
+| Method | Interaction | Diversity | Wall (s) | Compile (s) | Evals | Max log L | best r_E | in basin |
+|--------|-------------|-----------|---------:|------------:|------:|----------:|---------:|:--------:|
+| **multi-start Adam (12×)** *(baseline)* | none (independent) | by independence | ~1254 | ~561 | 3600 | **+31788** | **1.600** | **2/12 ✓** |
+| CMA-ES (evosax) | full covariance adaptation | **collapses** | 232 | 20 | 3200 | −158018 | 7.999 | 0/16 ✗ |
+| SVGD (blackjax) | kernel repulsion (gradient) | preserves | — | **compile-prohibitive (CPU)** | — | — | — | GPU/HPC |
+| SV-CMA-ES (evosax) | Stein repulsion (gradient-free) | preserves | 232 | 28 | 7680 | −149670† | 2.605 | 0/8 (still improving) |
+
+_r_E truth ≈ 1.6; a good fit has positive log L. Gradient-free methods (CMA-ES,
+SV-CMA-ES) compile in ~20 s (forward likelihood only, ~68 ms/eval); the
+gradient methods pay the ~280 s grad-graph compile._
+
+**SVGD is compile-prohibitive on this CPU.** `blackjax.svgd` fuses one gradient
+graph *per particle* into a single compile — ~16× the already-heavy MGE grad
+graph — which was still compiling after 26 min at >10 GB RAM when stopped. SVGD
+is a genuine GPU/HPC candidate (where the grad is faster and parallel), not a
+laptop-CPU one. **SV-CMA-ES is the cheap stand-in for the same hypothesis:**
+Stein repulsion to preserve diversity, but gradient-free, so it keeps CMA-ES's
+20 s compile.
+
+## The lesson so far: a population is not enough — it must stay diverse
+
+**CMA-ES fails, and worse than a single start.** It drove its whole population
+to `einstein_radius = 7.999` — the *opposite* prior wall from the single-start
+optimizers (which hit ~5) — with **0/16** members in the true basin. CMA-ES
+maintains **one** adapting Gaussian (mean + covariance); its covariance
+adaptation **collapses the population onto a single mode** each generation, and
+here it collapsed onto the wrong one. Its "population" exists to estimate a
+descent direction, not to cover multiple basins — CMA-ES is fundamentally a
+*unimodal* optimizer.
+
+So the many-points robustness of multi-start Adam does **not** come from having a
+population per se — it comes from **independence preserving basin diversity**
+(each start descends its own basin; 2 of 12 happened to start in the right one).
+An interacting population that *collapses* diversity (CMA-ES) is not just
+unhelpful, it can be worse.
+
+**The test of the hypothesis:** a method that *preserves* diversity while
+interacting should retain multi-basin coverage where CMA-ES lost it. SVGD
+(gradient + repulsion) is the natural test but is compile-prohibitive on this
+CPU (above), so **SV-CMA-ES** (Stein repulsion, gradient-free) is the cheap
+stand-in that isolates the *repulsion* variable against plain CMA-ES.
+
+**SV-CMA-ES result — repulsion prevents the collapse.** With Stein repulsion,
+the sub-populations did *not* collapse to the wall: best `einstein_radius`
+reached **2.605** (vs plain CMA-ES's **7.999**), and the log-posterior was still
+climbing steeply at gen 100 (−184k → −150k, not plateaued). So the repulsion
+term demonstrably **restored the diversity** plain CMA-ES destroys — the search
+stayed near the truth instead of collapsing to a wall. But it did **not** reach
+the basin (0/8) in 120 generations: gradient-free, it explores diversely but
+descends *slowly* into the narrow true basin.
+
+† still-improving, not converged — the log-posterior was rising when the budget
+ran out.
+
+## Verdict — the many-points principle needs BOTH diversity and gradients
+
+The wave answers the question cleanly. Robust MAP-finding on this likelihood
+needs **two** ingredients, and the methods separate exactly along them:
+
+| | maintains diversity? | uses gradient? | result |
+|---|:--:|:--:|---|
+| single cold-start (Adam/L-BFGS/SVI) | ✗ | ✓ | wrong basin |
+| CMA-ES | ✗ (collapses) | ✗ | wrong basin (worst, r_E→8) |
+| SV-CMA-ES | ✓ (repulsion) | ✗ | near truth (r_E 2.6), too slow to land |
+| **multi-start Adam** | **✓ (independence)** | **✓** | **truth (r_E 1.600)** |
+| SVGD | ✓ (repulsion) | ✓ | **predicted best — but GPU/HPC only on CPU compile** |
+
+- **Diversity alone** (SV-CMA-ES) keeps you near the truth but can't descend the
+  narrow basin fast — gradient-free exploration is slow.
+- **Gradient alone** (single start) descends fast but into whatever basin the
+  cold start fell in — usually the wrong one.
+- **Both** (multi-start Adam) is the robust-and-fast winner; **SVGD** is the
+  theoretically ideal unifier (repulsion-diversity + gradient) and the clear
+  thing to run **on GPU**, where its 16-fused-gradient compile is affordable.
+
+**Recommendation:** multi-start Adam for a robust CPU solve; **SVGD on GPU** as
+the next step to try to beat it (diversity + gradient in one interacting
+population). SV-CMA-ES with a longer budget / a final gradient-polish of its best
+member is a cheap CPU compromise.
+
+## Candidates still to run
+
+- **SV-CMA-ES** (running) — the cheap diversity-preservation test.
+- **SVGD on GPU/HPC** — the gradient version, once off the laptop CPU.
+- Cheap multi-start local-rule variants (ADABelief, Lion) — does the local rule
+  matter within independent multi-start? (multi-start L-BFGS is expensive — the
+  line search makes it ~hours — so it is capped/optional.)
+- **jaxns** cameo — JAX-native nested sampling reference (a *sampler*, included
+  for context: its many live points are the population principle done as
+  inference).
