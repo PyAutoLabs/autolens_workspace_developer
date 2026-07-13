@@ -96,6 +96,36 @@ the next step to try to beat it (diversity + gradient in one interacting
 population). SV-CMA-ES with a longer budget / a final gradient-polish of its best
 member is a cheap CPU compromise.
 
+## GPU / HPC status (RESUME HERE — 2026-07-13 EOD)
+
+The compute reality for the GPU candidates:
+
+- **RAL A100** — the `autolens_profiling` submit scripts target it
+  (`/mnt/ral/jnightin/…`, user `jnightin`), but it is **not reachable from the
+  local machine** (no SSH host configured; the RAL flow runs *on* the RAL login
+  node: `source activate.sh; sbatch hpc/batch_gpu/submit_…`). Submitting needs a
+  human on RAL.
+- **COSMA8** (Durham, `cosma8` in `~/.ssh/config`, A100 partition) — configured
+  but **2FA-gated**; an agent can't authenticate.
+- **Laptop GPU** (RTX 2060 6 GB, `~/venv/PyAutoGPU`, jax 0.6.2 cuda) — works for
+  **optax** (multi-start Adam) but **NOT** SVGD/CMA-ES: PyAutoGPU has blackjax
+  0.1.0b1 (too old for the 1.5 SVGD API) and no evosax/numpyro.
+
+**In progress at EOD:** `gpu_multi_start_adam.py` running on the laptop GPU with
+`N_STARTS=48` (GIGA-Lens scaling test — does the per-start ~17% hit rate push the
+whole-run hit toward ~100%?). Result → `output/gpu_multi_start_adam_n48_summary.txt`.
+**Read it first on resume.**
+
+**Tomorrow:**
+1. Read the 48-start GPU result; if it fit 6 GB, sweep N ∈ {24, 48, 96} for the
+   p_hit scaling curve (or reduce N if it OOM'd).
+2. **SVGD + SV-CMA-ES on RAL A100** — the diversity-preserving candidates that
+   need the A100 (+ full deps: newer blackjax, evosax). Needs: confirm the RAL
+   checkout layout (which repos under `/mnt/ral/jnightin/`), write RAL sbatch
+   scripts for `searches_minimal/{svgd,cmaes,sv_cmaes}.py`, human runs them on
+   the RAL login node.
+3. Cheap multi-start ADABelief/Lion local-rule variants (CPU, optional).
+
 ## Candidates still to run
 
 - **SV-CMA-ES** (running) — the cheap diversity-preservation test.
