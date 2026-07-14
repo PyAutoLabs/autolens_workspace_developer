@@ -31,14 +31,44 @@ Run on an NVIDIA A100 80GB (RAL `gpu` partition, `euclid_jump`; overlay blackjax
 | Method | Device | Compile (s) | Evals | Max log L | best r_E | in basin |
 |--------|--------|------------:|------:|----------:|---------:|:--------:|
 | **multi-start Adam (128×)** | A100 | 84.7 | 38 400 | **+31787.8** | **1.600** | **23/128 (p_hit 0.18)** |
-| SVGD (16 particles) | A100 | 44.5 | _running_ | _tbd_ | _tbd_ | _tbd_ |
+| **SVGD (16 particles)** | A100 | 90.1 | 4 800 | **+17999** | **1.595** | best particle = truth¶ |
+
+¶ SVGD's *best* particle reaches the truth (r_E 1.595, log L +18k); 0/16 of the
+*final* particles sit inside the tight ±0.3 basin because SVGD is a **posterior**
+method — repulsion spreads the cloud rather than collapsing every particle to the
+single MAP (hence its best log L +18k is shallower than the multi-start point
+optimum +31.8k). As a *mode-finder* (best particle), it succeeds.
 
 **Multi-start Adam scales exactly as GIGA-Lens predicts.** At 128 starts on the
 A100 (compile 85 s), **23** land in the true basin — the per-start hit rate holds
-at ~18% (2/12 on CPU → 23/128 on GPU), so P(≥1 hit) is now effectively 1.0. The
-GPU makes the wide parallel start-batch that guarantees robustness *cheap*. And
-**SVGD, prohibitive to even compile on CPU, compiles in 44.5 s on the A100** —
-the GPU is exactly what its 16-fused-gradient graph needed.
+at ~18% (2/12 on CPU → 23/128 on GPU), so P(≥1 hit) is effectively 1.0. The GPU
+makes the wide parallel start-batch that guarantees robustness *cheap*.
+
+**SVGD — the diversity-preserving gradient method — reaches the truth on the
+A100** (best r_E 1.595), where it was prohibitive to even compile on CPU
+(>26 min/10 GB; A100 compiles it in 90 s and runs 300 steps in 105 s). Two script
+lessons: (1) the SVGD step **must be jitted** — an un-jitted Python loop retraces
+the median-heuristic kernel update every step and never finishes; (2) the RAL GPU
+runs **float32** (x64 off), tolerated here.
+
+## Final verdict (CPU + A100)
+
+Robust MAP-finding on this likelihood needs **diversity AND gradients**, and the
+methods separate cleanly along both axes:
+
+| method | diversity | gradient | reaches truth? |
+|--------|:--:|:--:|:--:|
+| single cold-start (Adam/L-BFGS/SVI) | ✗ | ✓ | ✗ |
+| CMA-ES | ✗ (collapses) | ✗ | ✗ |
+| SV-CMA-ES | ✓ (repulsion) | ✗ | ✗ (near, too slow) |
+| **multi-start Adam** | ✓ (independence) | ✓ | ✓ **best (scales on GPU)** |
+| **SVGD** | ✓ (repulsion) | ✓ | ✓ (mode-finder; posterior spread) |
+
+**Practical recommendation:** **multi-start Adam** for a robust fast *point*
+estimate — trivially parallel, scales to ~100% basin-hit on a GPU (GIGA-Lens).
+**SVGD** when you also want a posterior — it reaches the basin and gives spread —
+but jit the loop and expect a distribution, not the deepest MAP. Both need the
+GPU to be practical at scale; SVGD needs it even to compile.
 
 _r_E truth ≈ 1.6; a good fit has positive log L. Gradient-free methods (CMA-ES,
 SV-CMA-ES) compile in ~20 s (forward likelihood only, ~68 ms/eval); the
