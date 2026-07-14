@@ -1,0 +1,30 @@
+--- multi-start L-BFGS (128x) Results ---
+Best fit:        lens.mass.einstein_radius=0.0000  lens.mass.centre=(0.003, -0.038)  shear=(0.2912, 0.2610)
+Einstein radius: 0.0000     (truth ~ 1.6)
+Max log L:       -149524.8438     (log posterior = -149539.0836, log prior = -14.2398)
+Log evidence:    n/a (point optimiser, not nested sampling)
+
+--- Performance ---
+Wall time:           644.97 s
+Sampling time:       211.80 s     (wall - JIT compile)
+JIT compile time:    433.17 s     (one-shot value_and_grad warm-up)
+Likelihood evals:    8789     (fwd+grad evals; iterations: 200)
+Time per eval:       1059.0 ms     (post-compile fwd+grad)
+ESS:                 n/a (point optimiser)
+Posterior samples:   n/a (point optimiser)
+Sampler config:      n_starts=128, max_iters=200, unconstrained z-space, 3/128 in basin (p_hit=0.02)
+
+--- Evaluation accounting ---
+Starts/particles:                128
+Actual iterations:               1..200 per start
+Max iterations (cap):            200
+Batch latency per step (ms):     1059.0
+Scalar-equiv objective evals:    8789
+Peak GPU memory (MB):            5493.9
+Scalar-equiv gradient evals:     8789
+
+--- Convergence ---
+Termination:         self-terminating (L-BFGS grad-tol=0.001, cap 200 iters)
+Converged:           True
+Evals to ML:         1     (first iter within 1 nat of max log posterior)
+Time to ML:          644.97 s

@@ -1,0 +1,188 @@
+===== NODE / GPU =====
+euclid-ral-gpu-1
+GPU 0: NVIDIA A100 80GB PCIe (UUID: GPU-acdb3682-59ed-28d7-8092-33357bf8df01)
+backend gpu [CudaDevice(id=0)]
+########## RUN Adam 12:08:08 ##########
+2026-07-14 12:08:10,312 - jax._src.xla_bridge - INFO - Unable to initialize backend 'rocm': module 'jaxlib.xla_extension' has no attribute 'GpuAllocatorConfig'
+2026-07-14 12:08:10,313 - jax._src.xla_bridge - INFO - Unable to initialize backend 'tpu': INTERNAL: Failed to open libtpu.so: libtpu.so: cannot open shared object file: No such file or directory
+JAX backend: gpu  devices: [CudaDevice(id=0)]
+2026-07-14 12:08:11,021 - autoarray.dataset.imaging.dataset - INFO - IMAGING - Data masked, contains a total of 15361 image-pixels
+Model free parameters: 15  |  N_STARTS = 128  |  OPTIMIZER = adam (lr=0.01)
+Collected 128 finite-gradient starts (from 128 draws)
+Batched (vmap x128) compile: 82.5 s
+
+Running 128-start adam for 300 steps on gpu...
+  step    0: best log_posterior = -170516.91
+  step   50: best log_posterior = 30668.82
+  step  100: best log_posterior = 31779.91
+  step  150: best log_posterior = 31787.69
+  step  200: best log_posterior = 31787.85
+  step  250: best log_posterior = 31787.85
+
+24/128 starts reached the correct basin (p_hit = 0.19)
+
+--- GPU multi-start adam (128x) Results ---
+Best fit:        lens.mass.einstein_radius=1.5997  lens.mass.centre=(0.000, 0.000)  shear=(0.0486, 0.0496)
+Einstein radius: 1.5997     (truth ~ 1.6)
+Max log L:       31787.9414     (log posterior = 31787.8493, log prior = -0.0921)
+Log evidence:    n/a (point optimiser, not nested sampling)
+
+--- Performance ---
+Wall time:           182.69 s
+Sampling time:       16.74 s     (wall - JIT compile)
+JIT compile time:    165.95 s     (one-shot value_and_grad warm-up)
+Likelihood evals:    38400     (fwd+grad evals; iterations: 300)
+Time per eval:       0.4 ms     (post-compile fwd+grad)
+ESS:                 n/a (point optimiser)
+Posterior samples:   n/a (point optimiser)
+Sampler config:      optimizer=adam, n_starts=128, lr=0.01, steps=300, device=gpu, 24/128 in basin (p_hit=0.19)
+
+--- Convergence ---
+Termination:         user-budget (fixed step count)
+Converged:           True
+Evals to ML:         126     (first iter within 1 nat of max log posterior)
+Time to ML:          76.73 s
+
+Summary written to: /mnt/ral/jnightin/autolens_workspace_developer/searches_minimal/output/gpu_multi_start_adam_n128_summary.txt
+
+comparison row:
+| GPU multi-start adam (128x)  |    182.7 |    166.0 |    38400 |     31787.94 |   1.5997 | user-budget |     yes |
+########## DONE Adam rc=0 12:11:32 ##########
+########## RUN AdamWarm 12:11:32 ##########
+2026-07-14 12:11:34,632 - jax._src.xla_bridge - INFO - Unable to initialize backend 'rocm': module 'jaxlib.xla_extension' has no attribute 'GpuAllocatorConfig'
+2026-07-14 12:11:34,633 - jax._src.xla_bridge - INFO - Unable to initialize backend 'tpu': INTERNAL: Failed to open libtpu.so: libtpu.so: cannot open shared object file: No such file or directory
+JAX backend: gpu  devices: [CudaDevice(id=0)]
+2026-07-14 12:11:35,383 - autoarray.dataset.imaging.dataset - INFO - IMAGING - Data masked, contains a total of 15361 image-pixels
+Model free parameters: 15  |  N_STARTS = 128  |  OPTIMIZER = adam (lr=0.01)
+Collected 128 finite-gradient starts (from 128 draws)
+Batched (vmap x128) compile: 16.3 s
+
+Running 128-start adam for 300 steps on gpu...
+  step    0: best log_posterior = -170516.91
+  step   50: best log_posterior = 30785.24
+  step  100: best log_posterior = 31779.96
+  step  150: best log_posterior = 31787.68
+  step  200: best log_posterior = 31787.81
+  step  250: best log_posterior = 31787.81
+
+23/128 starts reached the correct basin (p_hit = 0.18)
+
+--- GPU multi-start adam (128x) Results ---
+Best fit:        lens.mass.einstein_radius=1.5997  lens.mass.centre=(0.000, 0.000)  shear=(0.0486, 0.0496)
+Einstein radius: 1.5997     (truth ~ 1.6)
+Max log L:       31787.9062     (log posterior = 31787.8141, log prior = -0.0921)
+Log evidence:    n/a (point optimiser, not nested sampling)
+
+--- Performance ---
+Wall time:           50.30 s
+Sampling time:       16.51 s     (wall - JIT compile)
+JIT compile time:    33.79 s     (one-shot value_and_grad warm-up)
+Likelihood evals:    38400     (fwd+grad evals; iterations: 300)
+Time per eval:       0.4 ms     (post-compile fwd+grad)
+ESS:                 n/a (point optimiser)
+Posterior samples:   n/a (point optimiser)
+Sampler config:      optimizer=adam, n_starts=128, lr=0.01, steps=300, device=gpu, 23/128 in basin (p_hit=0.18)
+
+--- Convergence ---
+Termination:         user-budget (fixed step count)
+Converged:           True
+Evals to ML:         126     (first iter within 1 nat of max log posterior)
+Time to ML:          21.13 s
+
+Summary written to: /mnt/ral/jnightin/autolens_workspace_developer/searches_minimal/output/gpu_multi_start_adam_n128_summary.txt
+
+comparison row:
+| GPU multi-start adam (128x)  |     50.3 |     33.8 |    38400 |     31787.91 |   1.5997 | user-budget |     yes |
+########## DONE AdamWarm rc=0 12:12:38 ##########
+########## RUN ADABelief 12:12:38 ##########
+2026-07-14 12:12:39,860 - jax._src.xla_bridge - INFO - Unable to initialize backend 'rocm': module 'jaxlib.xla_extension' has no attribute 'GpuAllocatorConfig'
+2026-07-14 12:12:39,861 - jax._src.xla_bridge - INFO - Unable to initialize backend 'tpu': INTERNAL: Failed to open libtpu.so: libtpu.so: cannot open shared object file: No such file or directory
+JAX backend: gpu  devices: [CudaDevice(id=0)]
+2026-07-14 12:12:40,557 - autoarray.dataset.imaging.dataset - INFO - IMAGING - Data masked, contains a total of 15361 image-pixels
+Model free parameters: 15  |  N_STARTS = 128  |  OPTIMIZER = adabelief (lr=0.01)
+Collected 128 finite-gradient starts (from 128 draws)
+Batched (vmap x128) compile: 16.2 s
+
+Running 128-start adabelief for 300 steps on gpu...
+  step    0: best log_posterior = -170516.91
+  step   50: best log_posterior = 30837.11
+  step  100: best log_posterior = 31780.76
+  step  150: best log_posterior = 31787.75
+  step  200: best log_posterior = 31787.75
+  step  250: best log_posterior = 31787.75
+
+20/128 starts reached the correct basin (p_hit = 0.16)
+
+--- GPU multi-start adabelief (128x) Results ---
+Best fit:        lens.mass.einstein_radius=1.5997  lens.mass.centre=(0.000, 0.000)  shear=(0.0485, 0.0495)
+Einstein radius: 1.5997     (truth ~ 1.6)
+Max log L:       31787.8477     (log posterior = 31787.7555, log prior = -0.0922)
+Log evidence:    n/a (point optimiser, not nested sampling)
+
+--- Performance ---
+Wall time:           50.46 s
+Sampling time:       16.66 s     (wall - JIT compile)
+JIT compile time:    33.80 s     (one-shot value_and_grad warm-up)
+Likelihood evals:    38400     (fwd+grad evals; iterations: 300)
+Time per eval:       0.4 ms     (post-compile fwd+grad)
+ESS:                 n/a (point optimiser)
+Posterior samples:   n/a (point optimiser)
+Sampler config:      optimizer=adabelief, n_starts=128, lr=0.01, steps=300, device=gpu, 20/128 in basin (p_hit=0.16)
+
+--- Convergence ---
+Termination:         user-budget (fixed step count)
+Converged:           True
+Evals to ML:         117     (first iter within 1 nat of max log posterior)
+Time to ML:          19.68 s
+
+Summary written to: /mnt/ral/jnightin/autolens_workspace_developer/searches_minimal/output/gpu_multi_start_adabelief_n128_summary.txt
+
+comparison row:
+| GPU multi-start adabelief (128x) |     50.5 |     33.8 |    38400 |     31787.85 |   1.5997 | user-budget |     yes |
+########## DONE ADABelief rc=0 12:13:42 ##########
+########## RUN Lion 12:13:42 ##########
+2026-07-14 12:13:43,752 - jax._src.xla_bridge - INFO - Unable to initialize backend 'rocm': module 'jaxlib.xla_extension' has no attribute 'GpuAllocatorConfig'
+2026-07-14 12:13:43,753 - jax._src.xla_bridge - INFO - Unable to initialize backend 'tpu': INTERNAL: Failed to open libtpu.so: libtpu.so: cannot open shared object file: No such file or directory
+JAX backend: gpu  devices: [CudaDevice(id=0)]
+2026-07-14 12:13:44,447 - autoarray.dataset.imaging.dataset - INFO - IMAGING - Data masked, contains a total of 15361 image-pixels
+Model free parameters: 15  |  N_STARTS = 128  |  OPTIMIZER = lion (lr=0.001)
+Collected 128 finite-gradient starts (from 128 draws)
+Batched (vmap x128) compile: 16.0 s
+
+Running 128-start lion for 300 steps on gpu...
+  step    0: best log_posterior = -170516.91
+  step   50: best log_posterior = -123357.50
+  step  100: best log_posterior = -40087.05
+  step  150: best log_posterior = 13350.31
+  step  200: best log_posterior = 23605.33
+  step  250: best log_posterior = 29539.77
+
+20/128 starts reached the correct basin (p_hit = 0.16)
+
+--- GPU multi-start lion (128x) Results ---
+Best fit:        lens.mass.einstein_radius=1.6042  lens.mass.centre=(0.002, -0.006)  shear=(0.0326, 0.0603)
+Einstein radius: 1.6042     (truth ~ 1.6)
+Max log L:       29559.2637     (log posterior = 29559.1978, log prior = -0.0659)
+Log evidence:    n/a (point optimiser, not nested sampling)
+
+--- Performance ---
+Wall time:           49.75 s
+Sampling time:       16.31 s     (wall - JIT compile)
+JIT compile time:    33.44 s     (one-shot value_and_grad warm-up)
+Likelihood evals:    38400     (fwd+grad evals; iterations: 300)
+Time per eval:       0.4 ms     (post-compile fwd+grad)
+ESS:                 n/a (point optimiser)
+Posterior samples:   n/a (point optimiser)
+Sampler config:      optimizer=lion, n_starts=128, lr=0.001, steps=300, device=gpu, 20/128 in basin (p_hit=0.16)
+
+--- Convergence ---
+Termination:         user-budget (fixed step count)
+Converged:           True
+Evals to ML:         252     (first iter within 1 nat of max log posterior)
+Time to ML:          41.79 s
+
+Summary written to: /mnt/ral/jnightin/autolens_workspace_developer/searches_minimal/output/gpu_multi_start_lion_n128_summary.txt
+
+comparison row:
+| GPU multi-start lion (128x)  |     49.8 |     33.4 |    38400 |     29559.26 |   1.6042 | user-budget |     yes |
+########## DONE Lion rc=0 12:14:44 ##########

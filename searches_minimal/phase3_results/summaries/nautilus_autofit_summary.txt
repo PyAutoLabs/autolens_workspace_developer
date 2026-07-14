@@ -1,0 +1,19 @@
+--- Nautilus (autofit search, JAX likelihood on A100) Results ---
+Best fit:        lens.mass.einstein_radius=1.5998  lens.mass.centre=(-0.000, 0.000)  shear=(0.0484, 0.0498)
+Einstein radius: 1.5998     (truth ~ 1.6)
+Max log L:       31786.6082
+Log evidence:    31690.2297 +/- nan
+
+--- Performance ---
+Wall time:           522.98 s     (end-to-end search.fit, CPU orchestration + A100 JAX likelihood)
+Likelihood evals:    33000
+Time per eval:       15.848 ms     (sequential; Nautilus does not batch)
+ESS:                 1844.5
+Posterior samples:   32982
+Sampler config:      af.Nautilus n_live=100, default n_eff=500 / f_live=0.01; number_of_cores=1
+Hardware:            Nautilus orchestrates on CPU; each likelihood on the A100 (NOT GPU-native, NOT batched)
+
+--- Convergence ---
+Termination:         self-terminating (Nautilus n_eff / f_live convergence)
+Converged:           yes (autofit Nautilus default criterion)
+Truth basin:         YES   (max-posterior einstein_radius vs truth 1.6)

@@ -1,0 +1,55 @@
+===== NODE / GPU =====
+euclid-ral-gpu-2
+GPU 0: NVIDIA A100 80GB PCIe (UUID: GPU-bed92da1-4a1d-c9fe-0a65-a8b67f78862a)
+backend gpu [CudaDevice(id=0)]
+blackjax 1.3
+########## RUN SVGD 12:08:09 ##########
+2026-07-14 12:08:11,948 - jax._src.xla_bridge - INFO - Unable to initialize backend 'rocm': module 'jaxlib.xla_extension' has no attribute 'GpuAllocatorConfig'
+2026-07-14 12:08:11,949 - jax._src.xla_bridge - INFO - Unable to initialize backend 'tpu': INTERNAL: Failed to open libtpu.so: libtpu.so: cannot open shared object file: No such file or directory
+2026-07-14 12:08:12,359 - autoarray.dataset.imaging.dataset - INFO - IMAGING - Data masked, contains a total of 15361 image-pixels
+Model free parameters: 15
+Collected 16 finite-gradient particles (from 16 draws)
+
+Running SVGD (compiling on step 0)...
+JIT compile (svgd.step): 81.8 s
+  step   25: best log_posterior = -70752.28
+  step   50: best log_posterior = -40958.25
+  step   75: best log_posterior = -8364.98
+  step  100: best log_posterior = 5117.22
+  step  125: best log_posterior = 7008.54
+  step  150: best log_posterior = 9868.62
+  step  175: best log_posterior = 11175.75
+  step  200: best log_posterior = 12992.54
+  step  225: best log_posterior = 15553.50
+  step  250: best log_posterior = 15863.67
+  step  275: best log_posterior = 16536.04
+
+Best r_E = 1.598 (truth 1.6); 5/16 particles in basin
+
+--- SVGD (blackjax) Results ---
+Best fit:        lens.mass.einstein_radius=1.5980  lens.mass.centre=(0.007, 0.001)  shear=(0.0841, -0.0027)
+Einstein radius: 1.5980     (truth ~ 1.6)
+Max log L:       17117.3789     (log posterior = 17117.2267, log prior = -0.1522)
+Log evidence:    n/a (point optimiser, not nested sampling)
+
+--- Performance ---
+Wall time:           180.07 s
+Sampling time:       98.26 s     (wall - JIT compile)
+JIT compile time:    81.81 s     (one-shot value_and_grad warm-up)
+Likelihood evals:    4800     (fwd+grad evals; iterations: 300)
+Time per eval:       20.5 ms     (post-compile fwd+grad)
+ESS:                 n/a (point optimiser)
+Posterior samples:   n/a (point optimiser)
+Sampler config:      n_particles=16, steps=300, lr=0.01, rbf+median-heuristic repulsion; best r_E=1.598, 5/16 particles in basin
+
+--- Convergence ---
+Termination:         user-budget (fixed step count)
+Converged:           True
+Evals to ML:         296     (first iter within 1 nat of max log posterior)
+Time to ML:          178.27 s
+
+Summary written to: /mnt/ral/jnightin/autolens_workspace_developer/searches_minimal/output/svgd_summary.txt
+
+comparison row:
+| SVGD (blackjax)              |    180.1 |     81.8 |     4800 |     17117.38 |   1.5980 | user-budget |     yes |
+########## DONE SVGD rc=0 12:12:21 ##########
