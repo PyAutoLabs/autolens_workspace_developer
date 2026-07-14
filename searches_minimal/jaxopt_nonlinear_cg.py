@@ -42,7 +42,15 @@ time_compile(obj)
 z_starts, n_kept = make_z_starts(obj, N_STARTS)
 print(f"Collected {n_kept} finite-gradient z-starts")
 
-solver = NonlinearCG(fun=obj.neg_log_posterior_z_raw, maxiter=MAXITER, tol=TOL)
+# implicit_diff=False + backtracking line search — see jaxopt_lbfgs_multistart.py.
+solver = NonlinearCG(
+    fun=obj.neg_log_posterior_z_raw,
+    maxiter=MAXITER,
+    tol=TOL,
+    implicit_diff=False,
+    linesearch="backtracking",
+    maxls=15,
+)
 
 run_vmapped_map_solver(
     obj=obj,

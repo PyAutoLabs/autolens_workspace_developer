@@ -46,7 +46,18 @@ time_compile(obj)
 z_starts, n_kept = make_z_starts(obj, N_STARTS)
 print(f"Collected {n_kept} finite-gradient z-starts")
 
-solver = LBFGS(fun=obj.neg_log_posterior_z_raw, maxiter=MAXITER, tol=TOL)
+# implicit_diff=False: we read the solved params, never differentiate through
+# the solver, and the implicit-diff machinery blows up the vmapped XLA compile.
+# backtracking line search keeps the while-loop body small (the default `zoom`
+# search fuses the heavy MGE grad graph many times and compiles for >15 min).
+solver = LBFGS(
+    fun=obj.neg_log_posterior_z_raw,
+    maxiter=MAXITER,
+    tol=TOL,
+    implicit_diff=False,
+    linesearch="backtracking",
+    maxls=15,
+)
 
 run_vmapped_map_solver(
     obj=obj,

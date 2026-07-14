@@ -89,7 +89,16 @@ adam_best_logpost = -global_best_loss
 print(f"Stage 1 done: Adam best log_posterior = {adam_best_logpost:.2f}  ({adam_loop_s:.1f} s)")
 
 # ---- Stage 2: L-BFGS polish from every Adam endpoint -----------------------
-solver = LBFGS(fun=obj.neg_log_posterior_z_raw, maxiter=LBFGS_MAXITER, tol=LBFGS_TOL)
+# implicit_diff=False + backtracking line search — see jaxopt_lbfgs_multistart.py
+# (default zoom + implicit diff make the vmapped compile hang for >15 min).
+solver = LBFGS(
+    fun=obj.neg_log_posterior_z_raw,
+    maxiter=LBFGS_MAXITER,
+    tol=LBFGS_TOL,
+    implicit_diff=False,
+    linesearch="backtracking",
+    maxls=15,
+)
 run_batched = jax.jit(jax.vmap(lambda z: solver.run(z)))
 t0 = time.time()
 step = run_batched(z_after_adam)
