@@ -30,15 +30,21 @@ from searches_minimal._grad_setup import (
 )
 
 N_STARTS = int(os.environ.get("MULTISTART_N_STARTS", "64"))
-LEARNING_RATE = 1e-2
 N_STEPS = 300
 START_LOW, START_HIGH = 0.15, 0.85
 EINSTEIN_TRUTH = 1.6
 EINSTEIN_TOL = 0.3
 
+# Local optimizer rule within multi-start (does it matter vs Adam?): set via env.
+# Lion is sign-based, so it wants a ~10x smaller learning rate than Adam/ADABelief.
+OPTIMIZER = os.environ.get("MULTISTART_OPTIMIZER", "adam").lower()
+_OPT_FACTORY = {"adam": optax.adam, "adabelief": optax.adabelief, "lion": optax.lion}
+_OPT_LR = {"adam": 1e-2, "adabelief": 1e-2, "lion": 1e-3}
+LEARNING_RATE = float(os.environ.get("MULTISTART_LR", _OPT_LR[OPTIMIZER]))
+
 print(f"JAX backend: {jax.default_backend()}  devices: {jax.devices()}")
 obj = build_map_objective()
-print(f"Model free parameters: {obj.ndim}  |  N_STARTS = {N_STARTS}")
+print(f"Model free parameters: {obj.ndim}  |  N_STARTS = {N_STARTS}  |  OPTIMIZER = {OPTIMIZER} (lr={LEARNING_RATE})")
 
 compile_s = time_compile(obj)
 batched_vag = jax.jit(jax.vmap(jax.value_and_grad(obj.neg_log_posterior_raw)))
@@ -64,13 +70,13 @@ jax.block_until_ready(l); jax.block_until_ready(g)
 batched_compile_s = time.time() - t0
 print(f"Batched (vmap x{N_STARTS}) compile: {batched_compile_s:.1f} s")
 
-opt = optax.adam(LEARNING_RATE)
+opt = _OPT_FACTORY[OPTIMIZER](LEARNING_RATE)
 opt_state = opt.init(params)
 best_history: list[float] = []
 global_best_loss = np.inf
 global_best_params = params[0]
 
-print(f"\nRunning {N_STARTS}-start Adam for {N_STEPS} steps on {jax.default_backend()}...")
+print(f"\nRunning {N_STARTS}-start {OPTIMIZER} for {N_STEPS} steps on {jax.default_backend()}...")
 t_start = time.time()
 for i in range(N_STEPS):
     losses, grads = batched_vag(params)
@@ -92,8 +98,8 @@ n_in_basin = int(np.sum(np.abs(final_r_e - EINSTEIN_TRUTH) < EINSTEIN_TOL))
 print(f"\n{n_in_basin}/{N_STARTS} starts reached the correct basin (p_hit = {n_in_basin/N_STARTS:.2f})")
 
 write_grad_summary(
-    name=f"gpu_multi_start_adam_n{N_STARTS}",
-    title=f"GPU multi-start Adam ({N_STARTS}x)",
+    name=f"gpu_multi_start_{OPTIMIZER}_n{N_STARTS}",
+    title=f"GPU multi-start {OPTIMIZER} ({N_STARTS}x)",
     obj=obj,
     best_params=global_best_params,
     log_posterior_history=best_history,
@@ -104,7 +110,7 @@ write_grad_summary(
     n_iters=N_STEPS,
     converged=(n_in_basin > 0),
     config_line=(
-        f"n_starts={N_STARTS}, lr={LEARNING_RATE}, steps={N_STEPS}, "
+        f"optimizer={OPTIMIZER}, n_starts={N_STARTS}, lr={LEARNING_RATE}, steps={N_STEPS}, "
         f"device={jax.default_backend()}, {n_in_basin}/{N_STARTS} in basin (p_hit={n_in_basin/N_STARTS:.2f})"
     ),
 )
