@@ -39,15 +39,17 @@ import autolens as al  # noqa: E402
 from searches_minimal._setup import build_dataset  # noqa: E402
 
 
-MESH_CLS = al.mesh.RectangularSplineAdaptDensity  # spline = smooth/differentiable
+def _mesh(shape):
+    # Kernel-CDF mesh: continuous-density transform, C^inf, strict-FD certified
+    # on ALL params (incl. mass/shear) at over-sampling 1 — see
+    # autolens_workspace_test/scripts/jax_grad/imaging_pixelization.py.
+    return al.mesh.RectangularKernelAdaptDensity(shape=shape, bandwidth=0.1)
 
 
 def build_pix_model(mesh_shape: tuple[int, int] = (30, 30)) -> af.Collection:
-    """Isothermal + shear lens (free) with a spline-mesh + Constant pixelized
-    source (reg coefficient free). Mass priors centred near the benchmark truth
-    (einstein_radius ~ 1.6). The mesh is a *spline* adapt mesh, whose smooth
-    interpolation is designed to be differentiable (unlike the plain
-    RectangularAdaptDensity, whose hard adaptation is not)."""
+    """Isothermal + shear lens (free) with a kernel-CDF pixelized source (reg
+    coefficient free). Mass priors centred near the benchmark truth
+    (einstein_radius ~ 1.6)."""
     mass = af.Model(al.mp.Isothermal)
     mass.centre_0 = af.UniformPrior(lower_limit=-0.1, upper_limit=0.1)
     mass.centre_1 = af.UniformPrior(lower_limit=-0.1, upper_limit=0.1)
@@ -63,7 +65,7 @@ def build_pix_model(mesh_shape: tuple[int, int] = (30, 30)) -> af.Collection:
 
     pixelization = af.Model(
         al.Pixelization,
-        mesh=MESH_CLS(shape=mesh_shape),
+        mesh=_mesh(mesh_shape),
         regularization=al.reg.Constant,
     )
     pixelization.regularization.coefficient = af.UniformPrior(
@@ -76,8 +78,11 @@ def build_pix_model(mesh_shape: tuple[int, int] = (30, 30)) -> af.Collection:
 
 def main() -> None:
     print(f"JAX backend: {jax.default_backend()}  x64={jax.config.jax_enable_x64}")
-    print(f"Mesh: {MESH_CLS.__name__}")
+    print("Mesh: RectangularKernelAdaptDensity(bandwidth=0.1)")
     dataset = build_dataset()
+    # Kernel-CDF is differentiable at os_pix=1, but set it explicitly (the
+    # certified recipe pins over_sample_size_pixelization).
+    dataset = dataset.apply_over_sampling(over_sample_size_pixelization=1)
     model = build_pix_model()
     analysis = al.AnalysisImaging(dataset=dataset, use_jax=True)
     ndim = model.prior_count
