@@ -79,3 +79,60 @@ None of them gets past the initial exploration phase. Best-fit
 parameters and log Z therefore measure "where did the random init land",
 not "what is the MGE likelihood maximum". Crank `n_live`, `maxiter`,
 `max_steps`, `n_like_max`, etc. for converged numbers.
+
+
+===================================================================
+JAX gradient-based point optimizers (MAP)  —  see gradient_optimizer_findings.md
+===================================================================
+
+Objective: -(log_likelihood + sum log_prior) minimised in the physical
+parameter vector (a true MAP estimate; log_prior via autofit's jax-traceable
+model.log_prior_list_from_vector). Cold-started from a perturbed prior median
+(the raw median is a NaN-gradient degenerate point — ell_comps/shear at 0).
+einstein_radius truth ~ 1.6.
+
+| Optimizer              | Wall (s) | Compile (s) | Evals | ms/eval | Max log L    | Max log post | Conv |
+|------------------------|---------:|------------:|------:|--------:|-------------:|-------------:|-----:|
+| optax Adam      (MAP)  |    374.0 |       310.7 |   247 |   231.7 |   -158002.29 |   -158004.39 |  no  |
+| optax ADABelief (MAP)  |    329.3 |       276.7 |   256 |   199.5 |   -157998.66 |   -158000.87 |  no  |
+| jaxopt L-BFGS   (MAP)  |   1037.3 |       298.4 |   200 |   172.4 |   -158004.85 |   -158008.30 |  no  |
+
+Headline
+--------
+Per-eval, the JAX MAP objective is ~6-8x cheaper than the NumPy MGE likelihood
+(compile ~280-310 s one-shot, then ~170-230 ms/fwd+grad eval). But all three
+single cold-start optimizers -- first-order AND quasi-Newton -- converge to the
+SAME wrong basin: log L ~ -158000, einstein_radius driven to 4.4-5.0 against
+the prior wall. L-BFGS uses an independent line search (no lr/clip), so this is
+basin selection from the cold start, not a hyperparameter artifact. ADABelief
+also re-enters the ell_comps/shear=0 NaN singularity after ~200 steps.
+
+"Conv" = reached the intended optimum; all three are "no" (a converged local
+optimum in the WRONG basin is not a solution). This is the failure GIGA-Lens
+(multi-start) and Herculens/Enzi (warm-start chaining, SVI) are built to avoid
+-- see Phase 2.
+
+Phase 2 -- escaping the cold-start basin
+----------------------------------------
+
+| Method                     | Wall (s) | Compile (s) | Evals | ms/eval | Max log L    | r_E   | Robust?          |
+|----------------------------|---------:|------------:|------:|--------:|-------------:|------:|------------------|
+| multi-start Adam (12x)     |    ~1260 |       ~573* |  3600 |    ~192 |    +31787.93 | 1.600 | 2/12 -> truth    |
+| numpyro SVI (ADABelief)    |    107.2 |    folded** |   800 |   134.0 |   -158022.27 | 3.54  | no (overconfident)|
+
+*  two JIT compiles: single value_and_grad (start-filtering) + batched vmap-x12
+   graph (the loop). Per single-start eval ~192 ms.
+** SVI folds compile into step 1 (numpyro scan); 107 s wall includes it. SVI
+   single cold-start lands in the WRONG basin too (r_E=3.54) with a tight (0.07)
+   -- i.e. overconfident -- posterior: the mode-seeking VI failure Enzi et al.
+   note. Every single-start method (1st-order, quasi-Newton, VI) fails here;
+   only multi-start (many points) finds the truth.
+
+WINNER: multi-start Adam. 12 broad random starts, Adam, 300 steps -> 2 land in
+the CORRECT basin and recover einstein_radius = 1.600 (truth), centre (0,0),
+shear ~(0.05, 0.05) at log L = +31788 -- ~190,000 nats better than every
+single-start optimizer above. ~2/12 per-start success (~17%) is why one cold
+start fails and twelve don't (P>=1 hit ~ 89%). This is the GIGA-Lens recipe
+(Gu/Huang et al. 2022; 2.0 = arXiv:2606.30633).
+
+See gradient_optimizer_findings.md for the full write-up.
