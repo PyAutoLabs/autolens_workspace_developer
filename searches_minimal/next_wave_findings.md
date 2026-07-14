@@ -31,7 +31,17 @@ Run on an NVIDIA A100 80GB (RAL `gpu` partition, `euclid_jump`; overlay blackjax
 | Method | Device | Compile (s) | Evals | Max log L | best r_E | in basin |
 |--------|--------|------------:|------:|----------:|---------:|:--------:|
 | **multi-start Adam (128×)** | A100 | 84.7 | 38 400 | **+31787.8** | **1.600** | **23/128 (p_hit 0.18)** |
+| multi-start ADABelief (128×) | A100 | — | 38 400 | +31787.8 | 1.600 | 19/128 (p_hit 0.15) |
+| multi-start Lion (128×) | A100 | — | 38 400 | +29559 | 1.604 | 20/128 (p_hit 0.16) |
 | **SVGD (16 particles)** | A100 | 90.1 | 4 800 | **+17999** | **1.595** | best particle = truth¶ |
+
+**The local optimizer rule barely matters within multi-start.** Adam, ADABelief
+and Lion all give a ~15–18% per-start hit rate and recover the truth (r_E 1.60);
+Adam/ADABelief reach the deepest optimum (+31.8k), Lion's sign-based steps land
+slightly shallower (+29.6k) but still in the basin. The robustness is bought by
+the **many diverse starts**, not the update rule — reinforcing the thesis:
+diversity is the load-bearing ingredient, the gradient just makes each start
+descend efficiently.
 
 ¶ SVGD's *best* particle reaches the truth (r_E 1.595, log L +18k); 0/16 of the
 *final* particles sit inside the tight ±0.3 basin because SVGD is a **posterior**
