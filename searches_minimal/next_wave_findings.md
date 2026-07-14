@@ -20,8 +20,25 @@ wallclock and eval count.
 |--------|-------------|-----------|---------:|------------:|------:|----------:|---------:|:--------:|
 | **multi-start Adam (12×)** *(baseline)* | none (independent) | by independence | ~1254 | ~561 | 3600 | **+31788** | **1.600** | **2/12 ✓** |
 | CMA-ES (evosax) | full covariance adaptation | **collapses** | 232 | 20 | 3200 | −158018 | 7.999 | 0/16 ✗ |
-| SVGD (blackjax) | kernel repulsion (gradient) | preserves | — | **compile-prohibitive (CPU)** | — | — | — | GPU/HPC |
+| SVGD (blackjax) | kernel repulsion (gradient) | preserves | — | **CPU: prohibitive** / **A100: 44.5 s** | — | — | — | see A100 section |
 | SV-CMA-ES (evosax) | Stein repulsion (gradient-free) | preserves | 232 | 28 | 7680 | −149670† | 2.605 | 0/8 (still improving) |
+
+### A100 (RAL) results — GPU scaling
+
+Run on an NVIDIA A100 80GB (RAL `gpu` partition, `euclid_jump`; overlay blackjax
+1.3, base CUDA jax 0.4.38, **float32** — x64 off on that GPU, tolerated fine).
+
+| Method | Device | Compile (s) | Evals | Max log L | best r_E | in basin |
+|--------|--------|------------:|------:|----------:|---------:|:--------:|
+| **multi-start Adam (128×)** | A100 | 84.7 | 38 400 | **+31787.8** | **1.600** | **23/128 (p_hit 0.18)** |
+| SVGD (16 particles) | A100 | 44.5 | _running_ | _tbd_ | _tbd_ | _tbd_ |
+
+**Multi-start Adam scales exactly as GIGA-Lens predicts.** At 128 starts on the
+A100 (compile 85 s), **23** land in the true basin — the per-start hit rate holds
+at ~18% (2/12 on CPU → 23/128 on GPU), so P(≥1 hit) is now effectively 1.0. The
+GPU makes the wide parallel start-batch that guarantees robustness *cheap*. And
+**SVGD, prohibitive to even compile on CPU, compiles in 44.5 s on the A100** —
+the GPU is exactly what its 16-fused-gradient graph needed.
 
 _r_E truth ≈ 1.6; a good fit has positive log L. Gradient-free methods (CMA-ES,
 SV-CMA-ES) compile in ~20 s (forward likelihood only, ~68 ms/eval); the

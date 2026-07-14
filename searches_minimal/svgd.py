@@ -71,10 +71,15 @@ optimizer = optax.chain(
 svgd = blackjax.svgd(_grad_logdensity, optimizer, rbf_kernel, update_median_heuristic)
 state = svgd.init(initial_particles, {"length_scale": 1.0})
 
+# JIT the step: without this, the median-heuristic kernel-parameter update
+# retraces svgd.step every iteration (~compile cost per step, so the run never
+# finishes). Jitted, it compiles ONCE and each step is fast.
+svgd_step = jax.jit(svgd.step)
+
 # Compile timing on the first step.
 print("\nRunning SVGD (compiling on step 0)...")
 t0 = time.time()
-state = svgd.step(state)
+state = svgd_step(state)
 jax.tree_util.tree_map(lambda x: x.block_until_ready(), state.particles)
 compile_s = time.time() - t0
 print(f"JIT compile (svgd.step): {compile_s:.1f} s")
@@ -85,7 +90,7 @@ global_best_p = np.asarray(initial_particles[0])
 
 t_start = time.time()
 for i in range(1, N_STEPS):
-    state = svgd.step(state)
+    state = svgd_step(state)
     lps = np.asarray(batched_logpost(state.particles))
     lps = np.where(np.isfinite(lps), lps, -np.inf)
     j = int(np.argmax(lps))
