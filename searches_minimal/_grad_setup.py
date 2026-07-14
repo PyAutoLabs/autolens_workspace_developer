@@ -13,8 +13,9 @@ Both terms are pure-JAX and differentiable end-to-end:
   - ``analysis.log_likelihood_function`` on ``AnalysisImaging(use_jax=True)``
     (proven differentiable in ``jax_profiling/gradient/imaging/mge.py``), and
   - ``model.log_prior_list_from_vector(vector, xp=jnp)`` (autofit's own
-    JAX-traceable prior — the same term ``af.Fitness`` adds when
-    ``fom_is_log_likelihood=False``).
+    JAX-traceable prior — the same prior term an autofit fitness/objective adds
+    to the log likelihood when maximising the log posterior rather than the log
+    likelihood alone).
 
 Optimizing in the **physical** parameter vector (not the unit cube) keeps the
 prior explicit, so this is a true MAP estimate rather than an MLE. The MGE
@@ -143,7 +144,15 @@ def build_map_objective() -> MapObjective:
         up to theta-independent constants (noise normalisation, Uniform-prior
         and Gaussian-prior normalisation). Imaging block = normalized residual
         map (0.5*sum = 0.5*chi^2); prior block = (theta - mean)/sigma per
-        Gaussian prior (0.5*sum = Gaussian -log_prior up to a constant)."""
+        Gaussian prior (0.5*sum = Gaussian -log_prior up to a constant).
+
+        NOTE: this residual is only **reverse-mode** differentiable — the
+        positive-only source solve (``jax_nnls.solve_nnls_primal``) is a
+        ``custom_vjp`` with no forward rule. Gauss-Newton / Levenberg-Marquardt
+        need the forward-mode Jacobian (``jacfwd``/``jvp``) and therefore raise
+        ``TypeError: can't apply forward-mode autodiff (jvp) to a custom_vjp``.
+        Use it for the residual-identity check and gradient-based methods, not
+        LM/GN (see ``jaxopt_lm_multistart.py``)."""
         theta = physical_from_z(z)
         instance = model.instance_from_vector(vector=theta, xp=jnp)
         fit = analysis.fit_from(instance=instance)

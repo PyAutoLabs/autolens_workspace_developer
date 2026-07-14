@@ -26,13 +26,27 @@ multi-start Adam) so the population still supplies basin diversity; LM supplies
 fast second-order descent within each basin. **Self-terminating** on the
 gradient/step tolerance, capped at ``MAXITER``.
 
-Caveat: the NNLS positive-only source solve makes the residual only piecewise
-smooth (active-set kinks). LM assumes smooth residuals, so its per-basin descent
-may stall at a kink — a genuine outcome to report, not a bug.
+INFEASIBLE — verified outcome (kept as the documented attempt)
+-------------------------------------------------------------
 
-Run on the A100 (base venv has jaxopt 0.8.5):
+Levenberg-Marquardt is **not applicable** to the production objective on this
+model. jaxopt builds the residual Jacobian with **forward-mode** autodiff
+(``jacfwd`` / ``jvp``), but the positive-only source solve
+(``autoarray.util.jax_nnls.solve_nnls_primal``) is defined with a **reverse-mode
+custom gradient** (``custom_vjp``) and has no forward rule, so LM raises:
 
-    MULTISTART_N_STARTS=128 python -m searches_minimal.jaxopt_lm_multistart
+    TypeError: can't apply forward-mode autodiff (jvp) to a custom_vjp function
+
+This is the concrete form of the "non-smoothness caused by the non-negative
+linear amplitudes" the benchmark set out to identify: the NNLS active set makes
+the map z -> reconstruction only reverse-mode differentiable, which rules out
+every least-squares Gauss-Newton/LM method (they all need the forward Jacobian).
+The gradient itself is fine (reverse mode, FD-verified), so first-order and
+quasi-Newton methods (Adam, L-BFGS, BFGS, NCG) all work — see those scripts. The
+strongest *compatible* second-order method is therefore BFGS, not LM.
+
+This script attempts the run and reports the blocker cleanly (exit 0) so a batch
+sweep continues. Run:  MULTISTART_N_STARTS=128 python -m searches_minimal.jaxopt_lm_multistart
 
 Requirements: jaxopt (JAX).
 """
@@ -63,13 +77,22 @@ print(f"Collected {n_kept} finite-gradient z-starts")
 
 solver = LevenbergMarquardt(residual_fun=obj.residual_z_raw, maxiter=MAXITER, tol=TOL)
 
-run_vmapped_map_solver(
-    obj=obj,
-    solver=solver,
-    z_starts=z_starts,
-    name=f"jaxopt_lm_n{n_kept}",
-    title=f"multi-start LM ({n_kept}x)",
-    max_iters=MAXITER,
-    termination=f"self-terminating (LM tol={TOL}, cap {MAXITER} iters)",
-    is_residual=True,
-)
+try:
+    run_vmapped_map_solver(
+        obj=obj,
+        solver=solver,
+        z_starts=z_starts,
+        name=f"jaxopt_lm_n{n_kept}",
+        title=f"multi-start LM ({n_kept}x)",
+        max_iters=MAXITER,
+        termination=f"self-terminating (LM tol={TOL}, cap {MAXITER} iters)",
+        is_residual=True,
+    )
+except Exception as e:  # noqa: BLE001 — expected forward-mode/custom_vjp blocker
+    print("\n==================== LM INFEASIBLE ====================")
+    print(f"{type(e).__name__}: {str(e)[:300]}")
+    print(
+        "Levenberg-Marquardt needs the forward-mode residual Jacobian; the NNLS\n"
+        "positive-only inversion is reverse-mode-only (custom_vjp). See header.\n"
+        "======================================================="
+    )
