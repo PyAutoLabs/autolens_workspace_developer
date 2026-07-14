@@ -69,14 +69,29 @@ def prior_transform(cube):
 
 
 n_likelihood_calls = 0
+n_nan_calls = 0
 tracker = MLTracker()
+
+# Invalid-model penalty. The full prior includes degenerate points — most
+# importantly ell_comps = (0, 0) and shear = (0, 0), where the arctan2/sqrt that
+# map (ell_comps -> angle, magnitude) are singular and the likelihood is NaN.
+# PyAutoLens's own ``AnalysisImaging.log_likelihood_function`` catches these
+# (``FitException``) and returns a large negative value so the search discards
+# the point; the raw jitted likelihood here does not, so a nested sampler that
+# draws such a point crashes on NaN. Guarding to a penalty reproduces the
+# standard PyAutoLens nested-sampling behaviour (this is not a silent guard on
+# real data — it is the documented handling of an unphysical model instance).
+INVALID_PENALTY = -1.0e99
 
 
 def log_likelihood(params):
     """Adapter: NumPy in, JIT'd JAX likelihood, Python float out."""
-    global n_likelihood_calls
+    global n_likelihood_calls, n_nan_calls
     n_likelihood_calls += 1
     log_l = float(jit_log_likelihood(jnp.asarray(params)))
+    if not np.isfinite(log_l):
+        n_nan_calls += 1
+        log_l = INVALID_PENALTY
     tracker.record(log_l)
     return log_l
 
@@ -101,24 +116,26 @@ points, log_w, log_l = sampler.posterior()
 best_idx = np.argmax(log_l)
 best_instance = model.instance_from_vector(vector=list(points[best_idx]))
 max_logl = float(np.max(log_l))
+best_r_e = float(best_instance.galaxies.lens.mass.einstein_radius)
 
 evals_to_ml, time_to_ml = tracker.finalise(max_log_l=max_logl, tolerance=1.0)
 
 summary = f"""\
 --- Nautilus (JAX JIT) Results ---
 Best fit:        {format_best_fit(best_instance)}
+Einstein radius: {best_r_e:.4f}     (truth ~ 1.6)
 Max log L:       {max_logl:.4f}
-Log evidence:    {float(sampler.log_z):.4f}
+Log evidence:    {float(sampler.log_z):.4f} +/- {float(sampler.log_z_err) if hasattr(sampler, 'log_z_err') else float('nan'):.4f}
 
 --- Performance ---
 Wall time:           {t_elapsed:.2f} s     (excludes JIT compile, run ahead of time)
 Sampling time:       n/a (Nautilus does not split warmup)
 JIT compile time:    {t_jit:.2f} s     (one-shot warm-up before sampling)
-Likelihood evals:    {n_likelihood_calls}
+Likelihood evals:    {n_likelihood_calls}     (NaN/invalid-model draws penalised: {n_nan_calls})
 Time per eval:       {t_elapsed / max(n_likelihood_calls, 1) * 1e3:.3f} ms
 ESS:                 {float(sampler.n_eff):.1f}
 Posterior samples:   {len(points)}
-Sampler config:      n_live={n_live}, default n_eff=10000, f_live=0.01
+Sampler config:      n_live={n_live}, default n_eff=10000, f_live=0.01; CPU orchestration + A100 JAX likelihood
 
 --- Convergence ---
 Converged:           yes (Nautilus default n_eff / f_live)

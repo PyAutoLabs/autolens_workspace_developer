@@ -1,0 +1,28 @@
+--- float64 multi-start Adam (16x) Results ---
+Best fit:        lens.mass.einstein_radius=1.5996  lens.mass.centre=(0.000, 0.000)  shear=(0.0573, 0.0585)
+Einstein radius: 1.5996     (truth ~ 1.6)
+Max log L:       30863.2176     (log posterior = 30863.1250, log prior = -0.0926)
+Log evidence:    n/a (point optimiser, not nested sampling)
+
+--- Performance ---
+Wall time:           1756.06 s
+Sampling time:       1543.89 s     (wall - JIT compile)
+JIT compile time:    212.17 s     (one-shot value_and_grad warm-up)
+Likelihood evals:    4800     (fwd+grad evals; iterations: 300)
+Time per eval:       321.6 ms     (post-compile fwd+grad)
+ESS:                 n/a (point optimiser)
+Posterior samples:   n/a (point optimiser)
+Sampler config:      float64, n_starts=16, steps=300, device=cpu, 4/16 in basin; NaN steps=260
+
+--- Evaluation accounting ---
+Starts/particles:                16
+Batched optimizer steps:         300
+Scalar-equiv gradient evals:     4800
+nan_steps:                       260
+precision:                       float64
+
+--- Convergence ---
+Termination:         user-budget (fixed step count)
+Converged:           True
+Evals to ML:         300     (first iter within 1 nat of max log posterior)
+Time to ML:          1756.06 s
