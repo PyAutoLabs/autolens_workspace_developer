@@ -98,9 +98,22 @@ SEARCHES = {
     "lion": lambda n, b: af.MultiStartLion(
         n_starts=n, n_steps=300, learning_rate=1e-3, batch_size=b
     ),
-    # n_batch is Nautilus's own knob (it exposes it as search.batch_size).
+    # Baseline. n_batch is Nautilus's OWN algorithmic knob (exposed as
+    # search.batch_size) — how many points it proposes per iteration, i.e. the
+    # likelihood batch, hence the VRAM driver. Without the sparse operator the
+    # dense pix path costs ~1 GB/replica, so the default n_batch=100 would need
+    # ~100 GB and OOM the 80 GB card; 16 is the value autolens_profiling's vram
+    # table uses for pix at HST scale.
+    #
+    # force_x1_cpu / use_jax_vmap are MANDATORY on a JAX row: nautilus.Sampler
+    # forks a multiprocessing pool otherwise, which corrupts JAX state
+    # (autolens_profiling/searches/_samplers.py).
     "nautilus": lambda n, b: af.Nautilus(
-        n_live=100, number_of_cores=1, **({"n_batch": b} if b else {})
+        n_live=100,
+        n_batch=b or 16,
+        number_of_cores=1,
+        force_x1_cpu=True,
+        use_jax_vmap=True,
     ),
 }
 
