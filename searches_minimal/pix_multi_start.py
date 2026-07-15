@@ -33,13 +33,12 @@ import time
 import numpy as np
 import jax
 
-# float32 by default. The FD *probe* needs x64 (finite differences do), but the
-# samplers do not — and the multi-start vmap is memory-bound: at n_starts=16 the
-# vmapped jvp fusion is f64[16, 15361, 2, 31, 512] = 58 GiB, which OOMs an 80 GB
-# A100. fp32 halves it. (Prior A100 work likewise recorded pix/delaunay vmap
-# OOMs.) Set PIX_X64=1 to force float64.
-if os.environ.get("PIX_X64") == "1":
-    jax.config.update("jax_enable_x64", True)
+# float64 throughout: dropping to fp32 to dodge the OOM would be a science
+# compromise. The memory is instead bounded by the search's `batch_size`
+# (PyAutoFit#1373/#1374), which tiles the vmapped value_and_grad via
+# jax.lax.map. Unbatched at n_starts=16 the jvp fusion is
+# f64[16, 15361, 2, 31, 512] = 58 GiB and OOMs an 80 GB A100.
+jax.config.update("jax_enable_x64", True)
 
 import autofit as af  # noqa: E402
 import autolens as al  # noqa: E402
@@ -90,29 +89,47 @@ def build_analysis(dataset):
 
 
 SEARCHES = {
-    "adam": lambda n: af.MultiStartAdam(n_starts=n, n_steps=300, learning_rate=1e-2),
-    "adabelief": lambda n: af.MultiStartADABelief(
-        n_starts=n, n_steps=300, learning_rate=1e-2
+    "adam": lambda n, b: af.MultiStartAdam(
+        n_starts=n, n_steps=300, learning_rate=1e-2, batch_size=b
     ),
-    "lion": lambda n: af.MultiStartLion(n_starts=n, n_steps=300, learning_rate=1e-3),
-    "nautilus": lambda n: af.Nautilus(n_live=100, number_of_cores=1),
+    "adabelief": lambda n, b: af.MultiStartADABelief(
+        n_starts=n, n_steps=300, learning_rate=1e-2, batch_size=b
+    ),
+    "lion": lambda n, b: af.MultiStartLion(
+        n_starts=n, n_steps=300, learning_rate=1e-3, batch_size=b
+    ),
+    # n_batch is Nautilus's own knob (it exposes it as search.batch_size).
+    "nautilus": lambda n, b: af.Nautilus(
+        n_live=100, number_of_cores=1, **({"n_batch": b} if b else {})
+    ),
 }
 
 
 def main() -> None:
     which = sys.argv[1] if len(sys.argv) > 1 else "adam"
     n_starts = int(sys.argv[2]) if len(sys.argv) > 2 else 16
+    # batch_size: simultaneous model evaluations = the VRAM driver.
+    # 0/absent -> None (unbatched, the pre-#1374 behaviour).
+    batch_size = int(sys.argv[3]) if len(sys.argv) > 3 else None
+    batch_size = batch_size or None
 
     print(f"JAX backend: {jax.default_backend()}  x64={jax.config.jax_enable_x64}")
-    print(f"Sampler: {which}  n_starts={n_starts}  mesh=KernelAdaptDensity os_pix={OS_PIX}")
-    print(f"mesh_shape={MESH_SHAPE}  (vmap over starts is the memory driver)")
+    print(f"Sampler: {which}  n_starts={n_starts}  batch_size={batch_size}")
+    print(f"mesh=KernelAdaptDensity{MESH_SHAPE} os_pix={OS_PIX}  (no sparse operator)")
 
     dataset = build_dataset()
     analysis = build_analysis(dataset)
     model = build_model()
     print(f"Free (non-linear) parameters: {model.prior_count}")
 
-    search = SEARCHES[which](n_starts)
+    search = SEARCHES[which](n_starts, batch_size)
+
+    # VRAM estimate for this batch (the user-facing check; search.batch_size is
+    # the generic "simultaneous model evaluations" contract).
+    try:
+        analysis.print_vram_use(model=model, batch_size=batch_size or n_starts)
+    except Exception as exc:
+        print(f"(vram estimate unavailable: {exc!r})")
 
     t0 = time.time()
     result = search.fit(model=model, analysis=analysis)
