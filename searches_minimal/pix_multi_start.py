@@ -124,12 +124,15 @@ def main() -> None:
 
     search = SEARCHES[which](n_starts, batch_size)
 
-    # VRAM estimate for this batch (the user-facing check; search.batch_size is
-    # the generic "simultaneous model evaluations" contract).
-    try:
-        analysis.print_vram_use(model=model, batch_size=batch_size or n_starts)
-    except Exception as exc:
-        print(f"(vram estimate unavailable: {exc!r})")
+    # VRAM estimate for this batch (search.batch_size is the generic
+    # "simultaneous model evaluations" contract). OFF by default: it triggers a
+    # full vmapped compile of its own, which on a pixelized cell costs as much
+    # as the fit (its docstring's "20-30 seconds" is an MGE-scale claim).
+    if os.environ.get("PIX_VRAM") == "1":
+        try:
+            analysis.print_vram_use(model=model, batch_size=batch_size or n_starts)
+        except Exception as exc:
+            print(f"(vram estimate unavailable: {exc!r})")
 
     t0 = time.time()
     result = search.fit(model=model, analysis=analysis)
