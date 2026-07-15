@@ -26,13 +26,20 @@ Usage::
 
 from __future__ import annotations
 
+import os
 import sys
 import time
 
 import numpy as np
 import jax
 
-jax.config.update("jax_enable_x64", True)
+# float32 by default. The FD *probe* needs x64 (finite differences do), but the
+# samplers do not — and the multi-start vmap is memory-bound: at n_starts=16 the
+# vmapped jvp fusion is f64[16, 15361, 2, 31, 512] = 58 GiB, which OOMs an 80 GB
+# A100. fp32 halves it. (Prior A100 work likewise recorded pix/delaunay vmap
+# OOMs.) Set PIX_X64=1 to force float64.
+if os.environ.get("PIX_X64") == "1":
+    jax.config.update("jax_enable_x64", True)
 
 import autofit as af  # noqa: E402
 import autolens as al  # noqa: E402
@@ -98,6 +105,7 @@ def main() -> None:
 
     print(f"JAX backend: {jax.default_backend()}  x64={jax.config.jax_enable_x64}")
     print(f"Sampler: {which}  n_starts={n_starts}  mesh=KernelAdaptDensity os_pix={OS_PIX}")
+    print(f"mesh_shape={MESH_SHAPE}  (vmap over starts is the memory driver)")
 
     dataset = build_dataset()
     analysis = build_analysis(dataset)
