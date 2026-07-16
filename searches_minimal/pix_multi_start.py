@@ -50,6 +50,9 @@ TRUTH_EINSTEIN_RADIUS = 1.6
 BASIN_TOL = 0.3  # same basin criterion as the MGE benchmark
 OS_PIX = 1
 MESH_SHAPE = (30, 30)
+# lr override for the #101 phase-2a lr sweep (e.g. PIX_LR=3e-3). None = the
+# rule's benchmark default (adam/adabelief 1e-2, lion 1e-3).
+PIX_LR = float(os.environ.get("PIX_LR") or 0) or None
 
 
 def build_model() -> af.Collection:
@@ -90,13 +93,13 @@ def build_analysis(dataset):
 
 SEARCHES = {
     "adam": lambda n, b: af.MultiStartAdam(
-        n_starts=n, n_steps=300, learning_rate=1e-2, batch_size=b
+        n_starts=n, n_steps=300, learning_rate=PIX_LR or 1e-2, batch_size=b
     ),
     "adabelief": lambda n, b: af.MultiStartADABelief(
-        n_starts=n, n_steps=300, learning_rate=1e-2, batch_size=b
+        n_starts=n, n_steps=300, learning_rate=PIX_LR or 1e-2, batch_size=b
     ),
     "lion": lambda n, b: af.MultiStartLion(
-        n_starts=n, n_steps=300, learning_rate=1e-3, batch_size=b
+        n_starts=n, n_steps=300, learning_rate=PIX_LR or 1e-3, batch_size=b
     ),
     # Baseline. n_batch is Nautilus's OWN algorithmic knob (exposed as
     # search.batch_size) — how many points it proposes per iteration, i.e. the
@@ -127,7 +130,7 @@ def main() -> None:
     batch_size = batch_size or None
 
     print(f"JAX backend: {jax.default_backend()}  x64={jax.config.jax_enable_x64}")
-    print(f"Sampler: {which}  n_starts={n_starts}  batch_size={batch_size}")
+    print(f"Sampler: {which}  n_starts={n_starts}  batch_size={batch_size}  lr={PIX_LR or 'default'}")
     print(f"mesh=KernelAdaptDensity{MESH_SHAPE} os_pix={OS_PIX}  (no sparse operator)")
 
     dataset = build_dataset()
