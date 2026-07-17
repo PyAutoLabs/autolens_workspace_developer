@@ -135,11 +135,16 @@ def main():
     )
     grid = al.Grid2D.from_mask(mask=real_space_mask)
 
+    # DFT is exact but only viable below the 10k-visibility guard; NUFFT above it
+    transformer_class = (
+        al.TransformerNUFFT if uv_wavelengths.shape[0] > 10000 else al.TransformerDFT
+    )
     simulator = al.SimulatorInterferometer(
         uv_wavelengths=uv_wavelengths,
         exposure_time=300.0,
         noise_sigma=cfg["noise"],
         noise_seed=1,
+        transformer_class=transformer_class,
     )
     dataset = simulator.via_tracer_from(
         tracer=al.Tracer(galaxies=[lens_true, source_true]), grid=grid
@@ -149,6 +154,7 @@ def main():
         noise_map=dataset.noise_map,
         uv_wavelengths=uv_wavelengths,
         real_space_mask=real_space_mask,
+        transformer_class=transformer_class,
     )
 
     # the precision operator is T^H C^-1 T — noise-dependent; key the cache on the noise config
