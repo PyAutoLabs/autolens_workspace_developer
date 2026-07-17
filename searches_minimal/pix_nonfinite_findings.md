@@ -188,23 +188,55 @@ Directions for phase 2, cheapest first:
 Whichever is chosen, the JAX/numpy asymmetry at `abstract.py:754` should stop being
 silent: a non-PD `H` currently yields NaN on JAX and `LinAlgError` on numpy.
 
-### 2. `autofit/non_linear/fitness.py:239-240` — **FIX (separate repo, separate issue)**
+### 2. `autofit/non_linear/fitness.py:239-240` — **CONTRACT, not a fix** (separate repo)
+
+> **Corrected 2026-07-17 (PyAutoFit#1391).** As first written, this section made two
+> claims that a follow-up investigation disproved. Both corrections are folded in
+> below; the original wording is preserved in the git history of this file.
 
 ```python
 log_likelihood = xp.where(xp.isnan(log_likelihood), self.resample_figure_of_merit, log_likelihood)
 log_likelihood = xp.where(xp.isinf(log_likelihood), self.resample_figure_of_merit, log_likelihood)
 ```
 
-This is the standard JAX `where`-guard gradient trap. It repairs the **value**
-(the probe's rejected draws report `loss = inf`, not `nan` — the guard fired) but
-reverse-mode AD still differentiates the masked branch and computes `0 * NaN = NaN`,
-so **the resample guard does not protect gradient consumers at all**. Any
-`jax.grad` user gets a NaN gradient from a point the guard "handled".
-
-This retroactively explains a #101 observation: starts died with a *non-finite*
+This is the JAX `where`-guard gradient trap. It repairs the **value** (the probe's
+rejected draws report `loss = inf`, not `nan` — the guard fired) but reverse-mode
+AD still differentiates the masked branch and computes `0 * NaN = NaN`, so a
+`jax.grad` user can get a NaN gradient from a point the guard "handled". That
+retroactively explains a #101 observation: starts died with a *non-finite*
 objective rather than a NaN one, and `optax.apply_if_finite` latched at the cliff.
-It is PyAutoFit, not PyAutoArray — file separately; the standard remedy is the
-double-`where` ("safe-x") pattern.
+
+**Correction 1 — the trap is narrower than "protects gradient consumers at all".**
+It fires only when the masked branch's **derivative** is non-finite, not merely its
+value. `sqrt(x)` at x<0 and `cholesky(A)` for non-PD `A` (this issue's actual site)
+are NaN in both value and derivative → it fires. `log(x)` at x<0 is NaN in value but
+its derivative `1/x` stays finite → `0 * -1 = 0`, no trap. The original "does not
+protect gradient consumers **at all**" was overreach.
+
+**Correction 2 — the prescribed remedy does not work.** The original text called for
+"the double-`where` (safe-x) pattern". Applied to the **output**, it does not fix
+anything. Measured:
+
+```
+current (fitness.py:239-240)     x=-1.0  value=inf  grad=nan
+output-side double-where         x=-1.0  value=inf  grad=nan   <-- prescribed remedy FAILS
+input-side safe-x                x=-1.0  value=inf  grad=0.0   <-- works
+```
+
+By the time `Fitness.call` receives `log_likelihood`, the non-finite derivative is
+**already on the autodiff tape**; no transformation of the output removes it. Only
+refusing to *evaluate* the offending op at the invalid input works — and that
+decision requires knowing which input is invalid, which is knowable at the NaN's
+source (site 1 above, autoarray's Cholesky), not at the `Fitness` boundary where the
+likelihood is an opaque already-computed scalar.
+
+**So `Fitness.call` is structurally incapable of fixing this**, and PyAutoFit#1391 is
+scoped to *pinning the contract* — a docstring plus
+`autofit_workspace_test/scripts/jax_assertions/fitness_nan_gradient_contract.py` —
+rather than a code fix. The real fix for the pixelized case is site 1.
+
+**Reproduction:** ~20 lines of CPU JAX (see that assertion script). This specific
+bug does **not** need the A100 — only the site-1 localisation above does.
 
 ### 3. Everything else — **NO ACTION**
 
