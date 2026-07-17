@@ -75,7 +75,7 @@ We now compose our scaling relation models, using **PyAutoFits** relational mode
 - Define the free parameters of the scaling relation using priors (note how the priors below are outside the for loop,
   meaning that every extra galaxy is associated with the same scailng relation prior and therefore parameters).
 
-- For every extra galaxy centre and lumnosity, create a model mass profile (using `af.Model(dPIEPotentialSph)`), where 
+- For every extra galaxy centre and lumnosity, create a model mass profile (using `af.Model(dPIEMassB0Sph)`), where
   the centre of the mass profile is the extra galaxy centres and its other parameters are set via the scaling relation 
   priors.
 
@@ -92,7 +92,7 @@ extra_galaxies_list = []
 for extra_galaxy_centre, extra_galaxy_luminosity in zip(
     extra_galaxies_centre_list, extra_galaxies_luminosity_list
 ):
-    mass = af.Model(al.mp.dPIEMassSph)
+    mass = af.Model(al.mp.dPIEMassB0Sph)
     mass.centre = extra_galaxy_centre
     mass.ra = ra_star * (extra_galaxy_luminosity / luminosity_star) ** 0.5
     mass.rs = rs_star * (extra_galaxy_luminosity / luminosity_star) ** 0.5
