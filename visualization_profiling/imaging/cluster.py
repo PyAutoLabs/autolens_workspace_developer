@@ -112,7 +112,7 @@ with timer.section("build_tracer"):
             effective_radius=eff_r,
             sersic_index=sersic_n,
         )
-        mass = al.mp.dPIEMassSph(centre=centre, ra=ra, rs=rs, b0=b0)
+        mass = al.mp.dPIEMassB0Sph(centre=centre, ra=ra, rs=rs, b0=b0)
         main_lens_galaxies.append(
             al.Galaxy(redshift=redshift_lens, bulge=bulge, mass=mass)
         )
