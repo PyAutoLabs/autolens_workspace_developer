@@ -1,0 +1,18 @@
+  death report (last finite step; params at that point):
+    start  0: died after step  18  log_post=  -158276.19  r_E=5.7543 reg=8.468e+01
+    start  1: died after step  32  log_post=  -160082.39  r_E=6.0017 reg=7.409e-03
+    start  2: died after step  22  log_post=   -68994.56  r_E=1.3587 reg=1.723e+01
+    start  3: died after step  17  log_post=  -159506.45  r_E=5.0391 reg=1.167e-01
+    start  4: died after step  24  log_post=  -160870.41  r_E=3.9208 reg=6.369e-02
+    start  5: died after step  37  log_post=  -157506.28  r_E=3.3623 reg=1.087e+01
+    start  6: died after step  34  log_post=  -160059.20  r_E=6.1155 reg=1.693e-02
+    start  7: died after step  32  log_post=  -158690.89  r_E=3.4580 reg=4.737e+00
+    start  8: died after step   8  log_post=  -158210.69  r_E=3.2446 reg=3.873e+03
+    start  9: died after step   8  log_post=  -159067.79  r_E=4.6732 reg=4.617e-01
+    start 10: died after step  10  log_post=  -158211.74  r_E=3.5221 reg=4.259e+03
+    start 11: died after step  27  log_post=  -158213.01  r_E=3.8868 reg=3.611e+03
+    start 12: died after step  18  log_post=   -50674.83  r_E=1.4268 reg=1.413e-04
+    start 13: died after step  40  log_post=  -159847.39  r_E=6.3892 reg=3.378e-02
+    start 14: died after step   8  log_post=  -151845.60  r_E=2.6496 reg=4.981e-03
+    start 15: died after step  19  log_post=  -159352.62  r_E=5.7344 reg=1.855e-01
+  start  0: log L =          nan   r_E = nan   
