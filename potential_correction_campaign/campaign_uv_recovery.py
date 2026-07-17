@@ -40,7 +40,7 @@ def log(msg):
 TIERS = {
     # n_ant, n_times, shape, pixel_scale, noise_sigma, n_iter
     "local": dict(n_ant=18, n_times=8, shape=72, pixel_scale=0.08, noise=2.0, n_iter=6),
-    "mid": dict(n_ant=32, n_times=20, shape=100, pixel_scale=0.06, noise=1.0, n_iter=10),
+    "mid": dict(n_ant=32, n_times=20, shape=100, pixel_scale=0.06, noise=4.0, n_iter=10),
     "full": dict(n_ant=40, n_times=90, shape=128, pixel_scale=0.05, noise=0.5, n_iter=15),
 }
 
@@ -150,7 +150,8 @@ def main():
         real_space_mask=real_space_mask,
     )
 
-    precision_path = out / "nufft_precision_operator.npy"
+    # the precision operator is T^H C^-1 T — noise-dependent; key the cache on the noise config
+    precision_path = out / f"nufft_precision_operator_n{cfg['noise']:g}.npy"
     if precision_path.exists():
         log("loading cached precision operator")
         dataset = dataset.apply_sparse_operator(
