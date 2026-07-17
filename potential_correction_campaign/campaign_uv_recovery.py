@@ -76,13 +76,14 @@ def main():
     parser.add_argument("--subhalo-mass", type=float, default=1.0e10)
     parser.add_argument("--dpsi-coeff", type=float, default=2000.0)
     parser.add_argument("--src-coeff", type=float, default=1.0)
+    parser.add_argument("--reg-optimize", type=int, default=None, help="re-optimize reg strengths by evidence every N accepted LM iterations")
     parser.add_argument("--dpsi-scale", type=float, default=4.0)
     parser.add_argument("--use-jax", action="store_true", help="xp=jnp for the LM kernels")
     parser.add_argument("--out", default=None)
     args = parser.parse_args()
 
     cfg = TIERS[args.tier]
-    tag = f"{args.tier}_c{args.dpsi_coeff:.0e}_s{args.dpsi_scale:g}_sc{args.src_coeff:g}"
+    tag = f"{args.tier}_c{args.dpsi_coeff:.0e}_s{args.dpsi_scale:g}_sc{args.src_coeff:g}" + (f"_ro{args.reg_optimize}" if args.reg_optimize else "")
     out = Path(args.out or Path("output") / "potential_correction_campaign" / tag)
     out.mkdir(parents=True, exist_ok=True)
 
@@ -276,6 +277,7 @@ def main():
         dpsi_mask=dpsi_mask,
         gauge_constraints=True,
         n_iter=cfg["n_iter"],
+        reg_optimize_every=args.reg_optimize,
         verbose=True,
     )
     s_opt, dpsi_opt = iter_fit.solve_joint_optimization()
