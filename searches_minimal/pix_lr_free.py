@@ -167,7 +167,7 @@ def main() -> None:
         def reinit_starts(params, opt_states, dead_idx, rng):
             """Redraw dead starts in the unit band and reinit their optimizer
             state, leaving alive starts untouched (leaves are (S, ...))."""
-            params_np = np.asarray(params)
+            params_np = np.array(params)  # np.asarray of a jax array is read-only
             for k in dead_idx:
                 u = rng.uniform(PIX_START_LOW, PIX_START_HIGH, size=model.prior_count)
                 params_np[k] = np.asarray(
