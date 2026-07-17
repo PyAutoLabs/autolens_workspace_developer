@@ -60,16 +60,61 @@ starts is +31787.84 (log posterior); `r_E` truth ≈ 1.6.
 ## Phase 2 — pixelized cell (#100 model; A100)
 
 Gate result (see #100): converged Nautilus (27,840 calls, N_eff 1233,
-logZ +17345) reaches **+17419 at r_E = 1.31** — itself ~8k nats below the FD
-probe's +25537 at the truth point, consistent with the pixelized-source
-degeneracy making r_E ≈ 1.31 the dominant posterior mode. The optimizer bar is
-therefore **+17419** (matching the converged sampler), not the slack r_E
-tolerance; multi-start Adam@1e-2's single run (−39888) sits 57k nats under it.
+logZ +17345, 1h32 cold / ~22 min warm-cache) reaches **+17419 at
+r_E = 1.31** — itself ~8k nats below the FD probe's +25537 at the truth point,
+consistent with the pixelized-source degeneracy making r_E ≈ 1.31 the dominant
+posterior mode. The optimizer bar is therefore **+17419** (matching the
+converged sampler), not the slack r_E tolerance.
 
-- **2a (running):** Adam lr sweep, `PIX_LR ∈ {1e-3, 3e-3, 3e-2}`, 16 starts,
-  `batch_size=4`, RAL jobs 330529/330530/330531 — the direct test of the
-  mis-scaling suspect, near-free on the warm compile cache.
-- **2b (pending 2a):** the lr-free rules (prodigy first) on the pixelized
-  objective via a standalone script with vmapped per-start state — the af.*
-  path can't carry them (finding 4). If prodigy also fails where the lr sweep
-  fails, the learning rate was not the pixelized problem.
+### The elimination chain (all A100, 16 starts, `batch_size=4`, warm cache)
+
+| probe | job(s) | result |
+|---|---|---|
+| 2a: Adam lr sweep 1e-3 / 3e-3 / 3e-2 | 330529–31 | −39549 / **−28462** / −30659 — **lr ruled out** (1e-2 gave −39888 in #100) |
+| 2b: prodigy / dadapt / mechanic (lr-free) | 330535 | −50683 / −49124 / −50375, all frozen from step ~25 — **update rule ruled out** |
+| broad vs FD-certified narrow start band | 330588/89 | finite starts 16/16 → **0/16 by step 50 in BOTH bands** — start placement ruled out |
+| reg pinned at 1.0 (7 params) | 330593 | mortality unchanged — **reg ruled out** |
+| per-start death report | 330592 | deaths scattered across reg 1e-4…4e3, r_E 1.36…6.4; even step 0 has only 13–15/16 finite grads |
+
+**Diagnosis: trajectory NaN mortality.** The pixelized likelihood has hard
+non-finite walls (invalid inversions) throughout the broad parameter space.
+Every gradient trajectory walks into one within ~25–50 steps; an unguarded
+optimizer NaN-poisons outright, and `optax.apply_if_finite` zeroes updates
+with the start latched *at* the non-finite point — dead either way. This —
+not learning rate, rule, budget, or starts — is the #100 search failure. The
+MGE cell (whose only wall is the measure-zero ell_comps/shear singularity)
+never exposes it, which is why every MGE finding transferred except the one
+that mattered.
+
+### Resurrection: restart-on-death makes the landscape searchable
+
+`PIX_RESURRECT=1` redraws a dead start (params + its vmapped optimizer state)
+each step. Population stays alive (14–16/16 finite throughout) and descent
+continues indefinitely (jobs 330595 / 330598):
+
+| rule | 600 steps | 3000 steps (2.7 h) | best r_E |
+|---|---:|---:|---:|
+| adam@1e-2 | −21443 (improving) | **+1718 (still improving)** | 1.5704 (truth band) |
+| prodigy | −26946 | −15844 (late jump, improving) | 1.2795 (Nautilus mode) |
+
+The trajectories are long plateaus punctuated by breakthrough jumps —
+resurrection churn (~6/16 dead at any step) plus slow kinked-valley descent.
+
+### Verdict
+
+1. **The pixelized landscape is searchable by gradient descent only with
+   restart-on-death.** Any PyAutoFit promotion of the multi-start searches
+   must implement resurrection (redraw + per-start state reinit), not just
+   NaN-guards — `apply_if_finite` alone latches at the cliff edge, and the
+   current unguarded `af.MultiStart*` dies silently (this retroactively
+   explains #100's −39888 "0/16" result).
+2. **Even so, Nautilus wins the pixelized cell decisively:** +17419 with full
+   posterior/evidence in ~22 min (warm) vs +1718 after 2.7 h of resurrected
+   Adam. The MGE conclusion (gradient MAP ~10× faster than Nautilus) **inverts**
+   on inversion-heavy landscapes; multi-start gradient MAP stays the
+   recommendation only for parametric (MGE-class) likelihoods, where prodigy
+   makes it learning-rate-free at zero cost.
+3. **The load-bearing library follow-up is the likelihood, not the
+   optimizer:** localising and fixing the non-finite regions (the old
+   sweep-findings "localise the NaN" item) would help every gradient consumer
+   — MAP searches, HMC/NUTS samplers, SVGD — far more than optimizer work.
