@@ -77,13 +77,14 @@ def main():
     parser.add_argument("--dpsi-coeff", type=float, default=2000.0)
     parser.add_argument("--src-coeff", type=float, default=1.0)
     parser.add_argument("--reg-optimize", type=int, default=None, help="re-optimize reg strengths by evidence every N accepted LM iterations")
+    parser.add_argument("--warm-start", action="store_true", help="initialize the iterative LM from the one-shot solution")
     parser.add_argument("--dpsi-scale", type=float, default=4.0)
     parser.add_argument("--use-jax", action="store_true", help="xp=jnp for the LM kernels")
     parser.add_argument("--out", default=None)
     args = parser.parse_args()
 
     cfg = TIERS[args.tier]
-    tag = f"{args.tier}_c{args.dpsi_coeff:.0e}_s{args.dpsi_scale:g}_sc{args.src_coeff:g}" + (f"_ro{args.reg_optimize}" if args.reg_optimize else "")
+    tag = f"{args.tier}_c{args.dpsi_coeff:.0e}_s{args.dpsi_scale:g}_sc{args.src_coeff:g}" + (f"_ro{args.reg_optimize}" if args.reg_optimize else "") + ("_ws" if args.warm_start else "")
     out = Path(args.out or Path("output") / "potential_correction_campaign" / tag)
     out.mkdir(parents=True, exist_ok=True)
 
@@ -281,7 +282,10 @@ def main():
         reg_optimize_every=args.reg_optimize,
         verbose=True,
     )
-    s_opt, dpsi_opt = iter_fit.solve_joint_optimization()
+    x0 = np.asarray(fit.src_dpsi_slim) if args.warm_start else None
+    if x0 is not None:
+        log(f"warm-starting iterative from the one-shot solution ({x0.shape[0]} params)")
+    s_opt, dpsi_opt = iter_fit.solve_joint_optimization(x0=x0)
     ev2 = iter_fit.log_evidence(s=s_opt, dpsi=dpsi_opt)
     results["iterative_log_evidence"] = float(ev2)
     log(f"iterative Laplace log evidence = {ev2:.4e}")
