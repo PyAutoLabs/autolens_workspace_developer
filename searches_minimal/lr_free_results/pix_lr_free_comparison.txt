@@ -1,0 +1,7 @@
+Pixelized lr-free multi-start comparison (#101 phase 2b)
+n_starts=16 n_steps=3000 batch=4 seed=0 (bar = Nautilus max log L +17419 @ r_E 1.31)
+
+|                rule |   loop s |   best log L | best r_E | ~truth | ~naut | bar |
+|---------------------|----------|--------------|----------|--------|-------|-----|
+|                adam |   4601.3 |       1717.5 |   1.5704 |  1/16  |  1/16  |  no |
+|             prodigy |   5220.8 |     -15844.2 |   1.2795 |  1/16  |  1/16  |  no |
