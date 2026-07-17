@@ -271,7 +271,12 @@ def walk_backward(analysis, model, params, stages: Optional[List[str]] = None):
 
         def scalar_of(p, _getter=getter):
             fit, inversion = _fit_at(analysis, model, p)
-            return jnp.sum(jnp.asarray(_getter(fit, inversion)))
+            value = _getter(fit, inversion)
+            # autoarray wrappers (Array2D, ...) are not pytrees and their
+            # __array__ raises under a tracer — take the raw array first.
+            if hasattr(value, "array"):
+                value = value.array
+            return jnp.sum(jnp.asarray(value))
 
         try:
             grad = jax.grad(scalar_of)(params)
