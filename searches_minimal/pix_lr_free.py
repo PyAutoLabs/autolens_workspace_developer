@@ -160,12 +160,21 @@ def main() -> None:
 
         best_loss = np.inf
         best_params = params[0]
+        # Per-start death diagnostics: the last step, params and loss at which
+        # each start's objective was still finite (#101 NaN-mortality probe).
+        death_step = np.full(N_STARTS, -1, dtype=int)
+        last_finite_params = np.asarray(params0).copy()
+        last_finite_loss = np.full(N_STARTS, np.inf)
         print(f"\n[{name}] {N_STARTS}-start x {N_STEPS} steps  ({note})")
         t_start = time.time()
         for i in range(N_STEPS):
             losses, grads = batched_value_and_grad(params)
             losses_np = np.asarray(losses)
-            losses_np = np.where(np.isfinite(losses_np), losses_np, np.inf)
+            alive = np.isfinite(losses_np)
+            death_step[alive] = i
+            last_finite_params[alive] = np.asarray(params)[alive]
+            last_finite_loss[alive] = losses_np[alive]
+            losses_np = np.where(alive, losses_np, np.inf)
             j = int(np.argmin(losses_np))
             if losses_np[j] < best_loss:
                 best_loss = float(losses_np[j])
@@ -195,6 +204,27 @@ def main() -> None:
             if finite[j] < best_loss:
                 best_loss = float(finite[j])
                 best_params = params[j]
+
+        # Death report: where was each start when it last had a finite
+        # objective, and which parameters had run to extremes? Reports r_E and
+        # the reg coefficient (the non-PD-Cholesky suspect) if it is free.
+        reg_idx = [
+            k
+            for k, (path, _) in enumerate(model.path_priors_tuples)
+            if "coefficient" in str(path)
+        ]
+        print("  death report (last finite step; params at that point):")
+        for k in range(N_STARTS):
+            pl = list(last_finite_params[k])
+            r_e_d = model.instance_from_vector(
+                vector=pl
+            ).galaxies.lens.mass.einstein_radius
+            reg_s = f" reg={pl[reg_idx[0]]:.3e}" if reg_idx else ""
+            print(
+                f"    start {k:2d}: died after step {death_step[k]:3d}  "
+                f"log_post={-0.5 * last_finite_loss[k]:12.2f}  "
+                f"r_E={float(r_e_d):.4f}{reg_s}"
+            )
 
         # Per-start scoring. log_posterior = -0.5 * fom; log L = log_post -
         # log_prior (prior evaluated numpy-side — no extra JAX compile).

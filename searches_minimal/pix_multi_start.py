@@ -53,6 +53,10 @@ MESH_SHAPE = (30, 30)
 # lr override for the #101 phase-2a lr sweep (e.g. PIX_LR=3e-3). None = the
 # rule's benchmark default (adam/adabelief 1e-2, lion 1e-3).
 PIX_LR = float(os.environ.get("PIX_LR") or 0) or None
+# Fix the regularization coefficient (e.g. PIX_FIX_REG=1.0) instead of leaving
+# it free — the #101 NaN-mortality probe: descent drives reg toward the
+# non-positive-definite curvature regime where the JAX Cholesky NaN-resamples.
+PIX_FIX_REG = float(os.environ.get("PIX_FIX_REG") or 0) or None
 
 
 def build_model() -> af.Collection:
@@ -75,7 +79,11 @@ def build_model() -> af.Collection:
     pixelization = af.Model(
         al.Pixelization,
         mesh=al.mesh.RectangularKernelAdaptDensity(shape=MESH_SHAPE, bandwidth=0.1),
-        regularization=al.reg.Constant,
+        regularization=(
+            al.reg.Constant(coefficient=PIX_FIX_REG)
+            if PIX_FIX_REG
+            else al.reg.Constant
+        ),
     )
     source = af.Model(al.Galaxy, redshift=1.0, pixelization=pixelization)
 
