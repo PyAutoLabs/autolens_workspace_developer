@@ -1,0 +1,21 @@
+--- multi-start ademamix (MAP) Results ---
+Best fit:        lens.mass.einstein_radius=1.5995  lens.mass.centre=(0.000, 0.000)  shear=(0.0489, 0.0491)
+Einstein radius: 1.5995     (truth ~ 1.6)
+Max log L:       31786.0643     (log posterior = 31785.9706, log prior = -0.0936)
+Log evidence:    n/a (point optimiser, not nested sampling)
+
+--- Performance ---
+Wall time:           909.05 s
+Sampling time:       472.64 s     (wall - JIT compile)
+JIT compile time:    436.40 s     (one-shot value_and_grad warm-up)
+Likelihood evals:    3600     (fwd+grad evals; iterations: 300)
+Time per eval:       131.3 ms     (post-compile fwd+grad)
+ESS:                 n/a (point optimiser)
+Posterior samples:   n/a (point optimiser)
+Sampler config:      n_starts=12, steps=300, fixed-lr control, lr=1e-2 (dual-EMA momentum), start_spread=U(0.15,0.85), 3/12 reached correct basin
+
+--- Convergence ---
+Termination:         user-budget (fixed step count)
+Converged:           True
+Evals to ML:         128     (first iter within 1 nat of max log posterior)
+Time to ML:          387.86 s

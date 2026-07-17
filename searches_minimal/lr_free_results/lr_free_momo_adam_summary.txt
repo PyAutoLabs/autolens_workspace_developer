@@ -1,0 +1,21 @@
+--- multi-start momo_adam (MAP) Results ---
+Best fit:        lens.mass.einstein_radius=1.6076  lens.mass.centre=(0.043, -0.013)  shear=(0.0836, -0.0091)
+Einstein radius: 1.6076     (truth ~ 1.6)
+Max log L:       1646.7378     (log posterior = 1646.5421, log prior = -0.1957)
+Log evidence:    n/a (point optimiser, not nested sampling)
+
+--- Performance ---
+Wall time:           383.51 s
+Sampling time:       147.35 s     (wall - JIT compile)
+JIT compile time:    236.16 s     (one-shot value_and_grad warm-up)
+Likelihood evals:    3600     (fwd+grad evals; iterations: 300)
+Time per eval:       40.9 ms     (post-compile fwd+grad)
+ESS:                 n/a (point optimiser)
+Posterior samples:   n/a (point optimiser)
+Sampler config:      n_starts=12, steps=300, adaptive-lr (MoMo-Adam Polyak step, default lr cap 1e-2), start_spread=U(0.15,0.85), 3/12 reached correct basin
+
+--- Convergence ---
+Termination:         user-budget (fixed step count)
+Converged:           True
+Evals to ML:         54     (first iter within 1 nat of max log posterior)
+Time to ML:          69.03 s
