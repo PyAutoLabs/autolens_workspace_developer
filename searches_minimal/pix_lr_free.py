@@ -68,6 +68,12 @@ BATCH = int(os.environ.get("PIX_BATCH", 4))
 # narrow-vs-broad separates "NaN cliffs everywhere" from "broad starts die".
 PIX_START_LOW = float(os.environ.get("PIX_START_LOW", START_LOW))
 PIX_START_HIGH = float(os.environ.get("PIX_START_HIGH", START_HIGH))
+# Resurrection mode (#101): the pixelized likelihood has hard non-finite walls
+# and every trajectory dies on one within ~50 steps (jobs 330588/89/92/93).
+# With PIX_RESURRECT=1, a start whose objective goes non-finite is redrawn
+# fresh (params + optimizer state) instead of latching dead — the probe for
+# whether multi-start gradient MAP is viable on this landscape at all.
+PIX_RESURRECT = os.environ.get("PIX_RESURRECT") == "1"
 NAUTILUS_BAR_LOG_L = 17419.0  # converged Nautilus max log L (job 330513)
 NAUTILUS_MODE_R_E = 1.31
 
@@ -158,14 +164,40 @@ def main() -> None:
                 del losses
                 return jax.vmap(_opt.update)(grads, states, params)
 
+        def reinit_starts(params, opt_states, dead_idx, rng):
+            """Redraw dead starts in the unit band and reinit their optimizer
+            state, leaving alive starts untouched (leaves are (S, ...))."""
+            params_np = np.asarray(params)
+            for k in dead_idx:
+                u = rng.uniform(PIX_START_LOW, PIX_START_HIGH, size=model.prior_count)
+                params_np[k] = np.asarray(
+                    model.vector_from_unit_vector(unit_vector=list(u), xp=jnp)
+                )
+            params = jnp.asarray(params_np)
+            fresh_states = jax.vmap(opt.init)(params)
+            mask = np.zeros(N_STARTS, dtype=bool)
+            mask[dead_idx] = True
+            mask_j = jnp.asarray(mask)
+
+            def merge(old, fresh):
+                m = mask_j.reshape((N_STARTS,) + (1,) * (fresh.ndim - 1))
+                return jnp.where(m, fresh, old)
+
+            return params, jax.tree.map(merge, opt_states, fresh_states)
+
         best_loss = np.inf
         best_params = params[0]
+        n_resurrections = 0
         # Per-start death diagnostics: the last step, params and loss at which
         # each start's objective was still finite (#101 NaN-mortality probe).
         death_step = np.full(N_STARTS, -1, dtype=int)
         last_finite_params = np.asarray(params0).copy()
         last_finite_loss = np.full(N_STARTS, np.inf)
-        print(f"\n[{name}] {N_STARTS}-start x {N_STEPS} steps  ({note})")
+        resurrect_rng = np.random.default_rng(1)
+        print(
+            f"\n[{name}] {N_STARTS}-start x {N_STEPS} steps  ({note})"
+            f"{'  [RESURRECT]' if PIX_RESURRECT else ''}"
+        )
         t_start = time.time()
         for i in range(N_STEPS):
             losses, grads = batched_value_and_grad(params)
@@ -174,6 +206,12 @@ def main() -> None:
             death_step[alive] = i
             last_finite_params[alive] = np.asarray(params)[alive]
             last_finite_loss[alive] = losses_np[alive]
+            if PIX_RESURRECT and not alive.all():
+                dead_idx = np.flatnonzero(~alive)
+                n_resurrections += len(dead_idx)
+                params, opt_states = reinit_starts(
+                    params, opt_states, dead_idx, resurrect_rng
+                )
             losses_np = np.where(alive, losses_np, np.inf)
             j = int(np.argmin(losses_np))
             if losses_np[j] < best_loss:
