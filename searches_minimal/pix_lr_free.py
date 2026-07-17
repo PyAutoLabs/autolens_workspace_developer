@@ -63,6 +63,11 @@ from searches_minimal.lr_free_multistart import (  # noqa: E402
 N_STARTS = int(os.environ.get("PIX_N_STARTS", 16))
 N_STEPS = int(os.environ.get("PIX_N_STEPS", 300))
 BATCH = int(os.environ.get("PIX_BATCH", 4))
+# Start-band override: the broad default reproduces the #100 setup; the FD
+# probe certified finite gradients only in the narrow [0.4, 0.6] band, so
+# narrow-vs-broad separates "NaN cliffs everywhere" from "broad starts die".
+PIX_START_LOW = float(os.environ.get("PIX_START_LOW", START_LOW))
+PIX_START_HIGH = float(os.environ.get("PIX_START_HIGH", START_HIGH))
 NAUTILUS_BAR_LOG_L = 17419.0  # converged Nautilus max log L (job 330513)
 NAUTILUS_MODE_R_E = 1.31
 
@@ -74,7 +79,10 @@ def main() -> None:
         raise SystemExit(f"Unknown rule(s) {unknown}; choose from {list(RULES)}")
 
     print(f"JAX backend: {jax.default_backend()}  x64={jax.config.jax_enable_x64}")
-    print(f"Rules: {requested}  n_starts={N_STARTS} n_steps={N_STEPS} batch={BATCH}")
+    print(
+        f"Rules: {requested}  n_starts={N_STARTS} n_steps={N_STEPS} batch={BATCH}"
+        f"  start_band=U({PIX_START_LOW},{PIX_START_HIGH})"
+    )
     print(f"mesh=KernelAdaptDensity{MESH_SHAPE} os_pix={OS_PIX}  (no sparse operator)")
 
     dataset = build_dataset()
@@ -109,7 +117,7 @@ def main() -> None:
     t0 = time.time()
     while len(starts) < N_STARTS and tries < N_STARTS * 30:
         tries += 1
-        u = rng.uniform(START_LOW, START_HIGH, size=model.prior_count)
+        u = rng.uniform(PIX_START_LOW, PIX_START_HIGH, size=model.prior_count)
         x = jnp.asarray(model.vector_from_unit_vector(unit_vector=list(u), xp=jnp))
         loss, grad = _single(x)
         if np.isfinite(float(loss)) and np.all(np.isfinite(np.asarray(grad))):
@@ -165,8 +173,14 @@ def main() -> None:
             updates, opt_states = step_update(grads, opt_states, params, losses)
             params = optax.apply_updates(params, updates)
             if i % 25 == 0:
+                n_finite_loss = int(np.sum(np.isfinite(np.asarray(losses))))
+                n_finite_grad = int(
+                    np.sum(np.all(np.isfinite(np.asarray(grads)), axis=1))
+                )
                 print(
-                    f"  step {i:4d}: best log_posterior = {-0.5 * best_loss:.2f}",
+                    f"  step {i:4d}: best log_posterior = {-0.5 * best_loss:.2f}"
+                    f"   finite loss {n_finite_loss}/{N_STARTS}"
+                    f" grad {n_finite_grad}/{N_STARTS}",
                     flush=True,
                 )
         loop_s = time.time() - t_start
