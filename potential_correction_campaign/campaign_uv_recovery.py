@@ -75,13 +75,14 @@ def main():
     parser.add_argument("--tier", default="local", choices=sorted(TIERS))
     parser.add_argument("--subhalo-mass", type=float, default=1.0e10)
     parser.add_argument("--dpsi-coeff", type=float, default=2000.0)
+    parser.add_argument("--src-coeff", type=float, default=1.0)
     parser.add_argument("--dpsi-scale", type=float, default=4.0)
     parser.add_argument("--use-jax", action="store_true", help="xp=jnp for the LM kernels")
     parser.add_argument("--out", default=None)
     args = parser.parse_args()
 
     cfg = TIERS[args.tier]
-    tag = f"{args.tier}_c{args.dpsi_coeff:.0e}_s{args.dpsi_scale:g}"
+    tag = f"{args.tier}_c{args.dpsi_coeff:.0e}_s{args.dpsi_scale:g}_sc{args.src_coeff:g}"
     out = Path(args.out or Path("output") / "potential_correction_campaign" / tag)
     out.mkdir(parents=True, exist_ok=True)
 
@@ -181,7 +182,7 @@ def main():
     )
     src_pixelization = al.Pixelization(
         mesh=al.mesh.KNearestNeighbor(pixels=int(np.prod(source_shape))),
-        regularization=al.reg.Constant(coefficient=1.0),
+        regularization=al.reg.Constant(coefficient=args.src_coeff),
     )
     src_image_mesh = al.image_mesh.Overlay(shape=source_shape)
 
