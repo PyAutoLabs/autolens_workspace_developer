@@ -48,7 +48,7 @@ LOCAL_OUTPUT_PATH = _SCRIPT_DIR / "output"
 
 
 def fit():
-    from autoconf import conf
+    from autolens import conf
 
     conf.instance.push(
         new_path=_EUCLID_ROOT / "config",

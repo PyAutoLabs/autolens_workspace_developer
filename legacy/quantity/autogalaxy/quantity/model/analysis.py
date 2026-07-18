@@ -1,6 +1,6 @@
 import numpy as np
 
-from autoconf.dictable import to_dict
+from autolens import to_dict
 
 import autofit as af
 

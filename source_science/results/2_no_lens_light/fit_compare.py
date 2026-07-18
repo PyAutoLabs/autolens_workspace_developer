@@ -13,7 +13,7 @@ experiment 1 was driven by lens-light/source-light degeneracy during the fit.
 With no lens light to fit, the MGE source should recover truth far better.
 """
 
-from autoconf import jax_wrapper  # Sets JAX environment before other imports
+from autolens import jax_wrapper  # Sets JAX environment before other imports
 
 import json
 import os
