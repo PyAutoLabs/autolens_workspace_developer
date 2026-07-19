@@ -147,7 +147,7 @@ def make_test_data_path():
 def test__output_to_fits__array_2d_data__data_and_noise_map_written_correctly(
     dataset_quantity_7x7_array_2d, test_data_path
 ):
-    from autoconf.fitsable import output_to_fits
+    from autolens import output_to_fits
 
     output_to_fits(
         values=dataset_quantity_7x7_array_2d.data.native.array.astype("float"),
@@ -188,7 +188,7 @@ def test__output_to_fits__vector_yx_2d_data__first_pixel_written_correctly(
 
     dataset_quantity = ag.DatasetQuantity(data=data, noise_map=noise_map)
 
-    from autoconf.fitsable import output_to_fits
+    from autolens import output_to_fits
 
     output_to_fits(
         values=dataset_quantity.data.native.array.astype("float"),

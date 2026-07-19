@@ -9,7 +9,7 @@ saved to `source_science/results/mge_truth_source.json`).
 This flips which source class is "matched to truth" relative to tests 1/2.
 """
 
-from autoconf import jax_wrapper  # Sets JAX environment before other imports
+from autolens import jax_wrapper  # Sets JAX environment before other imports
 
 import numpy as np
 from pathlib import Path

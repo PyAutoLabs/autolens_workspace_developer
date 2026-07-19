@@ -25,7 +25,7 @@ positive-negative solver problem (shapelets *require* negative intensities to
 work). It is preserved here for completeness.
 """
 
-from autoconf import jax_wrapper  # Sets JAX environment before other imports
+from autolens import jax_wrapper  # Sets JAX environment before other imports
 
 import numpy as np
 from pathlib import Path

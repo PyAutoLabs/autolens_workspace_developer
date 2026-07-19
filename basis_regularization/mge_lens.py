@@ -46,7 +46,7 @@ This adds one extra parameter to the fit, the `coefficient`, which controls
 the degree of smoothing applied.
 """
 
-from autoconf import jax_wrapper  # Sets JAX environment before other imports
+from autolens import jax_wrapper  # Sets JAX environment before other imports
 
 import numpy as np
 from pathlib import Path

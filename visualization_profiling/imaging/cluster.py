@@ -39,7 +39,7 @@ from pathlib import Path
 
 import numpy as np
 
-from autoconf import jax_wrapper  # noqa: F401  — sets JAX env
+from autolens import jax_wrapper  # noqa: F401  — sets JAX env
 
 import autolens as al
 import autolens.plot as aplt

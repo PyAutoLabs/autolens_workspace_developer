@@ -1,4 +1,4 @@
-from autoconf.fitsable import hdu_list_for_output_from
+from autolens import hdu_list_for_output_from
 
 from autogalaxy.quantity.dataset_quantity import DatasetQuantity
 from autogalaxy.quantity.fit_quantity import FitQuantity

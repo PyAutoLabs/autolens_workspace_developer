@@ -6,7 +6,7 @@ shear, no Sersic bulge — but the source is the MGE galaxy extracted from
 the test-2 mge_source fit (`source_science/results/mge_truth_source.json`).
 """
 
-from autoconf import jax_wrapper  # Sets JAX environment before other imports
+from autolens import jax_wrapper  # Sets JAX environment before other imports
 
 import numpy as np
 from pathlib import Path

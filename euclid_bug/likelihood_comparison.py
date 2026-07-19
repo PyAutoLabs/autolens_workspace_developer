@@ -90,7 +90,7 @@ def _rel_diff(a, b):
 
 
 def main():
-    from autoconf import conf
+    from autolens import conf
 
     conf.instance.push(
         new_path=_EUCLID_ROOT / "config",

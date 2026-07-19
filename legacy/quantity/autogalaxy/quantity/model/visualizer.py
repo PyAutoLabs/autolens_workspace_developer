@@ -1,7 +1,7 @@
 import os
 
 import autofit as af
-from autoconf.test_mode import skip_visualization
+from autolens import skip_visualization
 
 from autogalaxy.quantity.model.plotter import PlotterQuantity
 

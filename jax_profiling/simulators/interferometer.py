@@ -18,7 +18,7 @@ Run from any path:
     python jax_profiling/simulators/interferometer.py
 """
 
-from autoconf import jax_wrapper  # noqa: F401 — must be first
+from autolens import jax_wrapper  # noqa: F401 — must be first
 
 import json
 import time

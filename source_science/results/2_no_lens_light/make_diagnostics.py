@@ -14,7 +14,7 @@ from pathlib import Path
 _DEV_ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(_DEV_ROOT))
 
-from autoconf import jax_wrapper  # Sets JAX environment before other imports
+from autolens import jax_wrapper  # Sets JAX environment before other imports
 import matplotlib
 
 matplotlib.use("Agg")
