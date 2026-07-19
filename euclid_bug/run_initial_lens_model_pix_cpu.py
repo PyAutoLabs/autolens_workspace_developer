@@ -2,7 +2,7 @@
 Local reproduction of the vis_pix CPU sparse-operator bug.
 
 Mirrors ``z_projects/euclid/scripts/initial_lens_model_pix_cpu.py`` body
-verbatim, but redirects autoconf's output_path to
+verbatim, but redirects autonerves's output_path to
 ``autolens_workspace_developer/euclid_bug/output/`` and hard-codes the test
 lens. The goal is to run the *exact* HPC code path locally, on a small mask
 (``info.json`` is set to ``mask_radius=2.3``), so the suspected source-
