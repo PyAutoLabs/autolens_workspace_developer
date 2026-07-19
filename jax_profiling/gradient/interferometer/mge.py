@@ -25,8 +25,8 @@ import autolens as al
 import autoarray as aa
 from autofit.jax import register_model as _register_model_pytrees
 
-# JAX x64 is auto-enabled by autoconf at import time (see
-# autoconf/jax_wrapper.py: sets JAX_ENABLE_X64="True" before jax imports),
+# JAX x64 is auto-enabled by autonerves at import time (see
+# autonerves/jax_wrapper.py: sets JAX_ENABLE_X64="True" before jax imports),
 # so we do not need to call jax.config.update here.
 
 # ---------------------------------------------------------------------------
