@@ -13,7 +13,50 @@ sampling in **physical parameter space**, keeping SMC's free log-evidence (sum
 of tempering `log_likelihood_increment`). Benchmark vs the Nautilus baseline
 (`output/comparison.txt`: nautilus_jax ~ −169k smoke, nss_grad ~ −31).
 
-## Status: wiring PROVEN; naive gradient SMC does NOT converge on this problem
+## Headline: cold-starting was the wrong test; warm-started, the solution is found
+
+**The representative regime is warm-started.** These samplers are meant to be
+handed a starting point near the maximum-likelihood solution by a JAX optimizer,
+not run cold from the prior. Cold-benchmarking them is not a fair test — and on
+this problem it is not even close:
+
+| | max log L |
+|---|---|
+| prior median | −159,736 |
+| every cold sampler arm (all step regimes) | −158k … −180k |
+| **multi-start Prodigy optimum** | **+31,788** |
+
+The cold runs never got within **~190,000 log-units** of the solution; the
+optimizer closes that entire gap in ~200 steps. The acceptance collapse
+characterised below is the sampler failing to cross a gap a gradient optimizer
+crosses trivially.
+
+Warm-started (RAL job 331035, float64, 64 particles), the picture inverts:
+
+- multi-start Prodigy: max log L **31787.93**, and the MLE's
+  **einstein_radius = 1.5997 against a truth of 1.6** — essentially exact.
+- Laplace reference scale **held** (no fallback): per-parameter posterior widths
+  sigma ~ 2e-4 … 2e-3 (physical).
+- Tempering advanced smoothly lambda 0.006 -> 1.0 in 15-16 steps (vs the cold
+  runs stalling at lambda ~ 1e-3), giving log Z ~ 31701 — a sane evidence number.
+
+**Outstanding: acceptance is still 0.000**, so the particles never move and the
+returned "posterior" is the reference reweighted, not a sampled posterior. Cause
+identified — a units error in the auto step size, fixed but **not yet re-run**:
+
+> **MALA units trap.** MALA proposes ``x + eps*grad + sqrt(2*eps)*xi``, so
+> ``eps`` is a **squared length**; the proposal length is ``sqrt(2*eps)``, not
+> ``eps``. Setting ``eps ~ sigma`` overshoots by ~1/sigma. Job 331035 ran
+> ``eps = 0.0029`` against ``sigma = 0.005``, i.e. proposal length 0.076 — about
+> **16x wider than the posterior** — hence zero acceptance at every temperature.
+> Correct scaling: ``ell = 2.38 * d^(-1/6) * sigma``, ``eps = ell^2 / 2``
+> (for HMC the step *is* a length, so it scales as sigma directly). The same
+> trap applied to the ``--tune`` spread rule; both now go through
+> ``auto_step_from_scale``.
+
+Next run should show non-zero acceptance and a genuinely mixed posterior.
+
+## Earlier cold-start study: wiring PROVEN; naive gradient SMC does NOT converge
 
 The machinery runs end-to-end in float64 (physical/whitened-space MALA & HMC,
 JAX-native log-prior, adaptive tempering, log-evidence, `--tune`). But **naive

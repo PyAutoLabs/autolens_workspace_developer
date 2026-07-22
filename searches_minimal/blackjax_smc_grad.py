@@ -428,12 +428,11 @@ else:  # hmc
 # sat at prior scale, so any step large enough to move was rejected outright.
 effective_step = args.step_size
 if args.warm_start and args.step_size == parser.get_default("step_size"):
-    effective_step = float(
-        (2.38 if args.kernel == "mala" else 1.0)
-        / np.sqrt(ndim)
-        * float(jnp.mean(REF_SIGMA_Z))
+    effective_step = auto_step_from_scale(float(jnp.mean(REF_SIGMA_Z)))
+    print(
+        f"Auto step size from reference width "
+        f"(sigma={float(jnp.mean(REF_SIGMA_Z)):.4g}): {effective_step:.4g}"
     )
-    print(f"Auto step size from reference width: {effective_step:.4g}")
 
 mcmc_parameters = {"step_size": jnp.asarray([effective_step])}
 
@@ -454,25 +453,41 @@ smc = blackjax.adaptive_tempered_smc(
     num_mcmc_steps=args.num_mcmc_steps,
 )
 
-# Optimal MALA/HMC step scaling. A fixed step cannot work here: the fixed-step
-# arm collapses to zero acceptance because the MGE likelihood is ~1000x sharper
-# than the prior, so as tempering concentrates the particle cloud the step must
-# shrink with it. Tie the step to the cloud's current per-dimension spread
-# (diagonal-covariance MALA), scaled by the dimension-optimal constant. This is
-# absolute (recomputed from state.particles each temperature), which is what
-# blackjax's inner_kernel_tuning API supports — the callback receives the stepped
-# SMC state, not the previous step size.
-STEP_SCALE = float((2.38 if args.kernel == "mala" else 1.0) / np.sqrt(ndim))
+# Step size from a target length scale ``sigma`` (the width the kernel should
+# move on). A fixed step cannot work here: the target concentrates by ~1000x
+# along the tempering path, so the step must track it.
+#
+# UNITS TRAP: MALA's proposal is ``x + eps*grad + sqrt(2*eps)*xi`` — ``eps`` is a
+# SQUARED length, and the proposal length is ``sqrt(2*eps)``, NOT ``eps``. Setting
+# eps ~ sigma therefore overshoots by ~1/sigma and gives zero acceptance (RAL job
+# 331035: eps=0.0029 vs sigma=0.005 => proposal length 0.076, ~16x too wide, acc
+# 0.000 at every temperature). Optimal MALA scaling is ell = 2.38 * d^(-1/6) *
+# sigma with eps = ell^2 / 2. HMC's step_size IS a length (the leapfrog step), so
+# it scales as sigma directly.
+
+
+def auto_step_from_scale(sigma: float) -> float:
+    if args.kernel == "mala":
+        ell = 2.38 * ndim ** (-1.0 / 6.0) * sigma
+        return float(0.5 * ell * ell)
+    return float(sigma * ndim ** (-0.25))
 
 
 if args.tune:
     import blackjax.smc.inner_kernel_tuning as ikt
 
+    _ELL_C = 2.38 * ndim ** (-1.0 / 6.0) if args.kernel == "mala" else None
+
     def mcmc_parameter_update_fn(rng_key, state, info):
-        # state.particles: (n_particles, ndim) in whitened space.
+        # state.particles: (n_particles, ndim) in whitened space. Same units trap
+        # as auto_step_from_scale: for MALA the step is a squared length.
         spread = jnp.mean(jnp.std(state.particles, axis=0))
-        new_step = jnp.clip(STEP_SCALE * spread, 1e-6, 1.0)
-        return {"step_size": jnp.asarray([new_step])}
+        if _ELL_C is not None:
+            ell = _ELL_C * spread
+            new_step = 0.5 * ell * ell
+        else:
+            new_step = spread * ndim ** (-0.25)
+        return {"step_size": jnp.asarray([jnp.clip(new_step, 1e-12, 1.0)])}
 
     tuned = ikt.as_top_level_api(
         smc_algorithm=blackjax.adaptive_tempered_smc,
