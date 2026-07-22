@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=smc_warm_cpu
+#SBATCH --job-name=smc_warm_fix
 #SBATCH --partition=ral
 #SBATCH --cpus-per-task=16
 #SBATCH --mem=128gb
@@ -37,8 +37,8 @@ python -c "import blackjax; print('blackjax', blackjax.__version__)"
 # converged and every downstream warm arm is meaningless.
 # ---------------------------------------------------------------------------
 echo ""
-echo "########## STEP 1: multi-start Prodigy warm start  $(date +%H:%M:%S) ##########"
-python -m searches_minimal._warm_start --n-starts 12 --n-steps 300 --refresh \
+echo "########## STEP 1: warm start (CACHED - reused so every arm shares one MLE)  $(date +%H:%M:%S) ##########"
+python -m searches_minimal._warm_start --n-starts 12 --n-steps 300 \
   || echo "WARMSTART rc=$? (downstream arms will fail)"
 echo "########## STEP 1 DONE  $(date +%H:%M:%S) ##########"
 
@@ -59,6 +59,13 @@ python -m searches_minimal.blackjax_smc_grad \
   --warm-start --tune --kernel mala --n-particles 64 --num-mcmc-steps 3 --target-ess 0.6 \
   || echo "ARM-WARM-TUNE rc=$? (continuing)"
 echo "########## STEP 3 DONE  $(date +%H:%M:%S) ##########"
+
+echo ""
+echo "########## STEP 4: SMC warm-start, HMC kernel  $(date +%H:%M:%S) ##########"
+python -m searches_minimal.blackjax_smc_grad \
+  --warm-start --kernel hmc --n-particles 64 --num-mcmc-steps 3 --target-ess 0.6 \
+  || echo "ARM-WARM-HMC rc=$? (continuing)"
+echo "########## STEP 4 DONE  $(date +%H:%M:%S) ##########"
 
 echo ""
 echo "===== SMC WARM-START RUN COMPLETE $(date +%H:%M:%S) ====="
