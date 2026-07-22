@@ -47,12 +47,14 @@ Usage:
     python searches_minimal/blackjax_smc_grad.py                 # MALA, fixed step
     python searches_minimal/blackjax_smc_grad.py --kernel hmc    # HMC inner kernel
     python searches_minimal/blackjax_smc_grad.py --tune          # adapt step size per temperature
+    python -m searches_minimal.blackjax_smc_grad --warm-start     # temper from the Prodigy-MLE Gaussian reference (representative)
 
 Requirements:
     pip install blackjax
 """
 
 import argparse
+import math
 import time
 from pathlib import Path
 
@@ -104,6 +106,21 @@ parser.add_argument(
     "acceptance rate (inner_kernel_tuning).",
 )
 parser.add_argument("--seed", type=int, default=42)
+parser.add_argument(
+    "--warm-start",
+    action="store_true",
+    help="Temper from a normalised Gaussian reference centred on the cached "
+    "multi-start (Prodigy) MLE instead of from the prior. This is the "
+    "representative regime — these samplers are meant to be warm-started by a "
+    "JAX optimizer — and it keeps log Z valid (see _warm_start.py).",
+)
+parser.add_argument(
+    "--ref-inflate",
+    type=float,
+    default=2.0,
+    help="Widen the Gaussian reference by this factor. The reference must be "
+    "BROADER than the posterior or the tempering path misses mass.",
+)
 args = parser.parse_args()
 
 
@@ -164,6 +181,39 @@ def _prior_arrays(model):
 
 
 P_MEAN, P_SIGMA, P_LOWER, P_UPPER, P_IS_GAUSS, P_SCALE = _prior_arrays(model)
+
+
+def _log_prior_norm(model) -> float:
+    """Total log normalisation constant of the prior density.
+
+    Dropped for plain MH (it cancels), but it does NOT cancel in the evidence:
+    log Z = log integral(prior * L) requires ``prior`` to be a normalised density.
+    Uniform -> -log(width); Gaussian -> -log(sigma) - 0.5*log(2*pi);
+    TruncatedGaussian -> the same minus log of the retained probability mass.
+    """
+    total = 0.0
+    for prior in model.priors_ordered_by_id:
+        sigma = getattr(prior, "sigma", None)
+        lo = float(getattr(prior, "lower_limit", -np.inf))
+        hi = float(getattr(prior, "upper_limit", np.inf))
+        if sigma is not None and np.isfinite(sigma) and sigma > 0:
+            mean = float(getattr(prior, "mean", 0.0) or 0.0)
+            total += -np.log(float(sigma)) - 0.5 * np.log(2.0 * np.pi)
+            if np.isfinite(lo) or np.isfinite(hi):
+                cdf_hi = _norm_cdf((hi - mean) / float(sigma)) if np.isfinite(hi) else 1.0
+                cdf_lo = _norm_cdf((lo - mean) / float(sigma)) if np.isfinite(lo) else 0.0
+                mass = max(cdf_hi - cdf_lo, 1e-300)
+                total += -np.log(mass)
+        else:
+            total += -np.log(hi - lo)
+    return float(total)
+
+
+def _norm_cdf(x: float) -> float:
+    return 0.5 * (1.0 + math.erf(x / np.sqrt(2.0)))
+
+
+LOG_PRIOR_NORM = _log_prior_norm(model)
 
 # Whitening. Parameters span very different physical scales (einstein_radius
 # ~ O(1) vs a centre coordinate ~ O(0.1)); a single scalar MALA/HMC step in raw
@@ -252,6 +302,63 @@ def log_likelihood_z(z):
 
 
 # --------------------------------------------------------------------------
+# Warm-start reference bridge (the representative regime).
+#
+# These samplers are meant to be warm-started from a JAX optimizer's MLE. A cold
+# prior->posterior run wastes its whole budget crossing the ~1000x scale gap
+# between prior and posterior (see smc_gradient_findings.md).
+#
+# Simply dropping particles at the MLE would destroy SMC's log-evidence, which
+# is only valid when tempering starts from a NORMALISED distribution. So instead
+# we temper geometrically from a normalised Gaussian reference g centred on the
+# MLE to the true posterior:
+#
+#     log target_lambda = (1-l)*log g + l*(log prior + log L)
+#                       = log g + l*(log prior + log L - log g)
+#
+# which maps onto blackjax's (logprior_fn + lambda * loglikelihood_fn) as
+#
+#     logprior_fn      := log g                                (normalised)
+#     loglikelihood_fn := log prior + log L - log g            (bridge weight)
+#
+# Because g integrates to 1, the accumulated tempering increments still estimate
+# log Z = log integral(prior * L) — the true evidence, directly comparable to
+# Nautilus. The prior here MUST carry its normalisation (LOG_PRIOR_NORM).
+# --------------------------------------------------------------------------
+
+if args.warm_start:
+    from searches_minimal._warm_start import load_warm_start
+
+    _ws = load_warm_start()
+    REF_MU_Z = jnp.asarray(_ws.mle) / SCALE
+    REF_SIGMA_Z = jnp.asarray(_ws.std * args.ref_inflate) / SCALE
+    _REF_LOGNORM = float(
+        -jnp.sum(jnp.log(REF_SIGMA_Z)) - 0.5 * ndim * math.log(2.0 * math.pi)
+    )
+    print(
+        f"Warm start: optimizer={_ws.optimizer} max log L={_ws.log_l:.2f} "
+        f"({_ws.n_converged}/{_ws.n_starts} converged, scale via {_ws.std_source}, "
+        f"inflate={args.ref_inflate})"
+    )
+
+    def log_reference_z(z):
+        """Normalised Gaussian reference in whitened space."""
+        return _REF_LOGNORM - 0.5 * jnp.sum(((z - REF_MU_Z) / REF_SIGMA_Z) ** 2)
+
+    def bridge_log_weight_z(z):
+        """log prior + log L - log g  (the tempered 'likelihood' of the bridge)."""
+        return (
+            log_prior_z(z) + LOG_PRIOR_NORM + log_likelihood_z(z) - log_reference_z(z)
+        )
+
+    smc_logprior_fn = log_reference_z
+    smc_loglikelihood_fn = bridge_log_weight_z
+else:
+    smc_logprior_fn = log_prior_z
+    smc_loglikelihood_fn = log_likelihood_z
+
+
+# --------------------------------------------------------------------------
 # One-shot compile of value_and_grad so the (dominant) gradient-stack compile
 # time is reported separately from sampling — mirrors probe_grad.py / the other
 # scripts. This is the expensive step for the gradient path.
@@ -314,7 +421,21 @@ else:  # hmc
     mcmc_init_fn = hmc.init
 
 # Shared scalar step, broadcast across particles via the leading dim of 1.
-mcmc_parameters = {"step_size": jnp.asarray([args.step_size])}
+#
+# Warm-started, the correct step scale is set by the REFERENCE width (which is
+# the posterior scale), not by the prior. Auto-scale to it unless the user gave
+# an explicit --step-size. This is what the cold runs could not do: their cloud
+# sat at prior scale, so any step large enough to move was rejected outright.
+effective_step = args.step_size
+if args.warm_start and args.step_size == parser.get_default("step_size"):
+    effective_step = float(
+        (2.38 if args.kernel == "mala" else 1.0)
+        / np.sqrt(ndim)
+        * float(jnp.mean(REF_SIGMA_Z))
+    )
+    print(f"Auto step size from reference width: {effective_step:.4g}")
+
+mcmc_parameters = {"step_size": jnp.asarray([effective_step])}
 
 
 # --------------------------------------------------------------------------
@@ -323,8 +444,8 @@ mcmc_parameters = {"step_size": jnp.asarray([args.step_size])}
 # --------------------------------------------------------------------------
 
 smc = blackjax.adaptive_tempered_smc(
-    logprior_fn=log_prior_z,
-    loglikelihood_fn=log_likelihood_z,
+    logprior_fn=smc_logprior_fn,
+    loglikelihood_fn=smc_loglikelihood_fn,
     mcmc_step_fn=mcmc_step_fn,
     mcmc_init_fn=mcmc_init_fn,
     mcmc_parameters=mcmc_parameters,
@@ -355,8 +476,8 @@ if args.tune:
 
     tuned = ikt.as_top_level_api(
         smc_algorithm=blackjax.adaptive_tempered_smc,
-        logprior_fn=log_prior_z,
-        loglikelihood_fn=log_likelihood_z,
+        logprior_fn=smc_logprior_fn,
+        loglikelihood_fn=smc_loglikelihood_fn,
         mcmc_step_fn=mcmc_step_fn,
         mcmc_init_fn=mcmc_init_fn,
         resampling_fn=resampling.systematic,
@@ -382,10 +503,18 @@ rng_key, init_key = jax.random.split(rng_key)
 cube0 = np.asarray(
     jax.random.uniform(init_key, shape=(args.n_particles, ndim), minval=0.0, maxval=1.0)
 )
-physical0 = np.stack(
-    [model.vector_from_unit_vector(list(c)) for c in cube0]
-).astype(np.float64)
-initial_particles = jnp.asarray(physical0) / SCALE  # whitened
+if args.warm_start:
+    # Draw the initial cloud from the normalised Gaussian reference itself —
+    # required for the bridge's log Z to be valid (the particles must be
+    # distributed as g at lambda=0).
+    initial_particles = REF_MU_Z + REF_SIGMA_Z * jax.random.normal(
+        init_key, shape=(args.n_particles, ndim)
+    )
+else:
+    physical0 = np.stack(
+        [model.vector_from_unit_vector(list(c)) for c in cube0]
+    ).astype(np.float64)
+    initial_particles = jnp.asarray(physical0) / SCALE  # whitened
 state = init_fn(initial_particles)
 
 
@@ -475,7 +604,7 @@ Likelihood evals:    {n_likelihood_calls}     (upper bound; inner={inner_evals}/
 Time per eval:       {t_elapsed / max(n_likelihood_calls, 1) * 1e3:.3f} ms
 ESS:                 n/a (SMC adaptive tempered targets ESS at each step)
 Posterior samples:   {args.n_particles}     (final tempered particles)
-Sampler config:      kernel={kernel_label}, n_particles={args.n_particles}, num_mcmc_steps={args.num_mcmc_steps}, target_ess={args.target_ess}, step_size={args.step_size}, n_smc_steps={n_smc_steps}
+Sampler config:      kernel={kernel_label}, start={'warm(Gaussian ref, inflate=' + str(args.ref_inflate) + ')' if args.warm_start else 'cold(prior)'}, n_particles={args.n_particles}, num_mcmc_steps={args.num_mcmc_steps}, target_ess={args.target_ess}, step_size={effective_step:.4g}, n_smc_steps={n_smc_steps}
 
 --- Convergence ---
 Converged:           yes (tempering reached lambda=1.0)
@@ -488,7 +617,7 @@ print(summary)
 
 output_dir = Path(__file__).parent / "output"
 output_dir.mkdir(parents=True, exist_ok=True)
-suffix = f"_{args.kernel}" + ("_tuned" if args.tune else "")
+suffix = f"_{args.kernel}" + ("_tuned" if args.tune else "") + ("_warm" if args.warm_start else "")
 summary_path = output_dir / f"{Path(__file__).stem}{suffix}_summary.txt"
 summary_path.write_text(summary)
 print(f"Summary written to: {summary_path}")
