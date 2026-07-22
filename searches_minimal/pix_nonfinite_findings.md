@@ -179,6 +179,11 @@ Directions for phase 2, cheapest first:
 * **Use `slogdet`** (or an eigenvalue sum) instead of `log(diag(cholesky))` — returns
   a sign and survives indefiniteness rather than NaN-ing. Still wrong-ish if the
   matrix is genuinely singular, but it fails *loudly*.
+  > **SHIPPED then REFUTED.** This was implemented as PyAutoArray#392
+  > (`Settings.log_det_method="slogdet"`, opt-in) and then A/B-tested against the
+  > multi-start gradient landscape in #112. It does **not** restore the search —
+  > see "Phase-2 validation (#112)" at the bottom of this file. Do not treat the
+  > log-det formulation as the fix for the #100/#101 walls.
 * **Treat the null space explicitly.** `log det(λ²L + εI)` for a singular `L` is
   ε-dependent by construction: the term is arguably ill-posed for `Constant`
   regularization on a connected mesh, and the `1e-8` is doing load-bearing science
@@ -267,3 +272,78 @@ not pre-emptively guard them; there is no evidence they fire.
   #101 is **not yet reproduced** and remains open.)
 * RAL clone is single-branch: `git fetch origin <branch>:refs/remotes/origin/<branch>`
   explicitly; a bare `git fetch origin` fatals on deleted refspecs.
+
+---
+
+# Phase-2 validation (#112): does `slogdet` reopen the landscape? — **NO**
+
+**Issue:** autolens_workspace_developer#112. **Question:** the localisation above
+named `log_det_regularization_matrix_term`'s non-PD Cholesky as *the* NaN site, and
+PyAutoArray#392 shipped a gradient-safe `slogdet` alternative. Does turning it on
+actually reopen the pixelized multi-start gradient landscape that walled in
+#100/#101?
+
+**Method:** strict A/B — the *same* script, *same* seed (0), *same* 16 starts ×
+150 steps × `adam@1e-2`, one env var apart (`PIX_LOGDET`), run back-to-back in one
+SLURM job. `searches_minimal/pix_slogdet_ab_cpu.sbatch`, RAL job **330953**
+(`ral` CPU partition, 1d07h31m wall). **This does not need the A100** — it is a
+gradient-*finiteness* question, not a throughput one; the only hard requirement is
+memory (batched, MaxRSS 41.5 GB).
+
+## Result: the two arms are indistinguishable
+
+| | cholesky (baseline) | slogdet (the fix) |
+|---|---|---|
+| BEST log L | **−31452.97** | **−31448.10** |
+| best r_E | 1.4016 | 1.4017 |
+| plateau value | −31450.18 | −31445.32 |
+| plateau reached at | **step 25** | **step 25** |
+| starts still finite @150 | **0/16** | **0/16** |
+| death-step range | 19–149 | 15–149 |
+| ~truth r_E / ~Nautilus r_E | 2/16 · 1/16 | 1/16 · 1/16 |
+| meets bar (+17419)? | no | no |
+| loop seconds | 43354 | 67973 (**1.57× slower**) |
+
+Per-step finite-loss attrition is the same story on both arms:
+
+```
+step:        0     25     50     75    100    125
+cholesky:  16/16  11/16  11/16   8/16   7/16   5/16
+slogdet:   16/16  12/16   7/16   6/16   7/16   4/16
+```
+
+**The Δ in best log L is 4.87 — 0.015% — on an objective sitting ~190,000 below
+the Nautilus bar.** Both arms stall at the identical step, plateau at the identical
+value, and lose every one of their 16 starts. `slogdet` costs 57% more runtime and
+buys nothing but a marginally better early *gradient*-finiteness count (16/16 vs
+15/16 at step 25) that has decayed to parity by step 50.
+
+## What this means
+
+**The #100/#101 walls are not (just) the non-PD Cholesky.** The #104 localisation
+was right about *where* the first NaN enters, but removing that specific NaN source
+does not restore search progress — so it was not the thing blocking the search. A
+gradient consumer on this objective dies for another reason, and phase 2 must stop
+treating the log-det formulation as the fix.
+
+Two concrete pointers for whoever picks this up:
+
+* **The stall is not the deaths.** Both arms plateau at **step 25**, while starts
+  keep dying all the way out to step 149. Progress stops long before the population
+  is exhausted, so "starts hit NaN walls" does not explain "best log L stops
+  improving". Something is wrong with the *descent direction*, not just the domain.
+* **The basin is reachable but non-finite.** In both arms exactly one start lands at
+  `r_E ≈ 1.42–1.45` — inside both the truth (1.6) and Nautilus-mode (1.31)
+  tolerances — and reports `log L = -inf` there. The optimizer does find the right
+  region and the objective is still not finite in it. That, not the log-det, is the
+  thing to localise next. Note also several starts finish with `log L = nan`,
+  `r_E = nan` (params themselves went NaN), which `optax.apply_if_finite` latching
+  does not prevent.
+
+Remaining candidates from the "Open question" section above are untouched by this
+result and stay open — the 920×920 reduced matrix (900 mesh pixels + 20
+unregularized MGE amplitudes) not leaving a clean Laplacian, disconnected mesh
+pixels, and the `unique_indices=True` scatter promise in `constant.py:55-58`.
+
+**Artifacts:** `/mnt/ral/jnightin/pixgrad_logs/pix_slogdet_ab_cpu-330953.out`, plus
+`searches_minimal/output/pix_lr_free_{cholesky,slogdet}_cpu_330953.txt`.
