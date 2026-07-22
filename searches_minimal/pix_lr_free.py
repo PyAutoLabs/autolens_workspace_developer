@@ -51,6 +51,7 @@ from searches_minimal.pix_multi_start import (  # noqa: E402
     BASIN_TOL,
     MESH_SHAPE,
     OS_PIX,
+    PIX_LOGDET,
 )
 from searches_minimal._setup import build_dataset  # noqa: E402
 from searches_minimal.lr_free_multistart import (  # noqa: E402
@@ -90,6 +91,7 @@ def main() -> None:
         f"  start_band=U({PIX_START_LOW},{PIX_START_HIGH})"
     )
     print(f"mesh=KernelAdaptDensity{MESH_SHAPE} os_pix={OS_PIX}  (no sparse operator)")
+    print(f"log_det_method={PIX_LOGDET or 'cholesky (default)'}")
 
     dataset = build_dataset()
     analysis = build_analysis(dataset)

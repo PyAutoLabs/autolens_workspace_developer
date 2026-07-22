@@ -57,6 +57,12 @@ PIX_LR = float(os.environ.get("PIX_LR") or 0) or None
 # it free — the #101 NaN-mortality probe: descent drives reg toward the
 # non-positive-definite curvature regime where the JAX Cholesky NaN-resamples.
 PIX_FIX_REG = float(os.environ.get("PIX_FIX_REG") or 0) or None
+# Inversion evidence log-det method (PyAutoArray#392, autolens_workspace_developer#112).
+# None/"cholesky" = default, byte-identical to prior behaviour (the baseline that
+# NaN-walled in #100/#101). "slogdet" = the shipped gradient-safe opt-in: finite +
+# differentiable where the Cholesky log-det NaN-resamples. The A/B is one env var
+# apart, so both arms run from the same seeds and script.
+PIX_LOGDET = os.environ.get("PIX_LOGDET") or None
 
 
 def build_model() -> af.Collection:
@@ -92,8 +98,12 @@ def build_model() -> af.Collection:
 
 def build_analysis(dataset):
     dataset = dataset.apply_over_sampling(over_sample_size_pixelization=OS_PIX)
+    # None -> AnalysisImaging's own default settings (cholesky); pass a Settings
+    # object only to opt into slogdet, so the default arm stays byte-identical.
+    settings = al.Settings(log_det_method=PIX_LOGDET) if PIX_LOGDET else None
     return al.AnalysisImaging(
         dataset=dataset,
+        settings=settings,
         raise_inversion_positions_likelihood_exception=False,
         use_jax=True,
     )
@@ -140,6 +150,7 @@ def main() -> None:
     print(f"JAX backend: {jax.default_backend()}  x64={jax.config.jax_enable_x64}")
     print(f"Sampler: {which}  n_starts={n_starts}  batch_size={batch_size}  lr={PIX_LR or 'default'}")
     print(f"mesh=KernelAdaptDensity{MESH_SHAPE} os_pix={OS_PIX}  (no sparse operator)")
+    print(f"log_det_method={PIX_LOGDET or 'cholesky (default)'}")
 
     dataset = build_dataset()
     analysis = build_analysis(dataset)
