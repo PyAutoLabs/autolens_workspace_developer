@@ -40,9 +40,49 @@ Warm-started (RAL job 331035, float64, 64 particles), the picture inverts:
 - Tempering advanced smoothly lambda 0.006 -> 1.0 in 15-16 steps (vs the cold
   runs stalling at lambda ~ 1e-3), giving log Z ~ 31701 — a sane evidence number.
 
-**Outstanding: acceptance is still 0.000**, so the particles never move and the
-returned "posterior" is the reference reweighted, not a sampled posterior. Cause
-identified — a units error in the auto step size, fixed but **not yet re-run**:
+### RESOLVED: it now samples
+
+Warm-started gradient SMC works end to end:
+
+```
+Auto step size from POSTERIOR width (sigma=0.5, ref sigma=1): 0.2871
+  step 1: lambda=0.108  max log L=31770.41  acc rate=0.799
+  step 2: lambda=0.206  max log L=31780.07  acc rate=0.781
+  step 3: lambda=0.329                      acc rate=0.754
+  step 4: lambda=0.523                      acc rate=0.523
+  step 5: lambda=0.664  max log L=31781.57  acc rate=0.413
+  step 6: lambda=0.849                      acc rate=0.262
+  step 7: lambda=1.000                      acc rate=0.166
+Best fit: einstein_radius = 1.5998   (truth 1.6)
+```
+
+Acceptance is healthy, particles genuinely move, max log L climbs toward the
+Prodigy MLE (31787.93). Getting there required **three compounding fixes**, each
+measured rather than guessed:
+
+1. **Prior-whitening does not whiten the posterior.** Measured **269x
+   anisotropy** in prior-whitened coordinates — ``einstein_radius`` has prior
+   scale 8.0 but posterior std 2e-4 (sigma_z 5.3e-5) against 1.4e-2 for the
+   loosest parameter. No scalar step can serve that spread: one tuned to the mean
+   is ~88x too large for the tightest parameter. Fix: whiten by the warm-start
+   (posterior) scale.
+2. **Diagonal whitening is not enough — the posterior is correlated.** Laplace
+   covariance condition number **568**, with |r| = 0.95 between two parameters
+   (two pairs above 0.9). Diagonal whitening leaves a thin *tilted* ridge that a
+   spherical proposal walks off. Fix: whiten with the **Cholesky factor of the
+   full covariance**, adding ``log|det L|`` to the reported evidence.
+3. **The step targeted the reference width, not the posterior width.** The
+   reference is deliberately inflated (``--ref-inflate``) so it covers the
+   posterior; in whitened units the reference has sigma 1 but the posterior has
+   sigma ~1/inflate, so scaling to sigma=1 overshoots by ``inflate^2``. Measured
+   directly: ``eps=1.148 -> acc 0.00``, ``eps=0.1 -> acc 0.94``. Fix: auto step
+   targets the posterior width (``eps=0.287`` at inflate=2).
+
+**Remaining refinement:** acceptance declines 0.80 -> 0.17 as lambda -> 1, which
+is exactly what a *fixed* step does as the target sharpens — this is the job of
+``--tune`` (per-temperature step adaptation), still to be validated at scale.
+
+### The earlier units error (also real, also fixed)
 
 > **MALA units trap.** MALA proposes ``x + eps*grad + sqrt(2*eps)*xi``, so
 > ``eps`` is a **squared length**; the proposal length is ``sqrt(2*eps)``, not
