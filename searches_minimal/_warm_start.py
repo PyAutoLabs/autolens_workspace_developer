@@ -69,7 +69,8 @@ MAX_CONSECUTIVE_NAN = 10
 @dataclass
 class WarmStart:
     mle: np.ndarray  # (ndim,) physical parameters at the best optimum
-    std: np.ndarray  # (ndim,) Gaussian reference scale about the MLE
+    std: np.ndarray  # (ndim,) marginal reference scale (diagonal fallback)
+    cov: np.ndarray | None  # (ndim, ndim) FULL reference covariance, or None
     log_l: float  # log likelihood at the MLE
     n_starts: int
     n_converged: int
@@ -80,6 +81,7 @@ class WarmStart:
         d = asdict(self)
         d["mle"] = [float(v) for v in self.mle]
         d["std"] = [float(v) for v in self.std]
+        d["cov"] = None if self.cov is None else [[float(v) for v in r] for r in self.cov]
         return d
 
 
@@ -117,11 +119,19 @@ def _finite_gradient_starts(obj, n_starts: int, seed: int) -> jnp.ndarray:
     return jnp.stack(starts)
 
 
-def _laplace_std(obj, mle: jnp.ndarray) -> np.ndarray | None:
-    """Per-parameter posterior scale from the inverse-Hessian diagonal at the MLE.
+def _laplace_cov(obj, mle: jnp.ndarray) -> np.ndarray | None:
+    """Full posterior covariance from the inverse Hessian at the MLE.
 
-    Returns ``None`` if the Hessian is not finite or not positive-definite on the
-    diagonal of its inverse (in which case the caller falls back).
+    The FULL matrix matters, not just its diagonal: the lens parameters
+    (einstein_radius / ellipticity / shear / centres) are strongly correlated, so
+    a diagonal-only whitening leaves the posterior a thin *tilted* ridge and a
+    spherical MALA/HMC proposal still walks straight off it (measured: diagonal
+    whitening lifted acceptance off zero only at the first temperature, then it
+    collapsed again). Whitening by the Cholesky factor of this matrix decorrelates
+    properly.
+
+    Returns ``None`` if the Hessian is not finite or the covariance is not
+    positive-definite (the caller then falls back).
     """
     try:
         hess = np.asarray(jax.hessian(obj.neg_log_posterior_raw)(mle))
@@ -131,16 +141,27 @@ def _laplace_std(obj, mle: jnp.ndarray) -> np.ndarray | None:
     if not np.all(np.isfinite(hess)):
         print("  Laplace: Hessian non-finite, falling back")
         return None
+    hess = 0.5 * (hess + hess.T)  # symmetrise away round-off
     try:
         cov = np.linalg.inv(hess)
     except np.linalg.LinAlgError:
         print("  Laplace: Hessian singular, falling back")
         return None
-    diag = np.diag(cov)
-    if not np.all(np.isfinite(diag)) or np.any(diag <= 0):
-        print("  Laplace: inverse-Hessian diagonal not positive, falling back")
+    cov = 0.5 * (cov + cov.T)
+    if not np.all(np.isfinite(cov)):
+        print("  Laplace: covariance non-finite, falling back")
         return None
-    return np.sqrt(diag)
+    try:
+        np.linalg.cholesky(cov)  # positive-definite?
+    except np.linalg.LinAlgError:
+        print("  Laplace: covariance not positive-definite, falling back")
+        return None
+    evals = np.linalg.eigvalsh(cov)
+    print(
+        f"  Laplace covariance OK — condition number {evals.max() / evals.min():.3g} "
+        f"(this is the anisotropy a diagonal whitening cannot remove)"
+    )
+    return cov
 
 
 def compute_warm_start(
@@ -203,7 +224,8 @@ def compute_warm_start(
     print(f"  {n_converged}/{n_starts} starts within 1 nat of the best optimum")
 
     # --- Gaussian reference scale, best source first ------------------------
-    std = _laplace_std(obj, mle)
+    cov = _laplace_cov(obj, mle)
+    std = None if cov is None else np.sqrt(np.diag(cov))
     std_source = "laplace"
     if std is None:
         endpoints = np.asarray(params)[converged_mask]
@@ -218,6 +240,7 @@ def compute_warm_start(
     return WarmStart(
         mle=np.asarray(mle, dtype=np.float64),
         std=np.asarray(std, dtype=np.float64),
+        cov=None if cov is None else np.asarray(cov, dtype=np.float64),
         log_l=log_l,
         n_starts=int(n_starts),
         n_converged=n_converged,
@@ -244,6 +267,11 @@ def load_warm_start(refresh: bool = False, path: Path = CACHE_PATH, **kwargs) ->
         return WarmStart(
             mle=np.asarray(d["mle"], dtype=np.float64),
             std=np.asarray(d["std"], dtype=np.float64),
+            cov=(
+                None
+                if d.get("cov") is None
+                else np.asarray(d["cov"], dtype=np.float64)
+            ),
             log_l=float(d["log_l"]),
             n_starts=int(d["n_starts"]),
             n_converged=int(d["n_converged"]),
@@ -276,7 +304,7 @@ def main() -> None:
     print(f"optimizer:     {ws.optimizer}")
     print(f"max log L:     {ws.log_l:.4f}")
     print(f"converged:     {ws.n_converged}/{ws.n_starts}")
-    print(f"ref scale via: {ws.std_source}")
+    print(f"ref scale via: {ws.std_source}  (full covariance: {ws.cov is not None})")
     print(f"mle:           {np.array2string(ws.mle, precision=4, max_line_width=100)}")
     print(f"std:           {np.array2string(ws.std, precision=4, max_line_width=100)}")
     print(f"written to:    {path}")

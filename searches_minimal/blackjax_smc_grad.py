@@ -89,9 +89,11 @@ parser.add_argument("--target-ess", type=float, default=0.5)
 parser.add_argument(
     "--step-size",
     type=float,
-    default=0.01,
-    help="Inner-kernel step size (dimensionless; scaled per-parameter by the "
-    "prior mass matrix). Overridden per-temperature when --tune is set.",
+    default=None,
+    help="Inner-kernel step size. Default None = auto-scale from the warm-start "
+    "reference (see auto_step_from_scale). NOTE: must default to None, not a "
+    "number — with a numeric default, passing that same number explicitly is "
+    "indistinguishable from not passing it, which silently defeats the override.",
 )
 parser.add_argument(
     "--hmc-integration-steps",
@@ -222,7 +224,56 @@ LOG_PRIOR_NORM = _log_prior_norm(model)
 # behaves sensibly across all parameters. blackjax's MALA takes only a scalar
 # step (no metric argument), so this whitening — not an array step or a mass
 # matrix — is what preconditions it. HMC then uses an identity mass matrix.
-SCALE = jnp.asarray(P_SCALE)
+# The sampler works in whitened coordinates z, related to physical params by the
+# affine map  params = SHIFT + z * SCALE.
+#
+# CRITICAL: whiten by the POSTERIOR scale, not the prior scale. Prior-whitening
+# does NOT whiten the posterior — measured on this problem the posterior is 269x
+# ANISOTROPIC in prior-whitened coordinates (einstein_radius: prior scale 8.0 but
+# posterior std 2e-4 => sigma_z 5.3e-5, against 1.4e-2 for the loosest
+# parameter). No scalar MALA/HMC step can serve that spread: a step tuned to the
+# mean is ~88x too large for the tightest parameter, throwing it ~88 sigma off
+# every proposal, which is why acceptance pinned at 0.000 in RAL jobs 330962 and
+# 331035 no matter how the scalar was tuned.
+#
+# Warm-started we know the posterior scale (the Laplace reference), so we whiten
+# by it: the target becomes ~N(0, I), isotropic and unit-scale, where a single
+# scalar step is exactly the right object. Cold, we have nothing better than the
+# prior scale.
+# The transform is a full matrix, params = SHIFT + L @ z, not just a per-axis
+# rescale: the posterior is strongly CORRELATED (einstein_radius / ellipticity /
+# shear / centres), so diagonal whitening leaves a thin tilted ridge that a
+# spherical proposal walks off. Using the Cholesky factor of the Laplace
+# covariance decorrelates as well as rescales, making the target ~N(0, I).
+if args.warm_start:
+    from searches_minimal._warm_start import load_warm_start
+
+    _ws = load_warm_start()
+    SHIFT = jnp.asarray(_ws.mle)
+    if _ws.cov is not None:
+        _L = np.linalg.cholesky(_ws.cov) * args.ref_inflate
+        _whiten_kind = "full-covariance Cholesky"
+    else:
+        _L = np.diag(_ws.std * args.ref_inflate)
+        _whiten_kind = "diagonal (no covariance available)"
+    print(
+        f"Warm start: optimizer={_ws.optimizer} max log L={_ws.log_l:.2f} "
+        f"({_ws.n_converged}/{_ws.n_starts} converged, scale via {_ws.std_source}, "
+        f"inflate={args.ref_inflate})"
+    )
+    print(f"Whitening: {_whiten_kind}")
+else:
+    SHIFT = jnp.zeros(ndim)
+    _L = np.diag(P_SCALE)
+
+WHITEN_L = jnp.asarray(_L)
+WHITEN_L_INV = jnp.asarray(np.linalg.inv(_L))
+
+# Jacobian of params = SHIFT + L @ z. The SMC evidence is computed in z-space;
+# converting back to the physical evidence adds log|det L|:
+#   integral prior(x) L(x) dx = |det L| * integral prior(x(z)) L(x(z)) dz
+LOG_JACOBIAN = float(np.sum(np.log(np.abs(np.diag(_L)))))
+
 INV_MASS_DIAG = jnp.ones(ndim)  # identity: the space is already whitened
 
 
@@ -293,12 +344,16 @@ def _log_likelihood_jvp(primals, tangents):
 # --------------------------------------------------------------------------
 
 
+def physical_from_z(z):
+    return SHIFT + WHITEN_L @ z
+
+
 def log_prior_z(z):
-    return log_prior(z * SCALE)
+    return log_prior(physical_from_z(z))
 
 
 def log_likelihood_z(z):
-    return log_likelihood(z * SCALE)
+    return log_likelihood(physical_from_z(z))
 
 
 # --------------------------------------------------------------------------
@@ -327,23 +382,15 @@ def log_likelihood_z(z):
 # --------------------------------------------------------------------------
 
 if args.warm_start:
-    from searches_minimal._warm_start import load_warm_start
-
-    _ws = load_warm_start()
-    REF_MU_Z = jnp.asarray(_ws.mle) / SCALE
-    REF_SIGMA_Z = jnp.asarray(_ws.std * args.ref_inflate) / SCALE
-    _REF_LOGNORM = float(
-        -jnp.sum(jnp.log(REF_SIGMA_Z)) - 0.5 * ndim * math.log(2.0 * math.pi)
-    )
-    print(
-        f"Warm start: optimizer={_ws.optimizer} max log L={_ws.log_l:.2f} "
-        f"({_ws.n_converged}/{_ws.n_starts} converged, scale via {_ws.std_source}, "
-        f"inflate={args.ref_inflate})"
-    )
+    # In these coordinates the reference is EXACTLY the standard normal: we
+    # whitened by its own scale, so g(z) = N(0, I) — normalised by construction,
+    # which is what keeps the SMC evidence valid.
+    _REF_LOGNORM = float(-0.5 * ndim * math.log(2.0 * math.pi))
+    REF_SIGMA_Z = jnp.ones(ndim)
 
     def log_reference_z(z):
-        """Normalised Gaussian reference in whitened space."""
-        return _REF_LOGNORM - 0.5 * jnp.sum(((z - REF_MU_Z) / REF_SIGMA_Z) ** 2)
+        """Normalised standard-normal reference in whitened space."""
+        return _REF_LOGNORM - 0.5 * jnp.sum(z**2)
 
     def bridge_log_weight_z(z):
         """log prior + log L - log g  (the tempered 'likelihood' of the bridge)."""
@@ -370,7 +417,9 @@ else:
 # reference and is where the initial particle cloud is centred.
 # --------------------------------------------------------------------------
 
-Z_MEDIAN = jnp.asarray(model.vector_from_unit_vector([0.5] * ndim)) / SCALE
+Z_MEDIAN = (
+    jnp.asarray(model.vector_from_unit_vector([0.5] * ndim)) - SHIFT
+) @ WHITEN_L_INV.T
 
 print("JIT-compiling value_and_grad(log_likelihood_z) (one-shot)...", flush=True)
 t_jit_start = time.time()
@@ -385,6 +434,26 @@ if not np.all(np.isfinite(_g0)):
         "Non-finite gradient at the whitened prior median even after masking — "
         "gradient path unsound."
     )
+
+
+# Step size from a target length scale ``sigma`` (the width the kernel should
+# move on). A fixed step cannot work here: the target concentrates by ~1000x
+# along the tempering path, so the step must track it.
+#
+# UNITS TRAP: MALA's proposal is ``x + eps*grad + sqrt(2*eps)*xi`` — ``eps`` is a
+# SQUARED length, and the proposal length is ``sqrt(2*eps)``, NOT ``eps``. Setting
+# eps ~ sigma therefore overshoots by ~1/sigma and gives zero acceptance (RAL job
+# 331035: eps=0.0029 vs sigma=0.005 => proposal length 0.076, ~16x too wide, acc
+# 0.000 at every temperature). Optimal MALA scaling is ell = 2.38 * d^(-1/6) *
+# sigma with eps = ell^2 / 2. HMC's step_size IS a length (the leapfrog step), so
+# it scales as sigma directly.
+
+
+def auto_step_from_scale(sigma: float) -> float:
+    if args.kernel == "mala":
+        ell = 2.38 * ndim ** (-1.0 / 6.0) * sigma
+        return float(0.5 * ell * ell)
+    return float(sigma * ndim ** (-0.25))
 
 
 # --------------------------------------------------------------------------
@@ -426,13 +495,22 @@ else:  # hmc
 # the posterior scale), not by the prior. Auto-scale to it unless the user gave
 # an explicit --step-size. This is what the cold runs could not do: their cloud
 # sat at prior scale, so any step large enough to move was rejected outright.
-effective_step = args.step_size
-if args.warm_start and args.step_size == parser.get_default("step_size"):
-    effective_step = auto_step_from_scale(float(jnp.mean(REF_SIGMA_Z)))
+if args.step_size is not None:
+    effective_step = args.step_size
+elif args.warm_start:
+    # Target the POSTERIOR width, not the reference width. The reference is
+    # deliberately inflated (--ref-inflate) so it covers the posterior, so in
+    # whitened units the reference has sigma 1 but the posterior has sigma
+    # ~1/inflate. Scaling to sigma=1 overshoots by inflate^2 and pins acceptance
+    # at zero (measured: eps=1.148 -> acc 0.00, eps=0.1 -> acc 0.94).
+    sigma_post = 1.0 / args.ref_inflate
+    effective_step = auto_step_from_scale(sigma_post)
     print(
-        f"Auto step size from reference width "
-        f"(sigma={float(jnp.mean(REF_SIGMA_Z)):.4g}): {effective_step:.4g}"
+        f"Auto step size from POSTERIOR width "
+        f"(sigma={sigma_post:.4g}, ref sigma=1): {effective_step:.4g}"
     )
+else:
+    effective_step = 0.01
 
 mcmc_parameters = {"step_size": jnp.asarray([effective_step])}
 
@@ -453,24 +531,6 @@ smc = blackjax.adaptive_tempered_smc(
     num_mcmc_steps=args.num_mcmc_steps,
 )
 
-# Step size from a target length scale ``sigma`` (the width the kernel should
-# move on). A fixed step cannot work here: the target concentrates by ~1000x
-# along the tempering path, so the step must track it.
-#
-# UNITS TRAP: MALA's proposal is ``x + eps*grad + sqrt(2*eps)*xi`` — ``eps`` is a
-# SQUARED length, and the proposal length is ``sqrt(2*eps)``, NOT ``eps``. Setting
-# eps ~ sigma therefore overshoots by ~1/sigma and gives zero acceptance (RAL job
-# 331035: eps=0.0029 vs sigma=0.005 => proposal length 0.076, ~16x too wide, acc
-# 0.000 at every temperature). Optimal MALA scaling is ell = 2.38 * d^(-1/6) *
-# sigma with eps = ell^2 / 2. HMC's step_size IS a length (the leapfrog step), so
-# it scales as sigma directly.
-
-
-def auto_step_from_scale(sigma: float) -> float:
-    if args.kernel == "mala":
-        ell = 2.38 * ndim ** (-1.0 / 6.0) * sigma
-        return float(0.5 * ell * ell)
-    return float(sigma * ndim ** (-0.25))
 
 
 if args.tune:
@@ -522,14 +582,12 @@ if args.warm_start:
     # Draw the initial cloud from the normalised Gaussian reference itself —
     # required for the bridge's log Z to be valid (the particles must be
     # distributed as g at lambda=0).
-    initial_particles = REF_MU_Z + REF_SIGMA_Z * jax.random.normal(
-        init_key, shape=(args.n_particles, ndim)
-    )
+    initial_particles = jax.random.normal(init_key, shape=(args.n_particles, ndim))
 else:
     physical0 = np.stack(
         [model.vector_from_unit_vector(list(c)) for c in cube0]
     ).astype(np.float64)
-    initial_particles = jnp.asarray(physical0) / SCALE  # whitened
+    initial_particles = (jnp.asarray(physical0) - SHIFT) @ WHITEN_L_INV.T  # whitened
 state = init_fn(initial_particles)
 
 
@@ -586,7 +644,7 @@ t_elapsed = time.time() - t_start
 final_particles = _particles(state)  # whitened z
 final_log_l = vmapped_log_l(final_particles)
 best_idx = int(jnp.argmax(final_log_l))
-best_physical = np.asarray(final_particles[best_idx]) * np.asarray(SCALE)  # de-whiten
+best_physical = np.asarray(physical_from_z(final_particles[best_idx]))  # de-whiten
 best_instance = model.instance_from_vector(vector=list(best_physical))
 max_logl = float(jnp.max(final_log_l))
 
@@ -609,7 +667,7 @@ summary = f"""\
 --- BlackJAX SMC (adaptive tempered + {kernel_label}, whitened sampling) Results ---
 Best fit:        {format_best_fit(best_instance)}
 Max log L:       {max_logl:.4f}
-Log evidence:    {log_z:.4f}     (sum of SMC log_likelihood_increment over temperatures)
+Log evidence:    {log_z + LOG_JACOBIAN:.4f}     (SMC increments + log|J|={LOG_JACOBIAN:.4f} for the whitening transform)
 
 --- Performance ---
 Wall time:           {t_elapsed:.2f} s     (excludes JIT compile, run ahead of time)
