@@ -29,7 +29,7 @@ finite and non-zero.
 | Imaging, `RectangularKernelAdaptDensity` (os_pix=4) | **works** | **yes** (2026-07-10: strict FD-step-sweep, all 14 params; variant F) | FoM parity with linear `AdaptDensity` = 2.7e-5 relative at default bandwidth |
 | Imaging, `RectangularKernelAdaptImage` + `reg.Adapt` + adapt images + border relocator (os_pix=4, bandwidth=0.1) | **works** | **yes** (2026-07-10: strict FD-step-sweep, all 14 params; variant G) | full production shape; FoM parity floor 6.3e-4 relative (intrinsic: the kernel smooths the adapt-image weights over its bandwidth; swept bandwidth×n_knots 2026-07-10) |
 | Interferometer, `RectangularKernelAdaptDensity` + `reg.Adapt` (sparse operator) | **works — the interferometer staircase now has its escape hatch** | **yes** (2026-07-10: strict FD-step-sweep, all 7 mass/shear params live; variant D of `jax_grad/interferometer.py`) | the production-shape adaptive mesh with usable gradients on the no-over-sampling path; FoM parity 3.9e-5 relative at default bandwidth |
-| Imaging, Delaunay pixelization | **hard error** (re-confirmed 2026-07-09: 3 PASS / 8 ERROR) | n/a | `jax.pure_callback` → `scipy.spatial.Delaunay` has no JVP rule (`PyAutoArray .../interpolator/delaunay.py:126`); see "Why Delaunay gradients are infeasible today" below (phase 2) |
+| Imaging, Delaunay pixelization | **hard error — but UNBLOCKABLE by one line** (probed 2026-07-26) | probe: median 9.6e-6, max 2.1e-3 over 14 params (mass/shear live) | `jax.pure_callback` has no JVP rule — but the current architecture runs EVERYTHING differentiable in-graph (visibility-walk point location, barycentric weights, dual areas, split points); the callback returns only int32 tables, which are piecewise-constant in the vertices, so `stop_gradient` on the callback input yields the EXACT almost-everywhere derivative (nothing dropped). Probe passed on the full production shape (Hilbert + edge zeroing + AdaptSplit); residual FD scatter on mass = FD steps crossing re-wiring events. Ship task filed: `PyAutoMind/draft/feature/autoarray/delaunay_frozen_tables_gradient.md`. The 2026-07-09 "infeasible" section below predates the in-graph walk and is superseded on points 1–2 (point 3's a.e. analysis is what the probe confirms) |
 | Imaging, `KNearestNeighbor` (Wendland kNN) + `reg.ConstantSplit` / `reg.AdaptSplit` | **works** | **yes** (2026-07-26: strict FD-step-sweep, all 14 params, rel err ≤ 3.3e-8; `jax_grad/knn.py` variants A/B) | the JAX-native Delaunay-family mesh: Hilbert image mesh + edge zeroing, no scipy callback anywhere in the graph — gradients flow through traced query points AND traced mesh vertices. **Split-family regularization only**: `reg.Constant`/`ConstantZeroth`/`Adapt` need `MeshGeometryDelaunay.neighbors` (a direct scipy call on the traced mesh grid) and raise `TracerArrayConversionError` under `jax.grad` — pinned as a negative test in the script. Science caveat: Wendland kNN historically underperforms Delaunay (kernel knobs, caustic smearing — see PyAutoArray#317 background) |
 | Imaging, `KNNBarycentric` + `reg.ConstantSplit` | **works** (gradients only) | **yes** (2026-07-26: strict FD-step-sweep, all 14 params, rel err ≤ 4.1e-7; `jax_grad/knn.py` variant C) | 3-nearest barycentric weights; slightly noisier FD than Wendland (3-NN-set swaps move weights discontinuously — measure-zero jump sites). **Mesh failed its science gate as a Delaunay replacement** (PyAutoArray#317: 2.2% log-evidence drift, ~5% of vertices unreachable) — certified for gradient correctness, not for production science |
 | Point source, source-plane χ² (`FitPositionsSource`) | **works** (probe 4/4 PASS; forward `jax.jit` still blocked by the `Grid2DIrregular` xp gap) | **yes** (2026-07-09, rel err ≤ 5e-6; `jax_grad/point_source.py`) | includes magnification-via-Hessian term (3rd derivatives of the potential); flux/H0 legitimately zero in positions-only fits |
@@ -256,6 +256,15 @@ with the kernel's dynamic range).
 
 ## Findings log
 
+- **2026-07-26** (Delaunay frozen-tables gradient probe): `stop_gradient` on
+  the tables `pure_callback` input unlocks `jax.grad` through the full
+  Delaunay likelihood — the in-graph visibility walk means only the int32
+  tables (true derivative: zero between re-wirings) are frozen, so this is
+  the exact a.e. gradient, not an approximation. Probe on the production
+  shape: 14/14 params live, FD median 9.6e-6 / max 2.1e-3, eager==jit. Ship
+  task filed to PyAutoMind. Remaining Delaunay-vs-KNN trade: the callback is
+  `vmap_method="sequential"` — one host qhull call per vmap lane — so the
+  KNN meshes stay the batched-throughput option.
 - **2026-07-26** (regularization × mesh sweep, table above +
   `jax_grad/regularization.py` — new): every `al.reg` scheme swept on both
   gradient-capable mesh families. New FD certifications: `Zeroth` (both
