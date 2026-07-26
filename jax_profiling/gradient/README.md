@@ -29,7 +29,7 @@ finite and non-zero.
 | Imaging, `RectangularKernelAdaptDensity` (os_pix=4) | **works** | **yes** (2026-07-10: strict FD-step-sweep, all 14 params; variant F) | FoM parity with linear `AdaptDensity` = 2.7e-5 relative at default bandwidth |
 | Imaging, `RectangularKernelAdaptImage` + `reg.Adapt` + adapt images + border relocator (os_pix=4, bandwidth=0.1) | **works** | **yes** (2026-07-10: strict FD-step-sweep, all 14 params; variant G) | full production shape; FoM parity floor 6.3e-4 relative (intrinsic: the kernel smooths the adapt-image weights over its bandwidth; swept bandwidth×n_knots 2026-07-10) |
 | Interferometer, `RectangularKernelAdaptDensity` + `reg.Adapt` (sparse operator) | **works — the interferometer staircase now has its escape hatch** | **yes** (2026-07-10: strict FD-step-sweep, all 7 mass/shear params live; variant D of `jax_grad/interferometer.py`) | the production-shape adaptive mesh with usable gradients on the no-over-sampling path; FoM parity 3.9e-5 relative at default bandwidth |
-| Imaging, Delaunay pixelization | **hard error — but UNBLOCKABLE by one line** (probed 2026-07-26) | probe: median 9.6e-6, max 2.1e-3 over 14 params (mass/shear live) | `jax.pure_callback` has no JVP rule — but the current architecture runs EVERYTHING differentiable in-graph (visibility-walk point location, barycentric weights, dual areas, split points); the callback returns only int32 tables, which are piecewise-constant in the vertices, so `stop_gradient` on the callback input yields the EXACT almost-everywhere derivative (nothing dropped). Probe passed on the full production shape (Hilbert + edge zeroing + AdaptSplit); residual FD scatter on mass = FD steps crossing re-wiring events. Ship task filed: `PyAutoMind/draft/feature/autoarray/delaunay_frozen_tables_gradient.md`. The 2026-07-09 "infeasible" section below predates the in-graph walk and is superseded on points 1–2 (point 3's a.e. analysis is what the probe confirms) |
+| Imaging, Delaunay pixelization | **works — frozen-tables a.e.-exact gradient** (SHIPPED 2026-07-26: `stop_gradient` on the tables callback input) | **yes** (2026-07-26: median 9.6e-6, max 2.1e-3 over 14 params at documented rtol=1e-2; `jax_grad/delaunay.py`) | everything differentiable runs in-graph (visibility-walk point location, barycentric weights, dual areas, split points); the callback returns only int32 tables, piecewise-constant in the vertices, so freezing them under differentiation drops nothing — the exact a.e. derivative. Residual FD scatter on mass/shear = FD steps crossing triangle-flip events (measure-zero likelihood discontinuities). Batched caveat: callback is `vmap_method="sequential"` — KNN meshes remain the vmap-throughput option. See "Delaunay gradients: SHIPPED" section below |
 | Imaging, `KNearestNeighbor` (Wendland kNN) + `reg.ConstantSplit` / `reg.AdaptSplit` | **works** | **yes** (2026-07-26: strict FD-step-sweep, all 14 params, rel err ≤ 3.3e-8; `jax_grad/knn.py` variants A/B) | the JAX-native Delaunay-family mesh: Hilbert image mesh + edge zeroing, no scipy callback anywhere in the graph — gradients flow through traced query points AND traced mesh vertices. **Split-family regularization only**: `reg.Constant`/`ConstantZeroth`/`Adapt` need `MeshGeometryDelaunay.neighbors` (a direct scipy call on the traced mesh grid) and raise `TracerArrayConversionError` under `jax.grad` — pinned as a negative test in the script. Science caveat: Wendland kNN historically underperforms Delaunay (kernel knobs, caustic smearing — see PyAutoArray#317 background) |
 | Imaging, `KNNBarycentric` + `reg.ConstantSplit` | **works** (gradients only) | **yes** (2026-07-26: strict FD-step-sweep, all 14 params, rel err ≤ 4.1e-7; `jax_grad/knn.py` variant C) | 3-nearest barycentric weights; slightly noisier FD than Wendland (3-NN-set swaps move weights discontinuously — measure-zero jump sites). **Mesh failed its science gate as a Delaunay replacement** (PyAutoArray#317: 2.2% log-evidence drift, ~5% of vertices unreachable) — certified for gradient correctness, not for production science |
 | Point source, source-plane χ² (`FitPositionsSource`) | **works** (probe 4/4 PASS; forward `jax.jit` still blocked by the `Grid2DIrregular` xp gap) | **yes** (2026-07-09, rel err ≤ 5e-6; `jax_grad/point_source.py`) | includes magnification-via-Hessian term (3rd derivatives of the potential); flux/H0 legitimately zero in positions-only fits |
@@ -125,7 +125,29 @@ to autodiff — clean steps converge to AD at 1e-6..1e-9 relative, so a wrong AD
 fails every step. The flips deserve their own investigation (likely
 positive-only-solver / PDIP tie-breaks — NNLS-ledger territory).
 
-## Why Delaunay gradients are infeasible today (phase 2a, 2026-07-09)
+## Delaunay gradients: SHIPPED via frozen tables (2026-07-26)
+
+The section below this one records the 2026-07-09 verdict and is kept as
+history; its premises are superseded. The in-graph visibility walk moved
+every differentiable quantity (point location, barycentric weights, dual
+areas, split points) inside the JIT program, leaving the host qhull
+``pure_callback`` returning only int32 connectivity tables. Those tables are
+piecewise-constant in the vertex positions — their true derivative is zero
+between re-wiring events — so wrapping the callback input in
+``stop_gradient`` (shipped in ``_jax_delaunay_tables``) yields the EXACT
+almost-everywhere derivative, not an approximation (the audit's point 3
+below, now realised; points 1–2 described the pre-walk architecture).
+
+Certification: `autolens_workspace_test/scripts/imaging/jax_grad/delaunay.py`
+(production shape: Hilbert + edge zeroing + AdaptSplit) — all 14 params live,
+lens light at 1e-8..1e-10, mass/shear at 1e-5..2e-3 (FD steps straddling
+triangle-flip events — measure-zero likelihood discontinuities where no
+method has a gradient; AD differentiates the branch the point is on), at a
+documented rtol=1e-2. Batched-sampler caveat: the callback remains
+``vmap_method="sequential"`` (one host qhull call per vmap lane) — the KNN
+meshes stay the batched-throughput option.
+
+## Why Delaunay gradients were infeasible before the walk (phase 2a, 2026-07-09 — superseded, see above)
 
 Re-confirmed on current mains via `imaging/delaunay.py`: **3 PASS / 8 ERROR**. The
 pre-inversion stages (ray-trace, blurred lens light, profile subtraction) are fully
