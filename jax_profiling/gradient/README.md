@@ -163,8 +163,67 @@ Three structurally distinct obstacles, in increasing depth:
 `_jax_delaunay_tables` in `jax.custom_jvp` with a zero rule, then FD-validate the
 frozen-triangulation gradients the same way as the rectangular mesh.
 
+## Final assessment: rectangular-mesh pixelized-source gradients (2026-07-26)
+
+Post-consolidation (PyAutoArray#403 — the kernel-CDF meshes now ARE
+`RectangularAdaptDensity` / `RectangularAdaptImage`; the FD tests are variants
+A–D of `autolens_workspace_test/scripts/imaging/jax_grad/pixelization.py`), a
+final certification re-run plus a linear-algebra precision probe (fresh
+environment, jax 0.10.2 CPU, float64) settles the two standing questions.
+
+**Do the gradients work?** Yes — re-certified. All four variants pass strict
+FD on all 14 parameters: `RectangularUniform` rel err ≤ 2e-7,
+`RectangularAdaptDensity` os_pix=4 ≤ 1.7e-7, and the full production shape
+(`RectangularAdaptImage` + `reg.Adapt` + `AdaptImages` + border relocator,
+os_pix=4) ≤ 6.2e-8, with typical parameters at 1e-9–1e-11. The one standing
+exclusion (os_pix=1 `einstein_radius`) reproduces exactly as documented: all
+three FD steps land on branch flips (FD values 5.4e8 / −5.4e7 / −5.3e6 against
+a self-consistent AD of +1.5e5) while every other parameter matches at ≤ 4e-7.
+
+**Does the linear algebra need reformulating (à la the slogdet option)?**
+No — measured, each candidate in turn on the os_pix=4 production-adjacent
+config:
+
+- **`log_det_method="slogdet"` vs `"cholesky"`** (PyAutoArray#391/#392): LL
+  differs by 6.4e-10 and the 14-parameter AD gradients agree to **2.1e-15**
+  max relative — in the positive-definite regime the two formulations are
+  gradient-equivalent to machine precision. `slogdet` buys *robustness*
+  (finite + differentiable where the Cholesky NaNs, i.e. extreme
+  regularization coefficients during exploration), not precision; keeping it
+  opt-in for gradient-based searches is the right call.
+- **Relaxed-KKT NNLS backward pass** (jaxnnls implicit differentiation):
+  sweeping `target_kappa` 1e-9 → 1e-13 around the 1e-11 default moves the
+  gradient by ≤ **3.1e-10** max relative — the backward-pass relaxation error
+  is 2–3 orders of magnitude below the FD certification floor. Tightening
+  `nnls_solver_tol` to 1e-12 moves gradients by 7.5e-15 (the forward solve is
+  already converged).
+- **NNLS custom-VJP vs exact unconstrained solve**: with
+  `use_positive_only_solver=False` (plain `linalg.solve`, exact built-in
+  implicit autodiff) the AD-vs-FD floor is the same (max 1.1e-7 vs 1.7e-7) —
+  the positive-only solver's custom VJP loses nothing measurable against the
+  analytically exact reference.
+- **os_pix=1 branch-flip cross-check**: the `einstein_radius` FD poisoning
+  persists unchanged under the unconstrained solver — re-confirming #377's
+  solver exoneration on the imaging config (the flips live in the fused JIT
+  graph, not the NNLS solve). AD remains the trustworthy value there.
+
+The AD-vs-FD residual (~1e-7 worst-case) is FD noise (step quantization +
+micro-flips), not autodiff error: FD converges toward AD as steps shrink at
+every clean step. **Verdict: gradients for rectangular-mesh pixelized sources
+are correct and already at the measurable precision floor; no linear-algebra
+reformulation is warranted.** What remains open is orthogonal to gradient
+precision: the JIT-only branch-flip localization (#377 follow-up — an XLA
+fusion ulp threshold, measure-thin, documented LL accuracy floor under jit),
+and the bandwidth-default quality question
+(`PyAutoMind/draft/research/autoarray/rectangular_kernel_bandwidth_defaults.md`),
+which affects reconstruction quality, not differentiability.
+
 ## Findings log
 
+- **2026-07-26** (final assessment, this section above): certification
+  re-passes post-consolidation; slogdet/cholesky gradient-equivalent to 2e-15;
+  relaxed-KKT backward error ≤ 3e-10; solver re-exonerated at os_pix=1 on the
+  imaging config. No linear-algebra reformulation warranted.
 - **2026-07-10** (kernel-CDF certification, PyAutoArray#373/#374): the
   kernel-density CDF meshes pass strict FD on ALL parameters in every
   configuration, including the two previously-dead corners (imaging os_pix=1,
