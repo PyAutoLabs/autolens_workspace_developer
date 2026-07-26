@@ -30,6 +30,8 @@ finite and non-zero.
 | Imaging, `RectangularKernelAdaptImage` + `reg.Adapt` + adapt images + border relocator (os_pix=4, bandwidth=0.1) | **works** | **yes** (2026-07-10: strict FD-step-sweep, all 14 params; variant G) | full production shape; FoM parity floor 6.3e-4 relative (intrinsic: the kernel smooths the adapt-image weights over its bandwidth; swept bandwidth×n_knots 2026-07-10) |
 | Interferometer, `RectangularKernelAdaptDensity` + `reg.Adapt` (sparse operator) | **works — the interferometer staircase now has its escape hatch** | **yes** (2026-07-10: strict FD-step-sweep, all 7 mass/shear params live; variant D of `jax_grad/interferometer.py`) | the production-shape adaptive mesh with usable gradients on the no-over-sampling path; FoM parity 3.9e-5 relative at default bandwidth |
 | Imaging, Delaunay pixelization | **hard error** (re-confirmed 2026-07-09: 3 PASS / 8 ERROR) | n/a | `jax.pure_callback` → `scipy.spatial.Delaunay` has no JVP rule (`PyAutoArray .../interpolator/delaunay.py:126`); see "Why Delaunay gradients are infeasible today" below (phase 2) |
+| Imaging, `KNearestNeighbor` (Wendland kNN) + `reg.ConstantSplit` / `reg.AdaptSplit` | **works** | **yes** (2026-07-26: strict FD-step-sweep, all 14 params, rel err ≤ 3.3e-8; `jax_grad/knn.py` variants A/B) | the JAX-native Delaunay-family mesh: Hilbert image mesh + edge zeroing, no scipy callback anywhere in the graph — gradients flow through traced query points AND traced mesh vertices. **Split-family regularization only**: `reg.Constant`/`ConstantZeroth`/`Adapt` need `MeshGeometryDelaunay.neighbors` (a direct scipy call on the traced mesh grid) and raise `TracerArrayConversionError` under `jax.grad` — pinned as a negative test in the script. Science caveat: Wendland kNN historically underperforms Delaunay (kernel knobs, caustic smearing — see PyAutoArray#317 background) |
+| Imaging, `KNNBarycentric` + `reg.ConstantSplit` | **works** (gradients only) | **yes** (2026-07-26: strict FD-step-sweep, all 14 params, rel err ≤ 4.1e-7; `jax_grad/knn.py` variant C) | 3-nearest barycentric weights; slightly noisier FD than Wendland (3-NN-set swaps move weights discontinuously — measure-zero jump sites). **Mesh failed its science gate as a Delaunay replacement** (PyAutoArray#317: 2.2% log-evidence drift, ~5% of vertices unreachable) — certified for gradient correctness, not for production science |
 | Point source, source-plane χ² (`FitPositionsSource`) | **works** (probe 4/4 PASS; forward `jax.jit` still blocked by the `Grid2DIrregular` xp gap) | **yes** (2026-07-09, rel err ≤ 5e-6; `jax_grad/point_source.py`) | includes magnification-via-Hessian term (3rd derivatives of the potential); flux/H0 legitimately zero in positions-only fits |
 | Point source, image-plane (`FitPositionsImagePairAll`) | prior probe: **not differentiable** | n/a | `PointSolver` triangle-tiling forward solve uses `jnp.where` masking + integer neighbour lookups |
 | Weak lensing (`FitWeak`, `xp=jnp`) | **works** | **yes** (2026-07-09, rel err ≤ 3e-9, plain + redshift-scaled; `jax_grad/weak.py`) | gradients through the deflection-Hessian shear derivation are correct; no step-by-step probe needed — full pipeline validated first try |
@@ -220,6 +222,18 @@ which affects reconstruction quality, not differentiability.
 
 ## Findings log
 
+- **2026-07-26** (KNN mesh certification, `jax_grad/knn.py` — new): both
+  k-nearest-neighbour meshes FD-certified strict on all 14 params
+  (`KNearestNeighbor` + ConstantSplit/AdaptSplit ≤ 3.3e-8 rel err;
+  `KNNBarycentric` ≤ 4.1e-7). Pure JAX end to end — no scipy callback,
+  gradients flow through traced mesh vertices as well as queries. Boundary
+  pinned: neighbour-based regularizations (`Constant`/`ConstantZeroth`/
+  `Adapt`) raise `TracerArrayConversionError` (scipy `Delaunay` on the
+  traced mesh grid in `MeshGeometryDelaunay.neighbors`) — split-family and
+  kernel schemes are the JAX pairings. `AdaptSplit()` at default
+  coefficients (inner == outer == 1.0) is numerically identical to
+  `ConstantSplit(1.0)` — use asymmetric coefficients to exercise the
+  adaptive path.
 - **2026-07-26** (final assessment, this section above): certification
   re-passes post-consolidation; slogdet/cholesky gradient-equivalent to 2e-15;
   relaxed-KKT backward error ≤ 3e-10; solver re-exonerated at os_pix=1 on the
