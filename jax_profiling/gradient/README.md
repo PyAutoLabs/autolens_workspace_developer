@@ -220,8 +220,53 @@ and the bandwidth-default quality question
 (`PyAutoMind/draft/research/autoarray/rectangular_kernel_bandwidth_defaults.md`),
 which affects reconstruction quality, not differentiability.
 
+## Regularization × mesh gradient matrix (2026-07-26 sweep)
+
+Every ``al.reg`` scheme swept against the gradient-capable meshes
+(``RectangularAdaptDensity`` os_pix=4; ``KNearestNeighbor`` /
+``KNNBarycentric`` with Hilbert image mesh + edge zeroing, os_pix=1), on the
+jax_test 14-parameter fiducial. Positive results are pinned by
+``autolens_workspace_test/scripts/imaging/jax_grad/regularization.py``;
+mesh-family negatives by ``jax_grad/knn.py``.
+
+| Regularization | Rectangular (kernel-CDF) | KNN meshes | Notes |
+|---|---|---|---|
+| `Constant` | **FD-certified** (jax_grad/pixelization.py) | **hard error** | rectangular neighbors are analytic/static; Delaunay-family neighbors call scipy on the traced mesh grid (`MeshGeometryDelaunay.neighbors`) → `TracerArrayConversionError` |
+| `Adapt` | **FD-certified** (production config, pixelization.py variant D) | **hard error** | same neighbors split as `Constant` |
+| `ConstantSplit` / `AdaptSplit` | **incompatible** (shape error: split machinery expects 4-cross-per-pixel, rectangular's shared 4-corner mappings are per-query) | **FD-certified** (jax_grad/knn.py, ≤ 3.3e-8) | the split family is the KNN/Delaunay-family production pairing; note `AdaptSplit()` at default inner==outer==1.0 ≡ `ConstantSplit(1.0)` |
+| `Zeroth` | **FD-certified** (1.4e-7) | **FD-certified** (7.5e-8 / 2.9e-7) | neighbour-free, pure xp |
+| `MaternKernel(nu=2.5)` | **FD-certified strict** (2.2e-4) | **works — FD-limited** (~2e-3, at the FD noise floor) | **the tfp question: YES, gradients flow** — `tfp.substrates.jax.math.bessel_kve` (tfp-nightly) ships a registered gradient w.r.t. its argument (`nu` is static), and the dense-covariance Cholesky inverse differentiates. See conditioning note below |
+| `MaternKernel(nu=0.5)` / `MaternAdaptKernel` / `GaussianKernel` | **works — FD-limited** (1.4e-2 / 9.4e-2, at each variant's FD noise floor) | **works — FD-limited** (~2e-3 / 6.7e-3) | gradients finite + live everywhere; the likelihood itself carries a 1e-6..4e-5 absolute numerical noise floor (dense kernel inverse / bessel lowering), which central FD divides by the step — the "mismatch" equals that floor in every case, i.e. no evidence of wrong AD. `MaternAdaptKernel()` at default coefficients ≡ `MaternKernel` (uniform weights) |
+| `BrightnessZeroth` | **hard error** | **hard error** | not xp-ported: numpy boolean ops on the traced pixel-signals array (`TracerArrayConversionError`) |
+| `ExponentialKernel` | **hard error** | **hard error** | not xp-ported: numpy (N,N,2) pairwise-diff build (`TracerArrayConversionError`) — unlike `GaussianKernel`/`MaternKernel`, which are xp-threaded |
+| `ConstantZeroth` | **broken** (numpy too) | **broken** | known dead code — missing `neighbors_sizes` argument (filed: `draft/bug/autoarray/constant_zeroth_broken_dead_code.md`) |
+| `CurvatureMask` / `FourthOrderMask` | **incompatible** | **incompatible** | dpsi (potential-correction) schemes sized to the data grid (952), not source-mesh schemes (784/330) — shape error by construction |
+| `AdaptSplitZeroth` | **incompatible** (split shape) | **hard error** (neighbors via its zeroth/adapt leg) | |
+
+**Kernel-scheme conditioning note.** The kernel regularizations form
+``coefficient * C^-1`` explicitly (``inv_via_cholesky``). On the rectangular
+mesh's well-spaced vertices cond(C) ≈ 3e5 (nu=2.5) and the scheme is
+strict-FD-certifiable; on the KNN meshes' TRACED (clustered) vertices
+cond(C) ≈ 1.4e9 (min pairwise separation 7e-3 vs median 9e-2), which puts a
+~1e-6 absolute noise floor on the likelihood — the one genuine
+linear-algebra reformulation candidate this sweep surfaced (avoid the
+explicit inverse, e.g. keep H implicit through the Cholesky of C for the
+``s^T H s`` and ``log det H`` terms, and/or scale the 1e-8 diagonal jitter
+with the kernel's dynamic range).
+
 ## Findings log
 
+- **2026-07-26** (regularization × mesh sweep, table above +
+  `jax_grad/regularization.py` — new): every `al.reg` scheme swept on both
+  gradient-capable mesh families. New FD certifications: `Zeroth` (both
+  families) and `MaternKernel(nu=2.5)` on rectangular — settling the
+  tfp/Bessel question: **Matérn gradients work** (tfp-nightly `bessel_kve`
+  has a registered gradient). Kernel schemes elsewhere are AD-live but
+  FD-limited by the likelihood's own noise floor (dense `C^-1` at
+  cond ~1e9 on clustered traced vertices) — reformulation candidate noted.
+  xp-port gaps found: `BrightnessZeroth`, `ExponentialKernel` (hard error
+  under trace); split-family structurally incompatible with rectangular;
+  `CurvatureMask`/`FourthOrderMask` are dpsi-only.
 - **2026-07-26** (KNN mesh certification, `jax_grad/knn.py` — new): both
   k-nearest-neighbour meshes FD-certified strict on all 14 params
   (`KNearestNeighbor` + ConstantSplit/AdaptSplit ≤ 3.3e-8 rel err;
