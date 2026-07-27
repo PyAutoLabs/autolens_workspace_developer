@@ -16,8 +16,29 @@ probe needs. Truth: einstein_radius = 1.6.
 Model (SLaM SOURCE_PIX[1] style):
   - lens light : MGE **linear**, non-linear geometry **fixed** at truth
   - lens mass  : Isothermal + ExternalShear, **free**, broad default priors
-  - source     : ``RectangularKernelAdaptDensity(bandwidth=0.1)`` + Constant reg
-                 (C^inf continuous-density transform — differentiable at os_pix=1)
+  - source     : one of the three gradient-certified pixelized meshes,
+                 selected by ``PIX_MESH`` (autolens_workspace_developer#117):
+
+    - ``rectangular`` (default): ``RectangularAdaptDensity(bandwidth=0.1)`` +
+      free ``reg.Constant`` — the kernel-CDF mesh (C^inf continuous-density
+      transform, differentiable at os_pix=1). This is the #100/#101 objective;
+      the class took the plain name in the rectangular-mesh consolidation
+      (formerly ``RectangularKernelAdaptDensity``).
+    - ``knn``: ``KNearestNeighbor(pixels=300, zeroed_pixels=30)`` + free
+      ``reg.AdaptSplit`` — Wendland-C4 weights, pure JAX. The neighbour-based
+      ``reg.Constant``/``reg.Adapt`` schemes call scipy Delaunay on the traced
+      mesh grid and raise ``TracerArrayConversionError`` under grad, so the
+      split-family regularization is mandatory (certified in
+      autolens_workspace_test ``jax_grad/knn.py``).
+    - ``delaunay``: ``Delaunay(pixels=300, zeroed_pixels=30)`` + free
+      ``reg.AdaptSplit`` — a.e.-exact frozen-tables gradient (certified in
+      ``jax_grad/delaunay.py``; the qhull tables callback is
+      ``vmap_method="sequential"``, one host call per vmap lane).
+
+    ``knn``/``delaunay`` are Delaunay-family meshes: their vertices come from a
+    Hilbert image-mesh computed once from static adapt data (the observed
+    image), so the analysis carries ``al.AdaptImages`` mirroring the certified
+    harness.
 
 Usage::
 
@@ -47,9 +68,20 @@ from searches_minimal._setup import build_dataset, MASK_RADIUS  # noqa: E402
 
 TRUTH_ELL = al.convert.ell_comps_from(axis_ratio=0.9, angle=45.0)
 TRUTH_EINSTEIN_RADIUS = 1.6
+# Simulator truth for the mass model (jax_profiling/simulators/imaging.py):
+# Isothermal(centre=(0,0), einstein_radius=1.6, ell_comps=from(0.9, 45)),
+# ExternalShear(0.05, 0.05). Used by pix_prodigy.py's truth-bar mode.
+TRUTH_MASS_ELL = al.convert.ell_comps_from(axis_ratio=0.9, angle=45.0)
+TRUTH_SHEAR = (0.05, 0.05)
 BASIN_TOL = 0.3  # same basin criterion as the MGE benchmark
 OS_PIX = 1
 MESH_SHAPE = (30, 30)
+# Delaunay-family (knn/delaunay) mesh scale, mirroring the certified
+# jax_grad harness: 300 Hilbert vertices + 30 zeroed circle-edge points.
+MESH_PIXELS = 300
+EDGE_PIXELS = 30
+# Which gradient-certified pixelized mesh to fit: rectangular | knn | delaunay.
+PIX_MESH = os.environ.get("PIX_MESH") or "rectangular"
 # lr override for the #101 phase-2a lr sweep (e.g. PIX_LR=3e-3). None = the
 # rule's benchmark default (adam/adabelief 1e-2, lion 1e-3).
 PIX_LR = float(os.environ.get("PIX_LR") or 0) or None
@@ -63,6 +95,40 @@ PIX_FIX_REG = float(os.environ.get("PIX_FIX_REG") or 0) or None
 # differentiable where the Cholesky log-det NaN-resamples. The A/B is one env var
 # apart, so both arms run from the same seeds and script.
 PIX_LOGDET = os.environ.get("PIX_LOGDET") or None
+
+
+def mesh_and_regularization():
+    """The ``PIX_MESH``-selected mesh + regularization (model components).
+
+    Regularization is free unless ``PIX_FIX_REG`` pins it. For the split-family
+    schemes the fix scales the certified (inner=0.1, outer=10) pair by
+    ``PIX_FIX_REG`` (so ``PIX_FIX_REG=1`` reproduces the certified config);
+    ``signal_scale`` stays pinned at 1.0 either way, so the free reg is
+    2-parameter (inner + outer), keeping the certified variants' surface.
+    """
+    if PIX_MESH == "rectangular":
+        mesh = al.mesh.RectangularAdaptDensity(shape=MESH_SHAPE, bandwidth=0.1)
+        if PIX_FIX_REG:
+            regularization = al.reg.Constant(coefficient=PIX_FIX_REG)
+        else:
+            regularization = al.reg.Constant
+    elif PIX_MESH in ("knn", "delaunay"):
+        mesh_cls = al.mesh.KNearestNeighbor if PIX_MESH == "knn" else al.mesh.Delaunay
+        mesh = mesh_cls(pixels=MESH_PIXELS, zeroed_pixels=EDGE_PIXELS)
+        if PIX_FIX_REG:
+            regularization = al.reg.AdaptSplit(
+                inner_coefficient=0.1 * PIX_FIX_REG,
+                outer_coefficient=10.0 * PIX_FIX_REG,
+                signal_scale=1.0,
+            )
+        else:
+            regularization = af.Model(al.reg.AdaptSplit)
+            regularization.signal_scale = 1.0
+    else:
+        raise ValueError(
+            f"PIX_MESH={PIX_MESH!r} — expected rectangular | knn | delaunay"
+        )
+    return mesh, regularization
 
 
 def build_model() -> af.Collection:
@@ -82,18 +148,54 @@ def build_model() -> af.Collection:
         al.Galaxy, redshift=0.5, bulge=lens_bulge, mass=mass, shear=shear
     )
 
+    mesh, regularization = mesh_and_regularization()
     pixelization = af.Model(
         al.Pixelization,
-        mesh=al.mesh.RectangularKernelAdaptDensity(shape=MESH_SHAPE, bandwidth=0.1),
-        regularization=(
-            al.reg.Constant(coefficient=PIX_FIX_REG)
-            if PIX_FIX_REG
-            else al.reg.Constant
-        ),
+        mesh=mesh,
+        regularization=regularization,
     )
     source = af.Model(al.Galaxy, redshift=1.0, pixelization=pixelization)
 
     return af.Collection(galaxies=af.Collection(lens=lens, source=source))
+
+
+def build_adapt_images(dataset) -> al.AdaptImages | None:
+    """AdaptImages for the Delaunay-family meshes (``knn``/``delaunay``).
+
+    Mirrors the certified jax_grad harness: a Hilbert image-mesh computed once
+    from the observed image as static adapt data, appended with a circle of
+    edge points whose reconstruction values the mesh zeroes
+    (``zeroed_pixels=EDGE_PIXELS``). Keys MUST be the stringified path tuple
+    (``str(("galaxies", "source"))``) — a raw tuple key silently yields
+    ``adapt_data=None`` downstream. The rectangular kernel-CDF mesh derives its
+    density in-graph and needs no adapt images.
+    """
+    if PIX_MESH == "rectangular":
+        return None
+
+    galaxy_image_name_dict = {
+        "('galaxies', 'lens')": dataset.data,
+        "('galaxies', 'source')": dataset.data,
+    }
+    image_mesh = al.image_mesh.Hilbert(
+        pixels=MESH_PIXELS, weight_power=3.5, weight_floor=0.01
+    )
+    image_plane_mesh_grid = image_mesh.image_plane_mesh_grid_from(
+        mask=dataset.mask,
+        adapt_data=galaxy_image_name_dict["('galaxies', 'source')"],
+    )
+    image_plane_mesh_grid = al.image_mesh.append_with_circle_edge_points(
+        image_plane_mesh_grid=image_plane_mesh_grid,
+        centre=dataset.mask.mask_centre,
+        radius=MASK_RADIUS + dataset.mask.pixel_scale / 2.0,
+        n_points=EDGE_PIXELS,
+    )
+    return al.AdaptImages(
+        galaxy_name_image_dict=galaxy_image_name_dict,
+        galaxy_name_image_plane_mesh_grid_dict={
+            "('galaxies', 'source')": image_plane_mesh_grid
+        },
+    )
 
 
 def build_analysis(dataset):
@@ -103,6 +205,7 @@ def build_analysis(dataset):
     settings = al.Settings(log_det_method=PIX_LOGDET) if PIX_LOGDET else None
     return al.AnalysisImaging(
         dataset=dataset,
+        adapt_images=build_adapt_images(dataset),
         settings=settings,
         raise_inversion_positions_likelihood_exception=False,
         use_jax=True,
@@ -149,7 +252,12 @@ def main() -> None:
 
     print(f"JAX backend: {jax.default_backend()}  x64={jax.config.jax_enable_x64}")
     print(f"Sampler: {which}  n_starts={n_starts}  batch_size={batch_size}  lr={PIX_LR or 'default'}")
-    print(f"mesh=KernelAdaptDensity{MESH_SHAPE} os_pix={OS_PIX}  (no sparse operator)")
+    mesh_desc = (
+        f"RectangularAdaptDensity{MESH_SHAPE} bandwidth=0.1"
+        if PIX_MESH == "rectangular"
+        else f"{PIX_MESH} pixels={MESH_PIXELS} zeroed={EDGE_PIXELS} (Hilbert+AdaptImages)"
+    )
+    print(f"mesh={mesh_desc} os_pix={OS_PIX}  (no sparse operator)")
     print(f"log_det_method={PIX_LOGDET or 'cholesky (default)'}")
 
     dataset = build_dataset()
