@@ -18,6 +18,7 @@ pre-fix uniform [0, 1] edge partition was off by up to ~1.5 mesh pixels in y.
 
 Run ``plotting_alignment/simulator.py`` first if the dataset is absent.
 """
+
 from pathlib import Path
 import numpy as np
 
@@ -294,13 +295,13 @@ for label, mesh in [
     d_faithful = np.hypot(*(drawn - encoded))
     d_interp = np.hypot(*(encoded - query))
     print(
-        f"{label:>22}: drawn-vs-encoded = {d_faithful:.4f}\" "
+        f'{label:>22}: drawn-vs-encoded = {d_faithful:.4f}" '
         f"({d_faithful / cell:.2f} cells)  |  mapper interp displacement = "
-        f"{d_interp:.4f}\" ({d_interp / cell:.2f} cells; physics, unasserted)"
+        f'{d_interp:.4f}" ({d_interp / cell:.2f} cells; physics, unasserted)'
     )
     assert d_faithful < 0.5 * cell, (
         f"{label}: drawn centroid deviates from the mapper-encoded centroid by "
-        f"{d_faithful:.4f}\" (> 0.5 local cell) — plot geometry unfaithful."
+        f'{d_faithful:.4f}" (> 0.5 local cell) — plot geometry unfaithful.'
     )
 
 print(

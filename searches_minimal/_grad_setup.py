@@ -62,7 +62,9 @@ class MapObjective:
     log_likelihood: Callable  # jitted, params -> log L
     log_prior: Callable  # jitted, params -> sum log prior
     neg_log_posterior: Callable  # jitted, params -> -(log L + log prior)
-    neg_log_posterior_raw: Callable  # UN-jitted (for vmap / composing, e.g. multi-start)
+    neg_log_posterior_raw: (
+        Callable  # UN-jitted (for vmap / composing, e.g. multi-start)
+    )
     value_and_grad: Callable  # jitted value_and_grad of neg_log_posterior
     # --- Phase-3: shared unconstrained parameterization + residual LS ---------
     # z (unconstrained, in R^ndim) -> physical params, via one sigmoid per param
@@ -72,7 +74,9 @@ class MapObjective:
     physical_from_z: Callable = None  # z -> physical params (jax-traceable)
     neg_log_posterior_z_raw: Callable = None  # UN-jitted z -> -(log L + log prior)
     residual_z_raw: Callable = None  # UN-jitted z -> residual vector r(z)
-    prior_gauss_idx: np.ndarray = None  # indices of Gaussian priors (for r's prior block)
+    prior_gauss_idx: np.ndarray = (
+        None  # indices of Gaussian priors (for r's prior block)
+    )
     prior_gauss_mean: np.ndarray = None
     prior_gauss_sigma: np.ndarray = None
 
@@ -214,7 +218,9 @@ def robust_cold_start(
     rng = np.random.default_rng(seed)
     base = np.full(obj.ndim, 0.5)
     for t in range(n_tries):
-        u = np.clip(base + rng.uniform(-spread, spread, size=obj.ndim), 1e-4, 1.0 - 1e-4)
+        u = np.clip(
+            base + rng.uniform(-spread, spread, size=obj.ndim), 1e-4, 1.0 - 1e-4
+        )
         x = jnp.asarray(obj.model.vector_from_unit_vector(list(u)))
         loss, grad = obj.value_and_grad(x)
         if np.isfinite(float(loss)) and np.all(np.isfinite(np.asarray(grad))):
@@ -353,7 +359,9 @@ def run_vmapped_map_solver(
     best_params = phys[j]
     r_e = np.array(
         [
-            obj.model.instance_from_vector(vector=list(p)).galaxies.lens.mass.einstein_radius
+            obj.model.instance_from_vector(
+                vector=list(p)
+            ).galaxies.lens.mass.einstein_radius
             for p in phys
         ]
     )
@@ -369,7 +377,11 @@ def run_vmapped_map_solver(
     # iteration (jaxopt damped-GN inner loop); first-/quasi-Newton cost one
     # value+grad per iteration (plus line-search probes we cannot cheaply count
     # under vmap, noted in the doc).
-    scalar_iters = int(np.sum(np.clip(iter_nums, 0, None))) if np.all(iter_nums >= 0) else n_starts * max_iters
+    scalar_iters = (
+        int(np.sum(np.clip(iter_nums, 0, None)))
+        if np.all(iter_nums >= 0)
+        else n_starts * max_iters
+    )
     acc = {
         "starts": n_starts,
         "actual_iters": f"{int(np.min(iter_nums))}..{int(np.max(iter_nums))} per start",

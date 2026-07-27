@@ -79,7 +79,9 @@ for i in range(N_STEPS):
     if i % 50 == 0:
         print(f"  step {i:4d}: log_posterior = {-loss_f:.2f}")
     if i - best_iter >= PLATEAU_PATIENCE:
-        print(f"  plateau: no improvement for {PLATEAU_PATIENCE} steps, stopping at {i}")
+        print(
+            f"  plateau: no improvement for {PLATEAU_PATIENCE} steps, stopping at {i}"
+        )
         break
 loop_s = time.time() - t_start
 n_evals = len(history)

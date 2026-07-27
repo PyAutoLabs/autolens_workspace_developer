@@ -45,7 +45,9 @@ TOL = float(os.environ.get("BFGS_TOL", "1e-3"))
 
 print(f"JAX backend: {jax.default_backend()}  devices: {jax.devices()}")
 obj = build_map_objective()
-print(f"Model free parameters: {obj.ndim}  |  N_STARTS = {N_STARTS}  |  BFGS maxiter={MAXITER} tol={TOL}")
+print(
+    f"Model free parameters: {obj.ndim}  |  N_STARTS = {N_STARTS}  |  BFGS maxiter={MAXITER} tol={TOL}"
+)
 
 time_compile(obj)
 z_starts, n_kept = make_z_starts(obj, N_STARTS)

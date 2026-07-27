@@ -60,7 +60,9 @@ def fitness_of(u_flat):
 
 
 solver = SV_CMA_ES(
-    population_size=POPULATION_SIZE, num_populations=NUM_POPULATIONS, solution=jnp.zeros(obj.ndim)
+    population_size=POPULATION_SIZE,
+    num_populations=NUM_POPULATIONS,
+    solution=jnp.zeros(obj.ndim),
 )
 params = dataclasses.replace(solver.default_params, std_init=STD_INIT)
 
@@ -75,8 +77,10 @@ best_history: list[float] = []
 global_best_neg = np.inf
 global_best_u = np.full(obj.ndim, 0.5)
 
-print(f"\nRunning SV-CMA-ES: {NUM_POPULATIONS} pops x {POPULATION_SIZE}, "
-      f"{N_GENERATIONS} gens, std_init={STD_INIT}...")
+print(
+    f"\nRunning SV-CMA-ES: {NUM_POPULATIONS} pops x {POPULATION_SIZE}, "
+    f"{N_GENERATIONS} gens, std_init={STD_INIT}..."
+)
 t_start = time.time()
 for gen in range(N_GENERATIONS):
     key, k_ask, k_tell = jax.random.split(key, 3)
@@ -100,17 +104,30 @@ means_final = np.asarray(state.mean) if hasattr(state, "mean") else None
 if means_final is not None and means_final.ndim == 2:
     means_phys = _unit_to_physical(means_final)
     means_r_e = np.array(
-        [obj.model.instance_from_vector(vector=list(p)).galaxies.lens.mass.einstein_radius for p in means_phys]
+        [
+            obj.model.instance_from_vector(
+                vector=list(p)
+            ).galaxies.lens.mass.einstein_radius
+            for p in means_phys
+        ]
     )
     n_in_basin = int(np.sum(np.abs(means_r_e - EINSTEIN_TRUTH) < EINSTEIN_TOL))
     denom = NUM_POPULATIONS
 else:
     n_in_basin, denom = -1, NUM_POPULATIONS
 
-best_phys = np.asarray(obj.model.vector_from_unit_vector(list(np.clip(global_best_u, 1e-4, 1 - 1e-4))))
-best_r_e = float(obj.model.instance_from_vector(vector=list(best_phys)).galaxies.lens.mass.einstein_radius)
-print(f"\nBest r_E = {best_r_e:.3f} (truth {EINSTEIN_TRUTH}); "
-      f"{n_in_basin}/{denom} sub-population means in basin")
+best_phys = np.asarray(
+    obj.model.vector_from_unit_vector(list(np.clip(global_best_u, 1e-4, 1 - 1e-4)))
+)
+best_r_e = float(
+    obj.model.instance_from_vector(
+        vector=list(best_phys)
+    ).galaxies.lens.mass.einstein_radius
+)
+print(
+    f"\nBest r_E = {best_r_e:.3f} (truth {EINSTEIN_TRUTH}); "
+    f"{n_in_basin}/{denom} sub-population means in basin"
+)
 
 write_grad_summary(
     name="sv_cmaes",
@@ -120,7 +137,9 @@ write_grad_summary(
     log_posterior_history=best_history,
     wall_s=compile_s + loop_s,
     compile_s=compile_s,
-    warm_ms_per_eval=(loop_s / max(N_GENERATIONS, 1) / (NUM_POPULATIONS * POPULATION_SIZE) * 1e3),
+    warm_ms_per_eval=(
+        loop_s / max(N_GENERATIONS, 1) / (NUM_POPULATIONS * POPULATION_SIZE) * 1e3
+    ),
     n_evals=NUM_POPULATIONS * POPULATION_SIZE * N_GENERATIONS,
     n_iters=N_GENERATIONS,
     converged=(abs(best_r_e - EINSTEIN_TRUTH) < EINSTEIN_TOL),

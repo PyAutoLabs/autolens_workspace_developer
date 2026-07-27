@@ -119,7 +119,9 @@ loop_s = time.time() - t_start
 final_log_l = np.asarray(batched_log_l(params))
 final_r_e = np.array(
     [
-        obj.model.instance_from_vector(vector=list(np.asarray(p))).galaxies.lens.mass.einstein_radius
+        obj.model.instance_from_vector(
+            vector=list(np.asarray(p))
+        ).galaxies.lens.mass.einstein_radius
         for p in params
     ]
 )
@@ -129,7 +131,9 @@ n_in_basin = int(np.sum(in_basin))
 print("\nPer-start outcome:")
 for k in range(len(params)):
     tag = "  <-- correct basin" if in_basin[k] else ""
-    print(f"  start {k:2d}: log L = {final_log_l[k]:12.2f}   r_E = {final_r_e[k]:.3f}{tag}")
+    print(
+        f"  start {k:2d}: log L = {final_log_l[k]:12.2f}   r_E = {final_r_e[k]:.3f}{tag}"
+    )
 print(
     f"\n{n_in_basin}/{N_STARTS} starts reached the correct basin "
     f"(|r_E - {EINSTEIN_TRUTH}| < {EINSTEIN_TOL})"

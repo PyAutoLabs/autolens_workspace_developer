@@ -62,8 +62,9 @@ def sersic_lens_bulge(config: Dict) -> al.lp.Sersic:
     )
 
 
-def lens_galaxy(config: Dict, lens_light_truth: str,
-                mge_lens_truth_path: Optional[Path] = None) -> al.Galaxy:
+def lens_galaxy(
+    config: Dict, lens_light_truth: str, mge_lens_truth_path: Optional[Path] = None
+) -> al.Galaxy:
     """Build a truth lens galaxy.
 
     Parameters
@@ -88,21 +89,22 @@ def lens_galaxy(config: Dict, lens_light_truth: str,
         return al.Galaxy(redshift=0.5, mass=mass, shear=shear)
     if lens_light_truth == "sersic":
         return al.Galaxy(
-            redshift=0.5, bulge=sersic_lens_bulge(config),
-            mass=mass, shear=shear,
+            redshift=0.5,
+            bulge=sersic_lens_bulge(config),
+            mass=mass,
+            shear=shear,
         )
     if lens_light_truth == "mge":
         if mge_lens_truth_path is None:
             raise ValueError("mge_lens_truth_path required for lens_light_truth='mge'")
         truth_galaxy = al.from_json(file_path=mge_lens_truth_path)
-        return al.Galaxy(
-            redshift=0.5, bulge=truth_galaxy.bulge, mass=mass, shear=shear
-        )
+        return al.Galaxy(redshift=0.5, bulge=truth_galaxy.bulge, mass=mass, shear=shear)
     raise ValueError(f"Unknown lens_light_truth: {lens_light_truth}")
 
 
-def source_galaxy(source_truth: str,
-                  mge_source_truth_path: Optional[Path] = None) -> al.Galaxy:
+def source_galaxy(
+    source_truth: str, mge_source_truth_path: Optional[Path] = None
+) -> al.Galaxy:
     """Build a truth source galaxy.
 
     Parameters
@@ -150,7 +152,8 @@ def simulate_and_save(
     sim = _simulator()
 
     lens = lens_galaxy(
-        config=config, lens_light_truth=lens_light_truth,
+        config=config,
+        lens_light_truth=lens_light_truth,
         mge_lens_truth_path=mge_lens_truth_path,
     )
     source = source_galaxy(

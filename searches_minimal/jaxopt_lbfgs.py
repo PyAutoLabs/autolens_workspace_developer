@@ -55,7 +55,9 @@ for _ in range(3):
 warm_ms = (time.time() - t0) / 3 * 1e3
 print(f"Warm fwd+grad: {warm_ms:.1f} ms/eval")
 
-solver = LBFGS(fun=obj.value_and_grad, value_and_grad=True, maxiter=MAXITER, tol=GRAD_TOL)
+solver = LBFGS(
+    fun=obj.value_and_grad, value_and_grad=True, maxiter=MAXITER, tol=GRAD_TOL
+)
 state = solver.init_state(params)
 
 history: list[float] = []

@@ -35,7 +35,12 @@ import numpy as np
 import autofit as af
 import autolens as al
 
-from searches_minimal._setup import build_analysis, build_dataset, build_model, format_best_fit
+from searches_minimal._setup import (
+    build_analysis,
+    build_dataset,
+    build_model,
+    format_best_fit,
+)
 
 N_LIVE = 100  # the value used by the standard autolens_workspace imaging examples
 
@@ -63,12 +68,16 @@ best_sample = samples.max_log_likelihood_sample
 best_instance = result.max_log_likelihood_instance
 max_logl = float(best_sample.log_likelihood)
 best_r_e = float(best_instance.galaxies.lens.mass.einstein_radius)
-log_evidence = float(samples.log_evidence) if samples.log_evidence is not None else float("nan")
+log_evidence = (
+    float(samples.log_evidence) if samples.log_evidence is not None else float("nan")
+)
 total_evals = int(samples.total_samples)
 
 # Effective sample size from the posterior weights: (sum w)^2 / sum(w^2).
 w = np.asarray(samples.weight_list, dtype=float)
-ess = float(w.sum() ** 2 / np.sum(w**2)) if w.size and np.sum(w**2) > 0 else float("nan")
+ess = (
+    float(w.sum() ** 2 / np.sum(w**2)) if w.size and np.sum(w**2) > 0 else float("nan")
+)
 
 # Nautilus's native log-evidence error, if autofit exposes the internal sampler.
 log_z_err = float("nan")

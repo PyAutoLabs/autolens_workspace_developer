@@ -44,7 +44,9 @@ LEARNING_RATE = float(os.environ.get("MULTISTART_LR", _OPT_LR[OPTIMIZER]))
 
 print(f"JAX backend: {jax.default_backend()}  devices: {jax.devices()}")
 obj = build_map_objective()
-print(f"Model free parameters: {obj.ndim}  |  N_STARTS = {N_STARTS}  |  OPTIMIZER = {OPTIMIZER} (lr={LEARNING_RATE})")
+print(
+    f"Model free parameters: {obj.ndim}  |  N_STARTS = {N_STARTS}  |  OPTIMIZER = {OPTIMIZER} (lr={LEARNING_RATE})"
+)
 
 compile_s = time_compile(obj)
 batched_vag = jax.jit(jax.vmap(jax.value_and_grad(obj.neg_log_posterior_raw)))
@@ -66,7 +68,8 @@ print(f"Collected {len(starts)} finite-gradient starts (from {tries} draws)")
 
 t0 = time.time()
 l, g = batched_vag(params)
-jax.block_until_ready(l); jax.block_until_ready(g)
+jax.block_until_ready(l)
+jax.block_until_ready(g)
 batched_compile_s = time.time() - t0
 print(f"Batched (vmap x{N_STARTS}) compile: {batched_compile_s:.1f} s")
 
@@ -76,14 +79,17 @@ best_history: list[float] = []
 global_best_loss = np.inf
 global_best_params = params[0]
 
-print(f"\nRunning {N_STARTS}-start {OPTIMIZER} for {N_STEPS} steps on {jax.default_backend()}...")
+print(
+    f"\nRunning {N_STARTS}-start {OPTIMIZER} for {N_STEPS} steps on {jax.default_backend()}..."
+)
 t_start = time.time()
 for i in range(N_STEPS):
     losses, grads = batched_vag(params)
     losses_np = np.where(np.isfinite(np.asarray(losses)), np.asarray(losses), np.inf)
     j = int(np.argmin(losses_np))
     if losses_np[j] < global_best_loss:
-        global_best_loss = float(losses_np[j]); global_best_params = params[j]
+        global_best_loss = float(losses_np[j])
+        global_best_params = params[j]
     best_history.append(-global_best_loss)
     updates, opt_state = opt.update(grads, opt_state, params)
     params = optax.apply_updates(params, updates)
@@ -92,10 +98,17 @@ for i in range(N_STEPS):
 loop_s = time.time() - t_start
 
 final_r_e = np.array(
-    [obj.model.instance_from_vector(vector=list(np.asarray(p))).galaxies.lens.mass.einstein_radius for p in params]
+    [
+        obj.model.instance_from_vector(
+            vector=list(np.asarray(p))
+        ).galaxies.lens.mass.einstein_radius
+        for p in params
+    ]
 )
 n_in_basin = int(np.sum(np.abs(final_r_e - EINSTEIN_TRUTH) < EINSTEIN_TOL))
-print(f"\n{n_in_basin}/{N_STARTS} starts reached the correct basin (p_hit = {n_in_basin/N_STARTS:.2f})")
+print(
+    f"\n{n_in_basin}/{N_STARTS} starts reached the correct basin (p_hit = {n_in_basin/N_STARTS:.2f})"
+)
 
 write_grad_summary(
     name=f"gpu_multi_start_{OPTIMIZER}_n{N_STARTS}",

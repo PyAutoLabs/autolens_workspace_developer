@@ -128,14 +128,19 @@ def make_collection(*, source_class: str, lens_light_class: str) -> af.Collectio
         lens = af.Model(al.Galaxy, redshift=0.5, mass=mass, shear=shear)
     elif lens_light_class == "sersic":
         lens = af.Model(
-            al.Galaxy, redshift=0.5, bulge=lens_sersic_bulge_model(),
-            mass=mass, shear=shear,
+            al.Galaxy,
+            redshift=0.5,
+            bulge=lens_sersic_bulge_model(),
+            mass=mass,
+            shear=shear,
         )
     elif lens_light_class == "mge":
         lens = af.Model(
-            al.Galaxy, redshift=0.5,
+            al.Galaxy,
+            redshift=0.5,
             bulge=mge_model(centre_prior_is_uniform=True),
-            mass=mass, shear=shear,
+            mass=mass,
+            shear=shear,
         )
     else:
         raise ValueError(lens_light_class)
@@ -173,7 +178,9 @@ def source_science_from(tracer: al.Tracer) -> Dict[str, float]:
     }
 
 
-def with_comparison(values: Dict[str, float], truth: Dict[str, float]) -> Dict[str, float]:
+def with_comparison(
+    values: Dict[str, float], truth: Dict[str, float]
+) -> Dict[str, float]:
     out = dict(values)
     for k in QUANTITY_KEYS[:-1]:
         out[f"delta_{k}"] = values[k] - truth[k]
@@ -206,7 +213,10 @@ def _solved_tracer(instance, dataset: al.Imaging, has_linear_lp: bool) -> al.Tra
 
 
 def posterior_source_science_from(
-    samples, dataset: al.Imaging, has_linear_lp: bool, n_draws: int = N_POSTERIOR_DRAWS,
+    samples,
+    dataset: al.Imaging,
+    has_linear_lp: bool,
+    n_draws: int = N_POSTERIOR_DRAWS,
 ) -> Dict:
     draws = {k: [] for k in QUANTITY_KEYS}
     n_failed = 0
@@ -218,7 +228,9 @@ def posterior_source_science_from(
                 vector=vector, ignore_assertions=True
             )
             tracer = _solved_tracer(
-                instance=instance, dataset=dataset, has_linear_lp=has_linear_lp,
+                instance=instance,
+                dataset=dataset,
+                has_linear_lp=has_linear_lp,
             )
             values = source_science_from(tracer=tracer)
         except Exception as e:  # noqa: BLE001 - skip bad draws
@@ -262,7 +274,8 @@ def with_pdf_comparison(pdf_summary: Dict, truth: Dict[str, float]) -> Dict:
             "delta_median": entry["median"] - truth_value,
             "z_score": (
                 (entry["median"] - truth_value) / entry["std"]
-                if entry["std"] > 0 else None
+                if entry["std"] > 0
+                else None
             ),
             "truth_within_1sigma": bool(
                 entry["lower_1sigma"] <= truth_value <= entry["upper_1sigma"]
@@ -359,7 +372,9 @@ def run_fits_and_compare(
     dataset_path: Path,
     fits_dir: Path,
     truth: Dict[str, float],
-    fit_list: Sequence[Tuple[str, str, str]],  # (model_name, source_class, lens_light_class)
+    fit_list: Sequence[
+        Tuple[str, str, str]
+    ],  # (model_name, source_class, lens_light_class)
     path_prefix: Path,
     unique_tag: str,
 ) -> Dict:
@@ -383,9 +398,12 @@ def run_fits_and_compare(
     }
 
     for model_name, source_class, lens_light_class in fit_list:
-        print(f"Running fit: {model_name}  (source={source_class}, lens_light={lens_light_class})")
+        print(
+            f"Running fit: {model_name}  (source={source_class}, lens_light={lens_light_class})"
+        )
         model = make_collection(
-            source_class=source_class, lens_light_class=lens_light_class,
+            source_class=source_class,
+            lens_light_class=lens_light_class,
         )
         search = af.Nautilus(
             path_prefix=path_prefix,
@@ -403,10 +421,13 @@ def run_fits_and_compare(
         mle_values = source_science_from(tracer=result.max_log_likelihood_tracer)
         mle_compared = with_comparison(values=mle_values, truth=truth_full)
         has_linear_lp = fit_has_linear_lp(
-            source_class=source_class, lens_light_class=lens_light_class,
+            source_class=source_class,
+            lens_light_class=lens_light_class,
         )
         pdf_summary = posterior_source_science_from(
-            samples=result.samples, dataset=dataset, has_linear_lp=has_linear_lp,
+            samples=result.samples,
+            dataset=dataset,
+            has_linear_lp=has_linear_lp,
         )
         pdf_compared = with_pdf_comparison(pdf_summary=pdf_summary, truth=truth_full)
         _save_subplot(result=result, model_name=model_name, fits_dir=fits_dir)

@@ -69,7 +69,9 @@ TOL = float(os.environ.get("LM_TOL", "1e-3"))
 
 print(f"JAX backend: {jax.default_backend()}  devices: {jax.devices()}")
 obj = build_map_objective()
-print(f"Model free parameters: {obj.ndim}  |  N_STARTS = {N_STARTS}  |  LM maxiter={MAXITER} tol={TOL}")
+print(
+    f"Model free parameters: {obj.ndim}  |  N_STARTS = {N_STARTS}  |  LM maxiter={MAXITER} tol={TOL}"
+)
 
 time_compile(obj)  # warm the shared value_and_grad (also used by make_z_starts)
 z_starts, n_kept = make_z_starts(obj, N_STARTS)

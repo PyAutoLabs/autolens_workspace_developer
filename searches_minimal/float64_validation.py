@@ -85,7 +85,12 @@ loop_s = time.time() - t_start
 
 phys = np.array([np.asarray(obj.physical_from_z(jnp.asarray(z))) for z in params])
 r_e = np.array(
-    [obj.model.instance_from_vector(vector=list(p)).galaxies.lens.mass.einstein_radius for p in phys]
+    [
+        obj.model.instance_from_vector(
+            vector=list(p)
+        ).galaxies.lens.mass.einstein_radius
+        for p in phys
+    ]
 )
 n_in_basin = int(np.sum(np.abs(r_e - EINSTEIN_TRUTH) < EINSTEIN_TOL))
 best_params = np.asarray(obj.physical_from_z(jnp.asarray(global_best_z)))

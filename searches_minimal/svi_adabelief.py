@@ -105,7 +105,9 @@ guide = AutoNormal(
 )
 # ADABelief with the large MAP gradient clipped (as in the optax point runs).
 optimizer = optax_to_numpyro(
-    optax.chain(optax.clip_by_global_norm(MAX_GRAD_NORM), optax.adabelief(LEARNING_RATE))
+    optax.chain(
+        optax.clip_by_global_norm(MAX_GRAD_NORM), optax.adabelief(LEARNING_RATE)
+    )
 )
 svi = SVI(numpyro_model, guide, optimizer, loss=Trace_ELBO())
 

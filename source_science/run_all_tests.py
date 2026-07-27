@@ -134,7 +134,10 @@ def ensure_mge_lens_truth_exists(config_name: str) -> Path:
     dataset = load_dataset(src_dataset_path)
     model = make_collection(source_class="sersic", lens_light_class="mge")
     search = af.Nautilus(
-        path_prefix=Path("output") / "lens_config_robustness" / config_name / "mge_lens_extractor",
+        path_prefix=Path("output")
+        / "lens_config_robustness"
+        / config_name
+        / "mge_lens_extractor",
         name="mge_lens__sersic_source",
         unique_tag=f"{config_name}_extractor_v1",
         n_live=75,
@@ -214,15 +217,18 @@ def run_one_test(
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--only", default=None,
+        "--only",
+        default=None,
         help="If set, only run tests for this config (e.g. config_1).",
     )
     parser.add_argument(
-        "--skip", default=None,
+        "--skip",
+        default=None,
         help="Comma-separated list of test_names to skip globally (e.g. 1_sersic_truth_sersic_lens,2_sersic_truth_no_lens).",
     )
     parser.add_argument(
-        "--skip-existing", action="store_true",
+        "--skip-existing",
+        action="store_true",
         help="Skip tests whose fit_comparison.json already exists.",
     )
     args = parser.parse_args()

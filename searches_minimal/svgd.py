@@ -43,6 +43,7 @@ EINSTEIN_TOL = 0.3
 obj = build_map_objective()
 print(f"Model free parameters: {obj.ndim}")
 
+
 # log-density = log posterior (blackjax SVGD ascends this + repulsion).
 def _grad_logdensity(particle):
     return jax.grad(lambda p: -obj.neg_log_posterior_raw(p))(particle)
@@ -105,14 +106,22 @@ loop_s = time.time() - t_start
 # Final particle outcome.
 final_r_e = np.array(
     [
-        obj.model.instance_from_vector(vector=list(np.asarray(p))).galaxies.lens.mass.einstein_radius
+        obj.model.instance_from_vector(
+            vector=list(np.asarray(p))
+        ).galaxies.lens.mass.einstein_radius
         for p in state.particles
     ]
 )
 n_in_basin = int(np.sum(np.abs(final_r_e - EINSTEIN_TRUTH) < EINSTEIN_TOL))
-best_r_e = float(obj.model.instance_from_vector(vector=list(global_best_p)).galaxies.lens.mass.einstein_radius)
-print(f"\nBest r_E = {best_r_e:.3f} (truth {EINSTEIN_TRUTH}); "
-      f"{n_in_basin}/{N_PARTICLES} particles in basin")
+best_r_e = float(
+    obj.model.instance_from_vector(
+        vector=list(global_best_p)
+    ).galaxies.lens.mass.einstein_radius
+)
+print(
+    f"\nBest r_E = {best_r_e:.3f} (truth {EINSTEIN_TRUTH}); "
+    f"{n_in_basin}/{N_PARTICLES} particles in basin"
+)
 
 write_grad_summary(
     name="svgd",

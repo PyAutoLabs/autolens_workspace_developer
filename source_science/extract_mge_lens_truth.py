@@ -45,7 +45,10 @@ def extract(config_name: str, dataset_name: str, output_name: str) -> Path:
     dataset = load_dataset(dataset_path)
     model = make_collection(source_class="sersic", lens_light_class="mge")
     search = af.Nautilus(
-        path_prefix=Path("output") / "lens_config_robustness" / config_name / "mge_lens_extractor",
+        path_prefix=Path("output")
+        / "lens_config_robustness"
+        / config_name
+        / "mge_lens_extractor",
         name="mge_lens__sersic_source",
         unique_tag=f"{config_name}_extractor_v1",
         n_live=75,
@@ -68,11 +71,13 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", required=True, help="Config name e.g. config_0")
     parser.add_argument(
-        "--dataset-name", required=True,
+        "--dataset-name",
+        required=True,
         help="Dataset folder under dataset/imaging/ to use as the source data",
     )
     parser.add_argument(
-        "--output-name", required=True,
+        "--output-name",
+        required=True,
         help="Output JSON filename relative to source_science/results/",
     )
     args = parser.parse_args()

@@ -86,7 +86,9 @@ for i in range(N_STEPS):
 adam_loop_s = time.time() - t_start
 z_after_adam = params
 adam_best_logpost = -global_best_loss
-print(f"Stage 1 done: Adam best log_posterior = {adam_best_logpost:.2f}  ({adam_loop_s:.1f} s)")
+print(
+    f"Stage 1 done: Adam best log_posterior = {adam_best_logpost:.2f}  ({adam_loop_s:.1f} s)"
+)
 
 # ---- Stage 2: L-BFGS polish from every Adam endpoint -----------------------
 # implicit_diff=False + backtracking line search — see jaxopt_lbfgs_multistart.py
@@ -117,19 +119,34 @@ print(
 )
 
 # ---- Score polished endpoints ----------------------------------------------
-phys = np.array([np.asarray(obj.physical_from_z(jax.numpy.asarray(z))) for z in z_polished])
+phys = np.array(
+    [np.asarray(obj.physical_from_z(jax.numpy.asarray(z))) for z in z_polished]
+)
 logpost = np.array(
-    [float(obj.log_likelihood(jax.numpy.asarray(p)) + obj.log_prior(jax.numpy.asarray(p))) for p in phys]
+    [
+        float(
+            obj.log_likelihood(jax.numpy.asarray(p))
+            + obj.log_prior(jax.numpy.asarray(p))
+        )
+        for p in phys
+    ]
 )
 logpost = np.where(np.isfinite(logpost), logpost, -np.inf)
 jb = int(np.argmax(logpost))
 best_params = phys[jb]
 r_e = np.array(
-    [obj.model.instance_from_vector(vector=list(p)).galaxies.lens.mass.einstein_radius for p in phys]
+    [
+        obj.model.instance_from_vector(
+            vector=list(p)
+        ).galaxies.lens.mass.einstein_radius
+        for p in phys
+    ]
 )
 n_in_basin = int(np.sum(np.abs(r_e - EINSTEIN_TRUTH) < EINSTEIN_TOL))
 polish_gain = float(logpost[jb]) - adam_best_logpost
-print(f"\n{n_in_basin}/{n_kept} polished starts in basin; polish gain over Adam = {polish_gain:+.4f} nat")
+print(
+    f"\n{n_in_basin}/{n_kept} polished starts in basin; polish gain over Adam = {polish_gain:+.4f} nat"
+)
 
 scalar_adam = n_kept * N_STEPS
 scalar_lbfgs = int(np.sum(np.clip(iter_nums, 0, None)))

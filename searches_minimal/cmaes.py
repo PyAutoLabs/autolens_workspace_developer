@@ -81,13 +81,17 @@ best_history: list[float] = []
 global_best_neg = np.inf
 global_best_u = np.full(obj.ndim, 0.5)
 
-print(f"\nRunning CMA-ES: pop={POPULATION_SIZE}, {N_GENERATIONS} gens, std_init={STD_INIT}...")
+print(
+    f"\nRunning CMA-ES: pop={POPULATION_SIZE}, {N_GENERATIONS} gens, std_init={STD_INIT}..."
+)
 t_start = time.time()
 for gen in range(N_GENERATIONS):
     key, k_ask, k_tell = jax.random.split(key, 3)
     population, state = solver.ask(k_ask, state, params)  # (P, ndim) unit-cube
     fitness = fitness_fn(population)
-    state, _metrics = solver.tell(k_tell, population, jnp.asarray(fitness), state, params)
+    state, _metrics = solver.tell(
+        k_tell, population, jnp.asarray(fitness), state, params
+    )
     j = int(np.argmin(fitness))
     if fitness[j] < global_best_neg:
         global_best_neg = float(fitness[j])
@@ -101,16 +105,26 @@ loop_s = time.time() - t_start
 final_phys = _unit_to_physical(solver.ask(key, state, params)[0])
 final_r_e = np.array(
     [
-        obj.model.instance_from_vector(vector=list(p)).galaxies.lens.mass.einstein_radius
+        obj.model.instance_from_vector(
+            vector=list(p)
+        ).galaxies.lens.mass.einstein_radius
         for p in final_phys
     ]
 )
 n_in_basin = int(np.sum(np.abs(final_r_e - EINSTEIN_TRUTH) < EINSTEIN_TOL))
 
-best_phys = np.asarray(obj.model.vector_from_unit_vector(list(np.clip(global_best_u, 1e-4, 1 - 1e-4))))
-best_r_e = float(obj.model.instance_from_vector(vector=list(best_phys)).galaxies.lens.mass.einstein_radius)
-print(f"\nBest r_E = {best_r_e:.3f} (truth {EINSTEIN_TRUTH}); "
-      f"{n_in_basin}/{POPULATION_SIZE} of final population in basin")
+best_phys = np.asarray(
+    obj.model.vector_from_unit_vector(list(np.clip(global_best_u, 1e-4, 1 - 1e-4)))
+)
+best_r_e = float(
+    obj.model.instance_from_vector(
+        vector=list(best_phys)
+    ).galaxies.lens.mass.einstein_radius
+)
+print(
+    f"\nBest r_E = {best_r_e:.3f} (truth {EINSTEIN_TRUTH}); "
+    f"{n_in_basin}/{POPULATION_SIZE} of final population in basin"
+)
 
 write_grad_summary(
     name="cmaes",
