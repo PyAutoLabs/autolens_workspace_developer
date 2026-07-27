@@ -82,6 +82,14 @@ MESH_PIXELS = 300
 EDGE_PIXELS = 30
 # Which gradient-certified pixelized mesh to fit: rectangular | knn | delaunay.
 PIX_MESH = os.environ.get("PIX_MESH") or "rectangular"
+# Regularization-scheme override (#117 Stage-3): None = the mesh's default
+# scheme (Constant for rectangular, AdaptSplit for the Delaunay family);
+# "matern" = al.reg.MaternKernel with free (coefficient, scale), nu pinned at
+# 0.5 — the OTHER JAX-safe pairing for the Delaunay family (kernel regs build
+# from pairwise distances, no scipy neighbors). Discriminates "free
+# regularization breaks the search" from "AdaptSplit's lambda^4-fragile
+# parametrization breaks the search".
+PIX_REG = os.environ.get("PIX_REG") or None
 # lr override for the #101 phase-2a lr sweep (e.g. PIX_LR=3e-3). None = the
 # rule's benchmark default (adam/adabelief 1e-2, lion 1e-3).
 PIX_LR = float(os.environ.get("PIX_LR") or 0) or None
@@ -106,16 +114,29 @@ def mesh_and_regularization():
     ``signal_scale`` stays pinned at 1.0 either way, so the free reg is
     2-parameter (inner + outer), keeping the certified variants' surface.
     """
+    def _matern():
+        if PIX_FIX_REG:
+            return al.reg.MaternKernel(
+                coefficient=PIX_FIX_REG, scale=1.0, nu=0.5
+            )
+        regularization = af.Model(al.reg.MaternKernel)
+        regularization.nu = 0.5
+        return regularization
+
     if PIX_MESH == "rectangular":
         mesh = al.mesh.RectangularAdaptDensity(shape=MESH_SHAPE, bandwidth=0.1)
-        if PIX_FIX_REG:
+        if PIX_REG == "matern":
+            regularization = _matern()
+        elif PIX_FIX_REG:
             regularization = al.reg.Constant(coefficient=PIX_FIX_REG)
         else:
             regularization = al.reg.Constant
     elif PIX_MESH in ("knn", "delaunay"):
         mesh_cls = al.mesh.KNearestNeighbor if PIX_MESH == "knn" else al.mesh.Delaunay
         mesh = mesh_cls(pixels=MESH_PIXELS, zeroed_pixels=EDGE_PIXELS)
-        if PIX_FIX_REG:
+        if PIX_REG == "matern":
+            regularization = _matern()
+        elif PIX_FIX_REG:
             regularization = al.reg.AdaptSplit(
                 inner_coefficient=0.1 * PIX_FIX_REG,
                 outer_coefficient=10.0 * PIX_FIX_REG,

@@ -63,6 +63,7 @@ from searches_minimal.pix_multi_start import (  # noqa: E402
     PIX_LOGDET,
     PIX_LR,
     PIX_MESH,
+    PIX_REG,
     TRUTH_EINSTEIN_RADIUS,
     TRUTH_MASS_ELL,
     TRUTH_SHEAR,
@@ -102,6 +103,8 @@ NAUTILUS_MODE_R_E = {"rectangular": 1.31, "knn": 1.011, "delaunay": 0.962}
 TRUTH_BAR = {"rectangular": 27059.4, "knn": 28791.5, "delaunay": 30078.7}
 
 OUT_DIR = os.path.join("searches_minimal", "output")
+# Distinguishes reg-scheme override arms in output filenames/reports.
+REG_TAG = f"_{PIX_REG}" if PIX_REG else ""
 
 
 def gradient_search(rule: str):
@@ -125,7 +128,7 @@ def gradient_search(rule: str):
     if rule != "prodigy" and PIX_LR:
         kwargs["learning_rate"] = PIX_LR
     search = cls(
-        name=f"pix_{rule}_{PIX_MESH}{NAME_SUFFIX}",
+        name=f"pix_{rule}_{PIX_MESH}{REG_TAG}{NAME_SUFFIX}",
         path_prefix=os.path.join("searches_minimal", "pix_prodigy"),
         n_starts=N_STARTS,
         n_steps=N_STEPS,
@@ -154,7 +157,7 @@ def nautilus_search():
     need ~100 GB).
     """
     return af.Nautilus(
-        name=f"pix_nautilus_{PIX_MESH}{NAME_SUFFIX}",
+        name=f"pix_nautilus_{PIX_MESH}{REG_TAG}{NAME_SUFFIX}",
         path_prefix=os.path.join("searches_minimal", "pix_prodigy"),
         n_live=100,
         n_batch=16,
@@ -187,8 +190,10 @@ def truth_bar() -> None:
     best = (-np.inf, None)
     lines = [f"# truth-point reg scan  mesh={PIX_MESH}  (figure_of_merit)"]
     for c in coefficients:
-        reg = model.galaxies.source.pixelization.regularization
-        if PIX_MESH == "rectangular":
+        if PIX_REG == "matern":
+            # MaternKernel: (coefficient, scale) — scan coefficient at scale 1.
+            physical = [c, 1.0]
+        elif PIX_MESH == "rectangular":
             physical = [c]
         else:
             # AdaptSplit: (inner, outer) at the certified 1:100 ratio.
@@ -211,7 +216,9 @@ def truth_bar() -> None:
     print(f"\nTRUTH BAR ({PIX_MESH}): max fom = {best[0]:.3f} at coeff={best[1]:.3e}")
     lines.append(f"# max {best[0]:.6f} at {best[1]:.6e}")
     os.makedirs(OUT_DIR, exist_ok=True)
-    with open(os.path.join(OUT_DIR, f"pix_truth_bar_{PIX_MESH}.txt"), "w") as f:
+    with open(
+        os.path.join(OUT_DIR, f"pix_truth_bar_{PIX_MESH}{REG_TAG}.txt"), "w"
+    ) as f:
         f.write("\n".join(lines) + "\n")
 
 
@@ -241,7 +248,8 @@ def report(rule: str, result, wall: float) -> None:
         "================ RESULT ================",
         f"rule               : {rule}  (mesh={PIX_MESH})",
         f"n_starts/steps/batch: {N_STARTS}/{N_STEPS}/{BATCH}  resurrect={RESURRECT}",
-        f"log_det={PIX_LOGDET or 'cholesky'}  fix_reg={PIX_FIX_REG or 'free'}",
+        f"log_det={PIX_LOGDET or 'cholesky'}  fix_reg={PIX_FIX_REG or 'free'}"
+        f"  reg={PIX_REG or 'mesh-default'}",
         f"wall_s             : {wall:.1f}",
         f"max log likelihood : {logl:.3f}",
         f"einstein_radius    : {r_e:.4f}   (truth {TRUTH_EINSTEIN_RADIUS}"
@@ -265,7 +273,7 @@ def report(rule: str, result, wall: float) -> None:
     print("\n" + text)
     os.makedirs(OUT_DIR, exist_ok=True)
     with open(
-        os.path.join(OUT_DIR, f"pix_prodigy_{rule}_{PIX_MESH}.txt"), "a"
+        os.path.join(OUT_DIR, f"pix_prodigy_{rule}_{PIX_MESH}{REG_TAG}.txt"), "a"
     ) as f:
         f.write(text + "\n\n")
         if fom_history:
