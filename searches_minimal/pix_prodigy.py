@@ -82,6 +82,13 @@ NAME_SUFFIX = os.environ.get("PIX_NAME_SUFFIX", "")
 # baselines once they converge.
 NAUTILUS_BAR = {"rectangular": 17419.0}
 NAUTILUS_MODE_R_E = {"rectangular": 1.31}
+# Truth-point bars from this campaign's `truth-bar` reg scans (2026-07-27,
+# local CPU): the objective at simulator-truth mass/shear, reg at its scan
+# optimum. An UPPER reference — a converged free-reg fit sits below it
+# (rectangular: +27059 truth-point vs +17419 Nautilus). The delaunay scan also
+# showed NaN foms at high coefficients (inner>=10) — the #104 high-lambda
+# fragility is visible in forward evals on this mesh.
+TRUTH_BAR = {"rectangular": 27059.4, "knn": 28791.5, "delaunay": 30078.7}
 
 OUT_DIR = os.path.join("searches_minimal", "output")
 
@@ -233,6 +240,7 @@ def report(rule: str, result, wall: float) -> None:
         f"in truth basin     : {abs(r_e - TRUTH_EINSTEIN_RADIUS) < BASIN_TOL}"
         "   (slack tol — converged-sampler logL is the real bar)",
         f"bar (Nautilus)     : {bar if bar is not None else 'none yet (baseline pending)'}",
+        f"bar (truth-point)  : {TRUTH_BAR.get(PIX_MESH, 'n/a')}   (upper reference)",
         f"steps to bar       : {steps_to_bar if steps_to_bar is not None else 'not reached'}",
         f"total_steps        : {total_steps}",
         f"n_resurrections    : {n_resurrections}",
