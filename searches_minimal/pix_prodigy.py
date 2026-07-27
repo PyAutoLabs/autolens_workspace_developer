@@ -113,7 +113,7 @@ def gradient_search(rule: str):
     # the adam family keeps its benchmark default unless PIX_LR overrides.
     if rule != "prodigy" and PIX_LR:
         kwargs["learning_rate"] = PIX_LR
-    return cls(
+    search = cls(
         name=f"pix_{rule}_{PIX_MESH}{NAME_SUFFIX}",
         path_prefix=os.path.join("searches_minimal", "pix_prodigy"),
         n_starts=N_STARTS,
@@ -130,6 +130,14 @@ def gradient_search(rule: str):
         number_of_cores=1,
         **kwargs,
     )
+    # LIBRARY BUG HOTFIX (PyAutoFit, filed from #117): abstract_search coerces
+    # iterations_per_full_update to float, and the multi-start _fit passes
+    # min(float, steps_remaining) straight into range() — TypeError whenever
+    # the cadence is below the remaining budget (config defaults are huge, so
+    # min() returns the int and the crash never fired before). Overwrite with
+    # the int post-construction until the library casts in _fit.
+    search.iterations_per_full_update = 50
+    return search
 
 
 def nautilus_search():
