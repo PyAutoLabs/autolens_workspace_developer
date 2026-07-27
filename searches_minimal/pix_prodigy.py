@@ -80,12 +80,13 @@ NAME_SUFFIX = os.environ.get("PIX_NAME_SUFFIX", "")
 # Per-mesh converged-sampler bars (max logL). Only rectangular exists so far —
 # the knn/delaunay entries are filled in from this campaign's own `nautilus`
 # baselines once they converge.
-# delaunay: this campaign's CPU baseline (job 331181, 2026-07-27, wall 8331s).
-# CAVEAT: n_live=100 single run; its mode r_E=0.962 is far from truth 1.6 and
-# sits ~10k nats below the truth-point bar — treat as "what a converged-ish
-# sampler achieved", not ground truth.
-NAUTILUS_BAR = {"rectangular": 17419.0, "delaunay": 19982.3}
-NAUTILUS_MODE_R_E = {"rectangular": 1.31, "delaunay": 0.962}
+# knn/delaunay: this campaign's CPU baselines (jobs 331180/331181, 2026-07-27).
+# CAVEAT: single n_live=100 runs; both modes sit FAR from truth (knn r_E=1.011,
+# delaunay 0.962) and well below their truth-point bars — at these modest
+# sampler settings they are floors, not converged references. Notably Prodigy
+# BEAT the knn baseline by ~16.8k nats (+22515 vs +5704) in ~1/5 the wall.
+NAUTILUS_BAR = {"rectangular": 17419.0, "knn": 5704.2, "delaunay": 19982.3}
+NAUTILUS_MODE_R_E = {"rectangular": 1.31, "knn": 1.011, "delaunay": 0.962}
 # Truth-point bars from this campaign's `truth-bar` reg scans (2026-07-27,
 # local CPU): the objective at simulator-truth mass/shear, reg at its scan
 # optimum. An UPPER reference — a converged free-reg fit sits below it
