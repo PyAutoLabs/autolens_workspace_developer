@@ -76,6 +76,12 @@ RESURRECT = os.environ.get("PIX_RESURRECT", "1") == "1"
 # resume chain: a completed short run under the chain's name would be loaded
 # as the finished result by the real budget's resume.
 NAME_SUFFIX = os.environ.get("PIX_NAME_SUFFIX", "")
+# Stage-3 arm knob: narrow the multi-start draw band (library default
+# 0.15-0.85 of the unit hypercube). A narrow-band arm that succeeds where the
+# broad band stalls localises the failure to global discovery, not local
+# landscape geometry.
+START_LOW = float(os.environ.get("PIX_START_LOW") or 0.15)
+START_HIGH = float(os.environ.get("PIX_START_HIGH") or 0.85)
 
 # Per-mesh converged-sampler bars (max logL). Only rectangular exists so far —
 # the knn/delaunay entries are filled in from this campaign's own `nautilus`
@@ -124,6 +130,8 @@ def gradient_search(rule: str):
         n_starts=N_STARTS,
         n_steps=N_STEPS,
         batch_size=BATCH,
+        start_lower_limit=START_LOW,
+        start_upper_limit=START_HIGH,
         resurrect=RESURRECT,
         convergence=af.MultiStartGradientConvergence(check_for_convergence=False),
         # Bound what a SLURM 24 h kill can lose: the persisted search_internal
