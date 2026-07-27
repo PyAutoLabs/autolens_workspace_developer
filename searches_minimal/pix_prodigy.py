@@ -134,13 +134,6 @@ def gradient_search(rule: str):
         number_of_cores=1,
         **kwargs,
     )
-    # LIBRARY BUG HOTFIX (PyAutoFit, filed from #117): abstract_search coerces
-    # iterations_per_full_update to float, and the multi-start _fit passes
-    # min(float, steps_remaining) straight into range() — TypeError whenever
-    # the cadence is below the remaining budget (config defaults are huge, so
-    # min() returns the int and the crash never fired before). Overwrite with
-    # the int post-construction until the library casts in _fit.
-    search.iterations_per_full_update = 50
     return search
 
 
