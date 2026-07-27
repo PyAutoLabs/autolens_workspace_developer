@@ -72,6 +72,10 @@ N_STARTS = int(os.environ.get("PIX_N_STARTS") or 16)
 N_STEPS = int(os.environ.get("PIX_N_STEPS") or 300)
 BATCH = int(os.environ.get("PIX_BATCH") or 4) or None
 RESURRECT = os.environ.get("PIX_RESURRECT", "1") == "1"
+# Isolates throwaway runs (e.g. PIX_NAME_SUFFIX=_smoke) from the fixed-name
+# resume chain: a completed short run under the chain's name would be loaded
+# as the finished result by the real budget's resume.
+NAME_SUFFIX = os.environ.get("PIX_NAME_SUFFIX", "")
 
 # Per-mesh converged-sampler bars (max logL). Only rectangular exists so far —
 # the knn/delaunay entries are filled in from this campaign's own `nautilus`
@@ -103,7 +107,7 @@ def gradient_search(rule: str):
     if rule != "prodigy" and PIX_LR:
         kwargs["learning_rate"] = PIX_LR
     return cls(
-        name=f"pix_{rule}_{PIX_MESH}",
+        name=f"pix_{rule}_{PIX_MESH}{NAME_SUFFIX}",
         path_prefix=os.path.join("searches_minimal", "pix_prodigy"),
         n_starts=N_STARTS,
         n_steps=N_STEPS,
@@ -129,7 +133,7 @@ def nautilus_search():
     need ~100 GB).
     """
     return af.Nautilus(
-        name=f"pix_nautilus_{PIX_MESH}",
+        name=f"pix_nautilus_{PIX_MESH}{NAME_SUFFIX}",
         path_prefix=os.path.join("searches_minimal", "pix_prodigy"),
         n_live=100,
         n_batch=16,
