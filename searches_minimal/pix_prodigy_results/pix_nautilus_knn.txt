@@ -1,0 +1,1 @@
+mesh=knn wall_s=19102.0 max_logL=5704.224 r_E=1.0114
