@@ -90,6 +90,12 @@ PIX_MESH = os.environ.get("PIX_MESH") or "rectangular"
 # regularization breaks the search" from "AdaptSplit's lambda^4-fragile
 # parametrization breaks the search".
 PIX_REG = os.environ.get("PIX_REG") or None
+# Kernel-CDF bandwidth for the rectangular mesh (#117 Stage-3 lever). The
+# scripts' historical 0.1 is sharp — C-infinity on paper but with narrow
+# gradient support; the library default 1.0 is the smooth landscape. The
+# rectangular stall (both broad AND fixed-reg arms flat where other meshes'
+# fixed-reg converged in ~150 steps) implicates exactly this knob.
+PIX_BANDWIDTH = float(os.environ.get("PIX_BANDWIDTH") or 0.1)
 # lr override for the #101 phase-2a lr sweep (e.g. PIX_LR=3e-3). None = the
 # rule's benchmark default (adam/adabelief 1e-2, lion 1e-3).
 PIX_LR = float(os.environ.get("PIX_LR") or 0) or None
@@ -124,7 +130,7 @@ def mesh_and_regularization():
         return regularization
 
     if PIX_MESH == "rectangular":
-        mesh = al.mesh.RectangularAdaptDensity(shape=MESH_SHAPE, bandwidth=0.1)
+        mesh = al.mesh.RectangularAdaptDensity(shape=MESH_SHAPE, bandwidth=PIX_BANDWIDTH)
         if PIX_REG == "matern":
             regularization = _matern()
         elif PIX_FIX_REG:
