@@ -92,16 +92,44 @@ The three meshes ranked exactly by interpolation smoothness class:
   information stops at topology flips → smaller basins → progress leans on
   restarts. Still solvable (see above), just the least gradient-efficient.
 
-## Rectangular: open, and why that's a throughput statement
+## Rectangular: open at campaign close — throughput-bound, with the bandwidth hypothesis in flight
 
-The rectangular chains are healthy but slow: **~5.7 min/step on 32 CPUs
-(~17× knn)** — far above its ~4.5× forward-eval ratio, i.e. the kernel-CDF
-`value_and_grad` is disproportionately expensive. 19 h bought 200 steps
-(−51201 → −30136 — for calibration, that passed the #101 adam *endpoint* in
-25 steps). With the late-breakout precedent, no verdict before ~1500 steps;
-chains are extended to 5 links and the per-step cost is flagged for the A100
-profiling follow-up. Nothing in the rectangular trajectory resembles the
-AdaptSplit wall signature.
+The rectangular cell is the one the CPU campaign could not finish, and its
+diagnosis evolved in two steps:
+
+1. **Throughput**: ~5.7 min/step on 32 CPUs (~17× knn) — far above its ~4.5×
+   forward-eval ratio, i.e. the kernel-CDF `value_and_grad` is
+   disproportionately expensive. 19 h bought 200 steps (−51201 → −30136;
+   for calibration, that passed the #101 adam 3000-step *endpoint* within 25
+   Prodigy steps). This jvp anomaly is the A100 follow-up's first target.
+2. **Landscape**: the **fixed-reg arm is also flat** (−71108 through 200
+   steps) — on every other mesh fixed-reg reached truth in ~150 steps, so the
+   reg axis is *exonerated* on rectangular and the prime suspect is the
+   scripts' sharp **`bandwidth=0.1`**: formally C∞, but with gradient support
+   so narrow it behaves like delaunay's small basins. `bandwidth=1.0`
+   (library default) arms were launched to test this; their truth-point bar
+   is **+25660** — only ~1.4k nats below the sharp ceiling (+27059), so if
+   smooth-bandwidth search works, "search at 1.0, refine at 0.1" is nearly
+   free. Verdict lands on PR #119 / the profiling cell docstring when the
+   arms resolve.
+
+**Should bandwidth be a free parameter?** Probably not — likely a *schedule
+variable*: a MAP objective may push it monotonically toward the staircase
+limit (bandwidth→0), railing it against the prior bound rather than
+inferring it, unless the inversion evidence's complexity terms create an
+interior optimum the way they do for the reg coefficient. Gate any
+free-bandwidth experiment on a cheap joint (bandwidth, reg) evidence scan at
+truth; if monotone, anneal it across pipeline stages instead.
+
+## Ops trap: library upgrades invalidate in-flight resume chains
+
+The Fit#1423 cadence arc changed the multi-start figure-of-merit bookkeeping
+mid-campaign. Running jobs (old code in memory) were unaffected, but every
+resume link importing the new library tripped the FoM sanity check (old
+−30138 vs recomputed +60272 = −2·logP) and correctly refused to continue —
+the rectangular broad chain lost its checkpoint and was restarted fresh.
+**Pin the HPC library mirrors for a campaign's duration, or plan to restart
+in-flight chains after any library upgrade.**
 
 ## Library bugs found and fixed by this campaign (both merged 2026-07-28)
 
