@@ -1,0 +1,17 @@
+================ RESULT ================
+rule               : prodigy  (mesh=rectangular)
+n_starts/steps/batch: 16/2/4  resurrect=True
+log_det=cholesky  fix_reg=free
+wall_s             : 1101.8
+max log likelihood : -51204.413
+einstein_radius    : 1.4269   (truth 1.6, Nautilus mode 1.31)
+in truth basin     : True   (slack tol — converged-sampler logL is the real bar)
+bar (Nautilus)     : 17419.0
+steps to bar       : not reached
+total_steps        : 2
+n_resurrections    : 0
+stop_reason        : max_steps
+=======================================
+
+fom_history (best -2logP per step): 102402.6 102391.5
+
