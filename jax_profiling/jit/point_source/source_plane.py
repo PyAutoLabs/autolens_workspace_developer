@@ -212,7 +212,8 @@ print(f"  eager per-call   = {eager_per_call:.6f} s")
 
 
 # ===================================================================
-# PART B — Full-pipeline JIT (expected to fail — see module docstring)
+# PART B — Full-pipeline JIT (JITs cleanly: the xp-propagation bug was
+# fixed in PyAutoLens#657 phase 2 / PyAutoArray#414, merged 2026-07-27)
 # ===================================================================
 
 print("\n" + "=" * 70)
@@ -260,11 +261,12 @@ except jax.errors.TracerArrayConversionError as e:
 # PART C — JIT-able prefix: tracer ray-trace of observed positions
 # ===================================================================
 #
-# Even though the full pipeline is blocked, the dominant work in the
-# source-plane likelihood — ray-tracing the observed image positions to
-# the source plane via the tracer's deflection field — IS JIT-traceable
-# when the input/output stay as raw arrays.  We profile that prefix here
-# so the JIT-able portion of the source-plane path is still measured.
+# PART B already JITs the full pipeline (the xp-propagation bug fixed in
+# PyAutoLens#657 phase 2 / PyAutoArray#414 no longer blocks it). This
+# section isolates the dominant compute within that pipeline — ray-tracing
+# the observed image positions to the source plane via the tracer's
+# deflection field — as a standalone raw-array prefix, so it can be
+# profiled and vmap'd independently of the full likelihood.
 
 print("\n" + "=" * 70)
 print("JIT-ABLE PREFIX: ray-trace observed positions to source plane")

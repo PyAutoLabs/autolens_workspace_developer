@@ -30,21 +30,30 @@ Pipeline summary
    positions, plus ``noise_normalization``.
 7. ``log_likelihood = -0.5 * (chi_squared + noise_normalization)``.
 
-Surprising finding: full pipeline IS differentiable
----------------------------------------------------
+Full pipeline: forward JIT and gradient both succeed
+-----------------------------------------------------
 ``source_plane.py`` reports that the *forward* JIT of
-``AnalysisPoint(FitPositionsSource).log_likelihood_function`` is blocked
-by ``Grid2DIrregular.grid_2d_via_deflection_grid_from`` not propagating
-``xp``.  That blocker still applies under ``jax.jit``, but
-``jax.value_and_grad`` does not require lowering at the same boundary
-and the full-pipeline stage below succeeds with a finite, non-zero
-gradient.  Concretely: NUTS / HMC samplers driven through ``Fitness.call``
-should work for the source-plane likelihood today, even though the
-forward JIT path remains broken.
+``AnalysisPoint(FitPositionsSource).log_likelihood_function`` now JITs
+cleanly: the ``Grid2DIrregular.grid_2d_via_deflection_grid_from``
+xp-propagation bug it used to hit was fixed in PyAutoLens#657 phase 2
+(PyAutoArray#414, merged 2026-07-27). This script confirms the same
+pipeline is also differentiable via ``jax.value_and_grad``, so both the
+forward-JIT and gradient paths are usable for the source-plane
+likelihood. Concretely: NUTS / HMC samplers driven through
+``Fitness.call``, and gradient-based optimizers driven through a jitted
+forward pass, both work for the source-plane likelihood today.
+
+The one remaining JIT gap in the point-source stack is the
+whole-fit-object case (``jax.jit(analysis.fit_from)``): the returned
+``Fit`` pytree holds a ``PointSolver`` leaf that is not a registered JAX
+type, which JAX rejects at the output boundary. That gap does not affect
+``log_likelihood_function`` (used here and in ``source_plane.py``, which
+return a plain scalar) and is tracked in
+``PyAutoPrompt/autolens/fit_point_pytree.md``.
 
 That makes this probe load-bearing in a different way than the imaging
-probes -- it surfaces a usable gradient path that the forward JIT
-profiler conceals.
+probes -- it confirms both the forward-JIT and gradient paths are usable
+for the source-plane likelihood.
 """
 
 import numpy as np
@@ -243,9 +252,10 @@ print("=" * 70)
 # This is the JIT-able prefix from source_plane.py: build a tracer,
 # compute deflections at each observed image-plane position, and
 # subtract to get the source-plane positions. Stays inside raw arrays
-# the whole way -- no Grid2DIrregular result crosses the trace
-# boundary, so the xp-propagation blocker in
-# Grid2DIrregular.grid_2d_via_deflection_grid_from is avoided.
+# the whole way, mirroring the prefix profiled in source_plane.py (the
+# xp-propagation bug this used to route around,
+# Grid2DIrregular.grid_2d_via_deflection_grid_from, was fixed in
+# PyAutoLens#657 phase 2 / PyAutoArray#414).
 # ---------------------------------------------------------------------------
 
 
@@ -352,13 +362,12 @@ print("\n" + "=" * 70)
 print("PART C -- FULL PIPELINE GRADIENT (via Fitness)")
 print("=" * 70)
 
-# source_plane.py reports a forward-JIT blocker for this same
-# pipeline (Grid2DIrregular.grid_2d_via_deflection_grid_from does not
-# propagate xp). value_and_grad does not require lowering at the same
-# boundary, so this stage is expected to PASS with a finite gradient
-# even while the forward JIT path is broken. A future status-flip
-# would indicate either the forward JIT was fixed (and we now hit a
-# different gradient path) or the gradient regressed.
+# source_plane.py confirms this same pipeline (via
+# log_likelihood_function) now JITs cleanly forward -- the
+# Grid2DIrregular.grid_2d_via_deflection_grid_from xp-propagation bug
+# was fixed in PyAutoLens#657 phase 2 (PyAutoArray#414). This stage is
+# expected to PASS with a finite gradient too, confirming both the
+# forward-JIT and gradient paths work for the source-plane likelihood.
 
 from autofit.non_linear.fitness import Fitness
 
