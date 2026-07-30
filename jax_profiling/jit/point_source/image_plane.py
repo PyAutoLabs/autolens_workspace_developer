@@ -11,10 +11,17 @@ image plane via the ``PointSolver`` (which JIT-traces a triangle-refinement
 loop), pairs each model image with the closest observed image, and computes
 a chi-squared in image-plane coordinates.
 
-Unlike the source-plane variant (see ``source_plane.py``), the full
-image-plane pipeline IS JIT-traceable end-to-end because ``PointSolver``
-threads ``xp=jnp`` through every step and ``FitPositionsImagePairAll``
-constructs its model-data via JAX-friendly operations.
+The full image-plane pipeline is JIT-traceable end-to-end because
+``PointSolver`` threads ``xp=jnp`` through every step and
+``FitPositionsImagePairAll`` constructs its model-data via JAX-friendly
+operations. The source-plane variant (see ``source_plane.py``) now JITs
+too: the ``Grid2DIrregular.grid_2d_via_deflection_grid_from``
+xp-propagation bug it used to hit was fixed in PyAutoLens#657 phase 2
+(PyAutoArray#414). The remaining JIT gap for point-source fits is the
+whole-fit-object case (``jax.jit(analysis.fit_from)``), which fails
+because the returned ``Fit`` pytree holds a ``PointSolver`` leaf that is
+not a registered JAX type -- tracked in
+``PyAutoPrompt/autolens/fit_point_pytree.md``.
 
 Pytree-native parameter inputs
 ------------------------------
