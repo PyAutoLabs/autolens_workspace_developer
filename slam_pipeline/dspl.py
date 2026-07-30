@@ -300,10 +300,6 @@ from pathlib import Path
         subhalo_mass=af.Model(al.mp.NFWMCRLudlowSph),
     )
 
-    """
-    Finish.
-    """
-
 
 if __name__ == "__main__":
 
