@@ -18,7 +18,7 @@ output_path/
 # tracked and are NOT covered by these rules.
 jax_profiling/dataset/cluster/
 jax_profiling/dataset/group/
-jax_profiling/dataset/multi/
+jax_profiling/dataset/multi_dataset/
 jax_profiling/dataset/imaging/simple/
 jax_profiling/dataset/interferometer/simple/
 jax_profiling/dataset/point_source/simple/data.fits

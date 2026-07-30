@@ -2,7 +2,7 @@
 Simulator Profiling: Multi-Wavelength Imaging
 ==============================================
 
-Profiles `autolens_workspace/scripts/multi/simulator.py` to pinpoint where
+Profiles `autolens_workspace/scripts/multi_dataset/simulator.py` to pinpoint where
 time goes when simulating two-waveband imaging (g-band + r-band). Times:
 
 - Per-band grid setup with adaptive over-sampling
@@ -102,7 +102,7 @@ _workspace_root = _script_dir.parents[1]
 
 dataset_name = "simple"
 dataset_path = (
-    _workspace_root / "jax_profiling" / "dataset" / "multi" / "imaging" / "lens_sersic"
+    _workspace_root / "jax_profiling" / "dataset" / "multi_dataset" / "imaging" / "lens_sersic"
 )
 dataset_path.mkdir(parents=True, exist_ok=True)
 
@@ -212,7 +212,7 @@ for band, tracer, grid in zip(waveband_list, tracer_list, grid_list):
         np.asarray(image_eager.array),
         np.asarray(image_jit),
         rtol=1e-4,
-        err_msg=f"multi/{band}: eager vs JIT image_2d_from mismatch",
+        err_msg=f"multi_dataset/{band}: eager vs JIT image_2d_from mismatch",
     )
     print(f"  {band}-band: eager ≡ JIT assertion PASSED")
 
