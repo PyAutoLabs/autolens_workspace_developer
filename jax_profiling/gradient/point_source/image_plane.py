@@ -31,35 +31,37 @@ Pipeline summary
 5. ``chi_squared = -2 * (-log(n_perms) + sum(log_p_per_data))`` and
    ``log_likelihood = -0.5 * chi_squared``.
 
-Finding: the image-plane likelihood is not differentiable
----------------------------------------------------------
-On ``main`` (and at the time this probe was written) every stage that
-chains through ``PointSolver.solve`` returns an **identically zero
-gradient** under ``jax.value_and_grad`` while still producing a sensible
-forward value:
+Finding (updated, #657 phase 5): solver gradients now flow
+----------------------------------------------------------
+Historically every stage that chains through ``PointSolver.solve``
+returned an **identically zero gradient** under ``jax.value_and_grad``
+(the triangle-subdivision path is reverse-mode opaque: integer
+neighbour lookups, ``jnp.where`` masking, fixed-iteration recursion),
+and this probe existed to guard that finding.
 
-* Step 1 (solver arrivals)               -> grad norm = 0
-* Step 2 (pairwise sq. distances)        -> grad norm = 0
-* Step 3 (FitPositionsImagePairAll chi^2)-> grad norm = 0
-* Full pipeline (Fitness.call)           -> grad norm = 0
+As of #657 phase 5 the solver applies an implicit fixed-point
+``custom_jvp`` at its solved positions
+(``autolens.point.solver.implicit_diff``; the gravity.jl / Lombardi
+2024 Eq. 30 mechanism — ``A dtheta = dalpha + dbeta``, never
+differentiating through the refinement iteration). The rule engages
+only when the tracer flattens to JAX-value leaves — i.e. on the
+``af.Model``/``Fitness`` registered-model path; hand-built tracers fall
+back to the old zero-gradient forward via the compatibility gate.
 
-The forward value of the full pipeline matches the eager NumPy
-reference to float64, so this is not a NaN-poisoning issue: the
-solver's triangle-subdivision path is reverse-mode opaque (integer
-indexing on neighbour lookups, ``jnp.where`` masking on retained
-triangles, fixed-iteration recursion) and gradients zero out at the
-boundary.
+Expected status as of the flip (2026-07-31):
 
-A user running NUTS / HMC against ``AnalysisPoint(FitPositionsImagePairAll)``
-would see a flat likelihood landscape and an immediate sampler failure
--- this probe surfaces the cause cleanly. Fixing it (re-formulating
-the solver as differentiable, switching to a continuous relaxation,
-or pre-solving outside the trace and stop-gradienting through it) is
-follow-up work and out of scope here.
+* Steps 1-3 (hand-built closures over raw arrays)  -> FAIL, all-zero —
+  these bypass model registration, so they exercise the compatibility
+  gate's unregistered fallback, by design.
+* Full pipeline (``Fitness.call``)                 -> **PASS, non-zero**
+  — the production path the guard protects.
 
-A future status-flip on this probe would indicate the solver path
-became differentiable; that is the regression guard this script
-exists to provide.
+The regression guard is the FULL-PIPELINE row: a flip of that row back
+to all-zero means the implicit rule has been disconnected. FD
+certification of the rule lives in
+``autolens_workspace_test/scripts/point_source/jax_grad/gradient.py``
+(fine-precision solver + per-parameter step sweep — the forward solve
+quantizes at ``pixel_scale_precision``, so naive FD reads a staircase).
 """
 
 import numpy as np
