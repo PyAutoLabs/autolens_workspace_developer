@@ -77,15 +77,12 @@ fit = al.FitImaging(dataset=dataset, tracer=tracer)
 """
 __Output__
 """
-output = aplt.Output(
-    path=Path("plot") / "imaging" / "orientation" / "plots" / "parametric",
-    format="png",
-)
+output_path = Path("plot") / "imaging" / "orientation" / "plots" / "parametric"
 
 """
 __Figures__
 
 We now pass the FitImaging to an `FitImaging` and call various `figure_*` methods to plot different attributes.
 """
-aplt.subplot_fit_imaging(fit=fit, output=output)
-aplt.subplot_fit_imaging(fit=fit, output=output)
+aplt.subplot_fit_imaging(fit=fit, output_path=output_path, output_format="png")
+aplt.subplot_fit_imaging(fit=fit, output_path=output_path, output_format="png")

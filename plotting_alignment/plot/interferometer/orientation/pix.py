@@ -72,10 +72,7 @@ fit = al.FitInterferometer(dataset=dataset, tracer=tracer)
 """
 __Output__
 """
-output = aplt.Output(
-    path=Path("plot") / "interferometer" / "orientation" / "plots" / "pix_delaunay",
-    format="png",
-)
+output_path = Path("plot") / "interferometer" / "orientation" / "plots" / "pix_delaunay"
 
 """
 __Figures__
@@ -83,4 +80,6 @@ __Figures__
 We now pass the FitInterferometer to an `FitInterferometer` and call various `figure_*` methods 
 to plot different attributes.
 """
-aplt.subplot_fit_interferometer(fit=fit, output=output)
+aplt.subplot_fit_interferometer(
+    fit=fit, output_path=output_path, output_format="png"
+)

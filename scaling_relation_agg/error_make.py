@@ -17,8 +17,6 @@ import autofit as af
 import autolens as al
 import autolens.plot as aplt
 
-output = aplt.Output(path=".", format="png")
-
 """
 __Dataset__
 
@@ -52,7 +50,7 @@ extra_galaxies_centre_list = [(3.5, 2.5), (-4.4, -5.0)]
 """
 We can plot the centres over the strong lens dataset to check that they look like reasonable values.
 """
-aplt.plot_array(array=dataset.data, output=output)
+aplt.plot_array(array=dataset.data, output_path=".", output_format="png")
 
 """
 __Luminosities__
