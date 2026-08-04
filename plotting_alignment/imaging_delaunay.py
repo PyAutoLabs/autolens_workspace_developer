@@ -260,13 +260,13 @@ print(f"Figure of Merit = {fit.figure_of_merit}")
 
 aplt.plot_array(
     array=fit.model_images_of_planes_list[1],
-    output=aplt.Output(
-        path=file_path, filename=f"{dataset_name}_source_delaunay", format="png"
-    ),
+    output_path=file_path,
+    output_filename=f"{dataset_name}_source_delaunay",
+    output_format="png",
 )
 aplt.plot_array(
     array=fit.model_images_of_planes_list[1],
-    output=aplt.Output(
-        path=file_path, filename=f"{dataset_name}_source_zoom_delaunay", format="png"
-    ),
+    output_path=file_path,
+    output_filename=f"{dataset_name}_source_zoom_delaunay",
+    output_format="png",
 )
