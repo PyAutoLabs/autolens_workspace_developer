@@ -1,0 +1,92 @@
+{
+  "kind": "gradient_search",
+  "rule": "prodigy",
+  "metadata": {
+    "recorded_at": "2026-08-11T21:11:29.023794+00:00",
+    "hostname": "DESKTOP-H143S82",
+    "backend": "gpu",
+    "device_kind": "NVIDIA GeForce RTX 2060 with Max-Q Design",
+    "jax_version": "0.10.2",
+    "jax_enable_x64": true,
+    "autofit_version": "2026.7.23.1",
+    "autolens_version": "2026.7.23.1",
+    "autofit_revision": "08f73c315e344b0ed2d9e90d72c7ed4580abe315",
+    "autolens_revision": "13a4655c73c50d7b056939afb359b41cd77ed7f4"
+  },
+  "config": {
+    "mesh": "delaunay_nn",
+    "regularization": "mesh-default",
+    "fixed_regularization_scale": 0.316227766,
+    "log_det_method": "cholesky",
+    "n_starts": 8,
+    "n_steps": 20,
+    "batch_size": 4,
+    "resurrect": true,
+    "iterations_per_full_update": 20,
+    "iterations_per_log": 10,
+    "start_lower_limit": 0.15,
+    "start_upper_limit": 0.85,
+    "name_suffix": "_rtx2060_fixed_s8_b4_20"
+  },
+  "metrics": {
+    "wall_seconds": 238.2740113735199,
+    "wall_seconds_per_step_including_compile": 11.913700568675996,
+    "max_log_likelihood": -60275.24761907752,
+    "best_log_posterior_proxy": -60275.878386228695,
+    "in_truth_basin": false,
+    "nautilus_bar": null,
+    "truth_point_bar": 30304.030161,
+    "steps_to_nautilus_bar_proxy": null,
+    "steps_to_truth_bar_proxy": null,
+    "total_steps": 20,
+    "n_resurrections": 0,
+    "stop_reason": "max_steps"
+  },
+  "recovered": {
+    "centre": [
+      0.04263556148192507,
+      0.006472725240134973
+    ],
+    "ell_comps": [
+      0.25600767167326843,
+      0.17680773111558312
+    ],
+    "einstein_radius": 1.2142013182399711,
+    "shear": [
+      0.14896161270322755,
+      -0.19476174236050023
+    ]
+  },
+  "delaunay_nn_diagnostics": {
+    "main_max_cavity": 9,
+    "main_max_neighbors": 11,
+    "split_max_cavity": 7,
+    "split_max_neighbors": 9,
+    "main_overflow_rows": 0,
+    "main_degenerate_rows": 0,
+    "split_overflow_rows": 0,
+    "split_degenerate_rows": 0
+  },
+  "fom_history": [
+    124403.1995013882,
+    124398.73616175276,
+    124394.21226109109,
+    124389.70411068066,
+    124385.23970718804,
+    124379.55294743353,
+    124369.83138979854,
+    124355.8785924146,
+    124335.52429939256,
+    124304.16762342694,
+    124258.6188931805,
+    124187.44363051889,
+    124088.4962434923,
+    123943.25336022602,
+    123732.32374691125,
+    123441.93610386351,
+    123014.4104723106,
+    122420.74397017718,
+    121640.51911064878,
+    120551.75677245739
+  ]
+}
