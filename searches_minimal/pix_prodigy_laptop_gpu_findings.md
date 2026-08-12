@@ -80,3 +80,122 @@ objective exceeds VRAM. Across the meshes that fit, too few starts manifests
 as a finite wrong-basin result, whereas an implementation incompatibility
 would produce compile, non-finite, or capacity failures; none were seen for
 the three Delaunay-family meshes.
+
+---
+
+# Follow-up: n_starts control and phase-2 settings (2026-08-11, evening)
+
+Same hardware, same objective, and the **same three source revisions** as the
+section above (PyAutoFit `08f73c31`, PyAutoArray `5dedb5e9`, PyAutoLens
+`13a4655c`) — verified unchanged before the runs, so these numbers compose
+directly with the earlier table. The environment was validated first by
+reproducing the earlier delaunay 4-start/batch-1 compile cell bit-identically
+(-59873.326 at r_E 1.2153).
+
+All cells below use batch 4, 300 steps, fixed regularization, `resurrect=True`
+and the broad 0.15--0.85 start band unless stated. Only the named variable
+moves.
+
+## 1. The 16-start claim, now measured on GPU
+
+The section above explained the Delaunay and KNN 8-start misses by start count,
+citing CPU evidence. Held at fixed batch/steps/regularization, that is correct:
+
+| mesh | starts | max logL | r_E | truth bar | verdict |
+|---|---:|---:|---:|---:|---|
+| delaunay | 8 | -9314.8 | 0.9691 | 30078.7 | wrong basin (Nautilus mode 0.962) |
+| delaunay | **16** | **+24581.8** | **1.6314** | 30078.7 | truth basin, 5497 short of bar |
+| knn | 8 | +1548.2 | 0.9958 | 28791.5 | wrong basin (Nautilus mode 1.011) |
+| knn | **16** | **+28693.8** | **1.6007** | 28791.5 | truth basin, **99.7% of bar** |
+
+Doubling starts alone moves Delaunay ~34,000 nats and KNN ~27,000 nats, from
+the sampler's wrong mode into the truth basin. **The start-count explanation
+holds.**
+
+Two riders that the earlier text does not cover:
+
+- **KNN needs far fewer steps than "≥1500" with fixed reg.** That budget was
+  extrapolated from the free-AdaptSplit CPU run breaking out near step 1300.
+  With fixed reg, KNN reaches r_E 1.6007 and 99.7% of its truth bar inside
+  **300** steps (90% of bar at step 271) and was still climbing at the cap
+  (+587 over the last 10 steps). The long budget is a property of free
+  AdaptSplit, not of the mesh.
+- **Delaunay at 16 starts converges to a worse optimum than on CPU.** It
+  plateaued at +24581.8 / r_E 1.6314 — flat for the last 10 steps, so it
+  stopped rather than ran out of budget — against +30202 / r_E 1.600 near step
+  150 for the 16-start CPU run at the same fixed reg (inner ~0.0316, outer
+  ~3.162). Under identical batch-4 settings KNN landed essentially on its bar,
+  so this is specific to Delaunay, not a generic batch-4 penalty. Most likely a
+  nearby local optimum reached after batch-induced divergence. **Open.**
+
+## 2. VRAM ceiling (6 GiB RTX 2060 Max-Q)
+
+| mesh | batch 4 | batch 8 |
+|---|---|---|
+| delaunay_nn | fits | **OOM** — single 5.64 GiB allocation |
+| delaunay | fits | **OOM** — single 3.93 GiB allocation |
+| rectangular | OOM at batch **1** (10.90 GiB) | — |
+
+**Batch 4 is a hardware ceiling for the whole Delaunay family on this card**,
+not a tuning preference — the batch-4 winner sits directly on it. Both failures
+are recorded as `failure_kind: vram` artifacts.
+
+## 3. DelaunayNN starts curve (batch 4, fixed reg)
+
+| starts | max logL | r_E | steps to bar | wall | wall to bar | s/step | resurrections |
+|---:|---:|---:|---:|---:|---:|---:|---:|
+| 4 | 30147.9 | 1.5972 | never (still climbing) | 815 s | — | 2.72 | 7 |
+| **8** | 30374.8 | 1.5998 | 175 | 1524 s | **889 s** | 5.08 | 10 |
+| 16 | **30388.2** | 1.5992 | **162** | 2827 s | 1527 s | 9.42 | 31 |
+
+The three phase-2 criteria split, and the split is lopsided:
+
+- **Highest likelihood:** 16 starts, by 13 nats — noise.
+- **Fewest steps to bar:** 16 starts, by 13 steps — noise.
+- **Shortest wall to bar:** **8 starts, by 1.7x.** 8 -> 16 buys 13 steps while
+  paying 1.85x per step, so it is a net loss. Resurrections tripling (10 -> 31)
+  shows the extra lanes mostly die in the bad-regularization region.
+
+**8 starts / batch 4 is confirmed the wall-time optimum**, now from a measured
+curve rather than from being the only batch-4 configuration tried.
+
+### Correction: 4 starts is not "too few"
+
+The phase-1 settings table reads *"4 / 1 / 200 — too few starts; improves but
+remains in the wrong basin."* That cell moved three variables at once (4 starts
+**and** batch 1 **and** 200 steps) relative to the 8-start winner. Holding batch
+and steps fixed, **4 starts does reach the truth basin** (+30147.9 at r_E
+1.5972). Its history shows why the earlier run missed:
+
+```
+step 200-230   -34518.6   flat — a regularization mode, not convergence
+step 240       -24837.2   late breakout
+step 290       +30127.1
+step 299       +30147.9   still climbing (+20.7 over last 10), 156 nats short of bar
+```
+
+So 4 starts neither failed nor converged — it escaped late and ran out of
+budget mid-climb. The failure in the earlier cell was the batch-1/200-step
+budget, not the start count. The defensible statement is that **4 starts works
+but gambles on a late resurrection breakout, so its timing is luck; 8 starts
+breaks out early and reliably.** This is the same "long plateau is a reg mode,
+not convergence" lesson as #117, reappearing at low start counts.
+
+## 4. Recommended settings (revised)
+
+- **DelaunayNN** — 8 starts, batch 4, fixed/inherited AdaptSplit, resurrection
+  on, 200-step cap. Unchanged, now backed by the curve above. Batch 4 is the
+  VRAM ceiling, not a choice.
+- **Delaunay** — 16 starts, batch 4, fixed reg. Reaches the truth basin, but
+  expect a lower optimum than CPU until the gap in §1 is understood.
+- **KNN** — 16 starts, batch 4, fixed reg, ~300 steps (not 1500). Reserve the
+  ≥1500-step budget for the free-AdaptSplit parametrization.
+- **Rectangular** — unchanged: not runnable at production size on this card.
+
+## 5. Not covered
+
+- **KNN free-AdaptSplit on GPU** was deliberately not run: it is the one arm
+  needing ~1500 steps, costing more than the rest of this matrix combined.
+  Its CPU recovery (+29724 / 1.599 near step 1300) stands as the evidence.
+- **Delaunay batch 2 at 16 starts** and the **DelaunayNN free-reg arm** were
+  still running when this section was written — see the resume note below.

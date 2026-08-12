@@ -1,0 +1,36 @@
+{
+  "kind": "failure",
+  "rule": "prodigy",
+  "metadata": {
+    "recorded_at": "2026-08-12T01:11:04.325282+00:00",
+    "hostname": "DESKTOP-H143S82",
+    "backend": "gpu",
+    "device_kind": "NVIDIA GeForce RTX 2060 with Max-Q Design",
+    "jax_version": "0.10.2",
+    "jax_enable_x64": true,
+    "autofit_version": "2026.7.23.1",
+    "autoarray_version": "2026.7.23.1",
+    "autolens_version": "2026.7.23.1",
+    "autofit_revision": "08f73c315e344b0ed2d9e90d72c7ed4580abe315",
+    "autoarray_revision": "5dedb5e90c3ac5957f4288f1968d34f9f4618a95",
+    "autolens_revision": "13a4655c73c50d7b056939afb359b41cd77ed7f4"
+  },
+  "config": {
+    "mesh": "delaunay",
+    "regularization": "mesh-default",
+    "fixed_regularization_scale": 0.316227766,
+    "log_det_method": "cholesky",
+    "n_starts": 16,
+    "n_steps": 1,
+    "batch_size": 8,
+    "resurrect": true,
+    "iterations_per_full_update": 1,
+    "iterations_per_log": 10,
+    "start_lower_limit": 0.15,
+    "start_upper_limit": 0.85,
+    "name_suffix": "_rtx2060_d_s16_b8_probe"
+  },
+  "failure_kind": "vram",
+  "exception": "JaxRuntimeError(\"RESOURCE_EXHAUSTED: Out of memory while trying to allocate 3.93GiB. [tf-allocator-allocation-error=''] [executable_name='jit_concatenate']\")",
+  "wall_seconds": 65.56515049934387
+}
