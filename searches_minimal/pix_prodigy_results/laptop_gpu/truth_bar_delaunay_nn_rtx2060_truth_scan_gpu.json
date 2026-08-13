@@ -1,0 +1,97 @@
+{
+  "kind": "truth_bar",
+  "metadata": {
+    "recorded_at": "2026-08-11T18:49:55.313674+00:00",
+    "hostname": "DESKTOP-H143S82",
+    "backend": "gpu",
+    "device_kind": "NVIDIA GeForce RTX 2060 with Max-Q Design",
+    "jax_version": "0.10.2",
+    "jax_enable_x64": true,
+    "autofit_version": "2026.7.23.1",
+    "autolens_version": "2026.7.23.1",
+    "autofit_revision": "08f73c315e344b0ed2d9e90d72c7ed4580abe315",
+    "autolens_revision": "13a4655c73c50d7b056939afb359b41cd77ed7f4"
+  },
+  "config": {
+    "mesh": "delaunay_nn",
+    "regularization": "mesh-default",
+    "fixed_regularization_scale": null,
+    "log_det_method": "cholesky",
+    "n_starts": 16,
+    "n_steps": 300,
+    "batch_size": 4,
+    "resurrect": true,
+    "start_lower_limit": 0.15,
+    "start_upper_limit": 0.85,
+    "name_suffix": "_rtx2060_truth_scan"
+  },
+  "rows": [
+    {
+      "coefficient_scale": 0.01,
+      "log_likelihood": 28252.505282183505,
+      "finite": true
+    },
+    {
+      "coefficient_scale": 0.03162277660168379,
+      "log_likelihood": 29009.9740876773,
+      "finite": true
+    },
+    {
+      "coefficient_scale": 0.1,
+      "log_likelihood": 29765.151630120254,
+      "finite": true
+    },
+    {
+      "coefficient_scale": 0.31622776601683794,
+      "log_likelihood": 30304.0301612639,
+      "finite": true
+    },
+    {
+      "coefficient_scale": 1.0,
+      "log_likelihood": 20991.868938142194,
+      "finite": true
+    },
+    {
+      "coefficient_scale": 3.1622776601683795,
+      "log_likelihood": -113571.38713686856,
+      "finite": true
+    },
+    {
+      "coefficient_scale": 10.0,
+      "log_likelihood": -157598.42998526106,
+      "finite": true
+    },
+    {
+      "coefficient_scale": 31.622776601683793,
+      "log_likelihood": -158196.11251397338,
+      "finite": true
+    },
+    {
+      "coefficient_scale": 100.0,
+      "log_likelihood": -158200.23710529157,
+      "finite": true
+    },
+    {
+      "coefficient_scale": 316.22776601683796,
+      "log_likelihood": -158197.95474696165,
+      "finite": true
+    },
+    {
+      "coefficient_scale": 1000.0,
+      "log_likelihood": -158195.36416409432,
+      "finite": true
+    },
+    {
+      "coefficient_scale": 3162.2776601683795,
+      "log_likelihood": -158193.44594849407,
+      "finite": true
+    },
+    {
+      "coefficient_scale": 10000.0,
+      "log_likelihood": -158190.7028093867,
+      "finite": true
+    }
+  ],
+  "best_log_likelihood": 30304.0301612639,
+  "best_coefficient_scale": 0.31622776601683794
+}

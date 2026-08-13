@@ -1,0 +1,62 @@
+{
+  "kind": "gradient_search",
+  "rule": "prodigy",
+  "metadata": {
+    "recorded_at": "2026-08-11T18:58:11.006898+00:00",
+    "hostname": "DESKTOP-H143S82",
+    "backend": "gpu",
+    "device_kind": "NVIDIA GeForce RTX 2060 with Max-Q Design",
+    "jax_version": "0.10.2",
+    "jax_enable_x64": true,
+    "autofit_version": "2026.7.23.1",
+    "autolens_version": "2026.7.23.1",
+    "autofit_revision": "08f73c315e344b0ed2d9e90d72c7ed4580abe315",
+    "autolens_revision": "13a4655c73c50d7b056939afb359b41cd77ed7f4"
+  },
+  "config": {
+    "mesh": "delaunay",
+    "regularization": "mesh-default",
+    "fixed_regularization_scale": 0.316227766,
+    "log_det_method": "cholesky",
+    "n_starts": 4,
+    "n_steps": 1,
+    "batch_size": 1,
+    "resurrect": true,
+    "start_lower_limit": 0.15,
+    "start_upper_limit": 0.85,
+    "name_suffix": "_rtx2060_fixed_s4_b1_compile"
+  },
+  "metrics": {
+    "wall_seconds": 134.08483266830444,
+    "wall_seconds_per_step_including_compile": 134.08483266830444,
+    "max_log_likelihood": -59873.3263895392,
+    "best_log_posterior_proxy": -59873.953808472965,
+    "in_truth_basin": false,
+    "nautilus_bar": 19982.3,
+    "truth_point_bar": 30078.691036,
+    "steps_to_nautilus_bar_proxy": null,
+    "steps_to_truth_bar_proxy": null,
+    "total_steps": 1,
+    "n_resurrections": 0,
+    "stop_reason": "max_steps"
+  },
+  "recovered": {
+    "centre": [
+      0.041423117234002334,
+      0.0076621050945272235
+    ],
+    "ell_comps": [
+      0.25711280856975616,
+      0.17566208835343589
+    ],
+    "einstein_radius": 1.2153356009528293,
+    "shear": [
+      0.15010979616677905,
+      -0.19589405837170498
+    ]
+  },
+  "delaunay_nn_diagnostics": {},
+  "fom_history": [
+    119747.90761694593
+  ]
+}

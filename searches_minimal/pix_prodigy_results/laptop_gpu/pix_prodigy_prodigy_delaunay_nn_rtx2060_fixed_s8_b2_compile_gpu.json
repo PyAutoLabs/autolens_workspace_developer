@@ -1,0 +1,73 @@
+{
+  "kind": "gradient_search",
+  "rule": "prodigy",
+  "metadata": {
+    "recorded_at": "2026-08-11T19:23:01.940404+00:00",
+    "hostname": "DESKTOP-H143S82",
+    "backend": "gpu",
+    "device_kind": "NVIDIA GeForce RTX 2060 with Max-Q Design",
+    "jax_version": "0.10.2",
+    "jax_enable_x64": true,
+    "autofit_version": "2026.7.23.1",
+    "autolens_version": "2026.7.23.1",
+    "autofit_revision": "08f73c315e344b0ed2d9e90d72c7ed4580abe315",
+    "autolens_revision": "13a4655c73c50d7b056939afb359b41cd77ed7f4"
+  },
+  "config": {
+    "mesh": "delaunay_nn",
+    "regularization": "mesh-default",
+    "fixed_regularization_scale": 0.316227766,
+    "log_det_method": "cholesky",
+    "n_starts": 8,
+    "n_steps": 1,
+    "batch_size": 2,
+    "resurrect": true,
+    "iterations_per_full_update": 1,
+    "iterations_per_log": 10,
+    "start_lower_limit": 0.15,
+    "start_upper_limit": 0.85,
+    "name_suffix": "_rtx2060_fixed_s8_b2_compile"
+  },
+  "metrics": {
+    "wall_seconds": 158.86634707450867,
+    "wall_seconds_per_step_including_compile": 158.86634707450867,
+    "max_log_likelihood": -62200.97233167474,
+    "best_log_posterior_proxy": -62201.599750608504,
+    "in_truth_basin": false,
+    "nautilus_bar": null,
+    "truth_point_bar": 30304.030161,
+    "steps_to_nautilus_bar_proxy": null,
+    "steps_to_truth_bar_proxy": null,
+    "total_steps": 1,
+    "n_resurrections": 0,
+    "stop_reason": "max_steps"
+  },
+  "recovered": {
+    "centre": [
+      0.041423117234002334,
+      0.0076621050945272235
+    ],
+    "ell_comps": [
+      0.25711280856975616,
+      0.17566208835343589
+    ],
+    "einstein_radius": 1.2153356009528293,
+    "shear": [
+      0.15010979616677905,
+      -0.19589405837170498
+    ]
+  },
+  "delaunay_nn_diagnostics": {
+    "main_max_cavity": 9,
+    "main_max_neighbors": 11,
+    "split_max_cavity": 8,
+    "split_max_neighbors": 10,
+    "main_overflow_rows": 0,
+    "main_degenerate_rows": 0,
+    "split_overflow_rows": 0,
+    "split_degenerate_rows": 0
+  },
+  "fom_history": [
+    124403.19950121701
+  ]
+}

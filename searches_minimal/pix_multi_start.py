@@ -16,7 +16,7 @@ probe needs. Truth: einstein_radius = 1.6.
 Model (SLaM SOURCE_PIX[1] style):
   - lens light : MGE **linear**, non-linear geometry **fixed** at truth
   - lens mass  : Isothermal + ExternalShear, **free**, broad default priors
-  - source     : one of the three gradient-certified pixelized meshes,
+  - source     : one of four gradient-certified pixelized meshes,
                  selected by ``PIX_MESH`` (autolens_workspace_developer#117):
 
     - ``rectangular`` (default): ``RectangularAdaptDensity(bandwidth=0.1)`` +
@@ -34,11 +34,15 @@ Model (SLaM SOURCE_PIX[1] style):
       ``reg.AdaptSplit`` — a.e.-exact frozen-tables gradient (certified in
       ``jax_grad/delaunay.py``; the qhull tables callback is
       ``vmap_method="sequential"``, one host call per vmap lane).
+    - ``delaunay_nn``: ``DelaunayNN(pixels=300, zeroed_pixels=30)`` + the
+      same regularization choices as Delaunay. Sibson natural-neighbour
+      interpolation keeps the mapper continuous through ordinary Delaunay
+      diagonal flips, so this is the smoother-gradient Delaunay-family arm.
 
-    ``knn``/``delaunay`` are Delaunay-family meshes: their vertices come from a
-    Hilbert image-mesh computed once from static adapt data (the observed
-    image), so the analysis carries ``al.AdaptImages`` mirroring the certified
-    harness.
+    ``knn``/``delaunay``/``delaunay_nn`` are Delaunay-family meshes: their
+    vertices come from a Hilbert image-mesh computed once from static adapt
+    data (the observed image), so the analysis carries ``al.AdaptImages``
+    mirroring the certified harness.
 
 Usage::
 
@@ -76,11 +80,12 @@ TRUTH_SHEAR = (0.05, 0.05)
 BASIN_TOL = 0.3  # same basin criterion as the MGE benchmark
 OS_PIX = 1
 MESH_SHAPE = (30, 30)
-# Delaunay-family (knn/delaunay) mesh scale, mirroring the certified
+# Delaunay-family (knn/delaunay/delaunay_nn) mesh scale, mirroring the certified
 # jax_grad harness: 300 Hilbert vertices + 30 zeroed circle-edge points.
 MESH_PIXELS = 300
 EDGE_PIXELS = 30
-# Which gradient-certified pixelized mesh to fit: rectangular | knn | delaunay.
+# Which gradient-certified pixelized mesh to fit:
+# rectangular | knn | delaunay | delaunay_nn.
 PIX_MESH = os.environ.get("PIX_MESH") or "rectangular"
 # Regularization-scheme override (#117 Stage-3): None = the mesh's default
 # scheme (Constant for rectangular, AdaptSplit for the Delaunay family);
@@ -120,25 +125,30 @@ def mesh_and_regularization():
     ``signal_scale`` stays pinned at 1.0 either way, so the free reg is
     2-parameter (inner + outer), keeping the certified variants' surface.
     """
+
     def _matern():
         if PIX_FIX_REG:
-            return al.reg.MaternKernel(
-                coefficient=PIX_FIX_REG, scale=1.0, nu=0.5
-            )
+            return al.reg.MaternKernel(coefficient=PIX_FIX_REG, scale=1.0, nu=0.5)
         regularization = af.Model(al.reg.MaternKernel)
         regularization.nu = 0.5
         return regularization
 
     if PIX_MESH == "rectangular":
-        mesh = al.mesh.RectangularAdaptDensity(shape=MESH_SHAPE, bandwidth=PIX_BANDWIDTH)
+        mesh = al.mesh.RectangularAdaptDensity(
+            shape=MESH_SHAPE, bandwidth=PIX_BANDWIDTH
+        )
         if PIX_REG == "matern":
             regularization = _matern()
         elif PIX_FIX_REG:
             regularization = al.reg.Constant(coefficient=PIX_FIX_REG)
         else:
             regularization = al.reg.Constant
-    elif PIX_MESH in ("knn", "delaunay"):
-        mesh_cls = al.mesh.KNearestNeighbor if PIX_MESH == "knn" else al.mesh.Delaunay
+    elif PIX_MESH in ("knn", "delaunay", "delaunay_nn"):
+        mesh_cls = {
+            "knn": al.mesh.KNearestNeighbor,
+            "delaunay": al.mesh.Delaunay,
+            "delaunay_nn": al.mesh.DelaunayNN,
+        }[PIX_MESH]
         mesh = mesh_cls(pixels=MESH_PIXELS, zeroed_pixels=EDGE_PIXELS)
         if PIX_REG == "matern":
             regularization = _matern()
@@ -153,7 +163,8 @@ def mesh_and_regularization():
             regularization.signal_scale = 1.0
     else:
         raise ValueError(
-            f"PIX_MESH={PIX_MESH!r} — expected rectangular | knn | delaunay"
+            f"PIX_MESH={PIX_MESH!r} — expected "
+            "rectangular | knn | delaunay | delaunay_nn"
         )
     return mesh, regularization
 
@@ -171,9 +182,7 @@ def build_model() -> af.Collection:
     # Mass + shear: DEFAULT (broad) priors — the whole point of multi-start.
     mass = af.Model(al.mp.Isothermal)
     shear = af.Model(al.mp.ExternalShear)
-    lens = af.Model(
-        al.Galaxy, redshift=0.5, bulge=lens_bulge, mass=mass, shear=shear
-    )
+    lens = af.Model(al.Galaxy, redshift=0.5, bulge=lens_bulge, mass=mass, shear=shear)
 
     mesh, regularization = mesh_and_regularization()
     pixelization = af.Model(
@@ -187,7 +196,7 @@ def build_model() -> af.Collection:
 
 
 def build_adapt_images(dataset) -> al.AdaptImages | None:
-    """AdaptImages for the Delaunay-family meshes (``knn``/``delaunay``).
+    """AdaptImages for the Delaunay-family meshes.
 
     Mirrors the certified jax_grad harness: a Hilbert image-mesh computed once
     from the observed image as static adapt data, appended with a circle of
@@ -278,7 +287,9 @@ def main() -> None:
     batch_size = batch_size or None
 
     print(f"JAX backend: {jax.default_backend()}  x64={jax.config.jax_enable_x64}")
-    print(f"Sampler: {which}  n_starts={n_starts}  batch_size={batch_size}  lr={PIX_LR or 'default'}")
+    print(
+        f"Sampler: {which}  n_starts={n_starts}  batch_size={batch_size}  lr={PIX_LR or 'default'}"
+    )
     mesh_desc = (
         f"RectangularAdaptDensity{MESH_SHAPE} bandwidth=0.1"
         if PIX_MESH == "rectangular"
@@ -325,13 +336,19 @@ def main() -> None:
     try:
         params = np.asarray(result.samples.parameter_lists)
         if which != "nautilus" and len(params) > 1:
-            idx = model.prior_count and [
-                i for i, (p, _) in enumerate(model.path_priors_tuples)
-                if "einstein_radius" in str(p)
-            ][0]
+            idx = (
+                model.prior_count
+                and [
+                    i
+                    for i, (p, _) in enumerate(model.path_priors_tuples)
+                    if "einstein_radius" in str(p)
+                ][0]
+            )
             starts_re = params[1:, idx]
             hits = int(np.sum(np.abs(starts_re - TRUTH_EINSTEIN_RADIUS) < BASIN_TOL))
-            print(f"per-start basin    : {hits}/{len(starts_re)}  (p_hit={hits/len(starts_re):.2f})")
+            print(
+                f"per-start basin    : {hits}/{len(starts_re)}  (p_hit={hits / len(starts_re):.2f})"
+            )
     except Exception as exc:  # diagnostics must never fail the run
         print(f"per-start diagnostics unavailable: {exc!r}")
 
