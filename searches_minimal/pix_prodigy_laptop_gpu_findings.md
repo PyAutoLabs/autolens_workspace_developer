@@ -120,13 +120,12 @@ Two riders that the earlier text does not cover:
   **300** steps (90% of bar at step 271) and was still climbing at the cap
   (+587 over the last 10 steps). The long budget is a property of free
   AdaptSplit, not of the mesh.
-- **Delaunay at 16 starts converges to a worse optimum than on CPU.** It
+- **Delaunay at 16 starts / batch 4 converges to a local maximum.** It
   plateaued at +24581.8 / r_E 1.6314 — flat for the last 10 steps, so it
   stopped rather than ran out of budget — against +30202 / r_E 1.600 near step
   150 for the 16-start CPU run at the same fixed reg (inner ~0.0316, outer
-  ~3.162). Under identical batch-4 settings KNN landed essentially on its bar,
-  so this is specific to Delaunay, not a generic batch-4 penalty. Most likely a
-  nearby local optimum reached after batch-induced divergence. **Open.**
+  ~3.162). **Resolved in §6: the batch size is the cause.** At batch 2 the same
+  16-start configuration reproduces the CPU result to 1.3 nats.
 
 ## 2. VRAM ceiling (6 GiB RTX 2060 Max-Q)
 
@@ -186,8 +185,9 @@ not convergence" lesson as #117, reappearing at low start counts.
 - **DelaunayNN** — 8 starts, batch 4, fixed/inherited AdaptSplit, resurrection
   on, 200-step cap. Unchanged, now backed by the curve above. Batch 4 is the
   VRAM ceiling, not a choice.
-- **Delaunay** — 16 starts, batch 4, fixed reg. Reaches the truth basin, but
-  expect a lower optimum than CPU until the gap in §1 is understood.
+- **Delaunay** — 16 starts, **batch 2**, fixed reg, ~300 steps. Batch 4 is
+  actively wrong on this mesh: it converges to a local maximum 5622 nats low at
+  r_E 1.6314. Batch 2 costs ~30% more wall and recovers truth exactly (§6).
 - **KNN** — 16 starts, batch 4, fixed reg, ~300 steps (not 1500). Reserve the
   ≥1500-step budget for the free-AdaptSplit parametrization.
 - **Rectangular** — unchanged: not runnable at production size on this card.
@@ -197,5 +197,74 @@ not convergence" lesson as #117, reappearing at low start counts.
 - **KNN free-AdaptSplit on GPU** was deliberately not run: it is the one arm
   needing ~1500 steps, costing more than the rest of this matrix combined.
   Its CPU recovery (+29724 / 1.599 near step 1300) stands as the evidence.
-- **Delaunay batch 2 at 16 starts** and the **DelaunayNN free-reg arm** were
-  still running when this section was written — see the resume note below.
+- **DelaunayNN free-AdaptSplit beyond 300 steps** — see §6.2; it was still
+  creeping upward at the cap, and the KNN precedent suggests a ~1500-step
+  budget would be needed to test escape properly.
+
+## 6. Batch size and regularization (2026-08-13)
+
+The two cells that were still running when §1--§5 were written.
+
+### 6.1 Batch size decides whether Delaunay finds truth
+
+| mesh | starts | batch | max logL | r_E | steps to bar | wall | resurrections |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| delaunay | 16 | **2** | **+30203.3** | **1.6001** | **253** | 2080 s | 9 |
+| delaunay | 16 | 4 | +24581.8 | 1.6314 | never | 1598 s | 6 |
+
+At batch 2 the 16-start Delaunay run reproduces the CPU reference (+30202 @
+r_E 1.600) to **1.3 nats**, and recovers the full truth model — r_E 1.6001
+against truth 1.6, shear (0.0512, 0.0502) against (0.05, 0.05), centre
+(0.0024, -0.0029) against (0, 0). The batch-4 local maximum of §1 is therefore
+**caused by the batching**, at a cost of ~30% wall time to avoid.
+
+Crucially this is **mesh-specific**, and it splits along the line the mesh
+design predicts:
+
+| mesh | batch 2 | batch 4 | agree? |
+|---|---:|---:|---|
+| delaunay | +30203.3 @ 1.6001 | +24581.8 @ 1.6314 | **no — 5622 nats apart** |
+| delaunay_nn | +30374.3 @ 1.59868 | +30374.8 @ 1.59979 | yes — 0.5 nats |
+
+Plain Delaunay's mapper is discontinuous through triangulation flips, so the
+small floating-point differences batching introduces can tip a trajectory
+across a flip into a different basin. DelaunayNN's Sibson natural-neighbour
+interpolation is continuous through those flips and lands in the same place
+either way. **The smoother gradient buys reproducibility under numerical
+perturbation, not just faster convergence** — a property worth more than the
+raw step count, and one that shows up only in a batch comparison.
+
+Consequence for §3: "batch 4 is the winner" was established on DelaunayNN and
+**does not generalise**. Batch 4 is the DelaunayNN optimum and the VRAM
+ceiling; on plain Delaunay it is a correctness hazard.
+
+### 6.2 Free AdaptSplit does not recover within 300 steps
+
+DelaunayNN, 8 starts, batch 4, 300 steps, free AdaptSplit (inner, outer):
+
+| regularization | max logL | r_E | steps to bar | resurrections |
+|---|---:|---:|---:|---:|
+| fixed (0.316227766) | **+30374.8** | **1.5998** | 175 | 10 |
+| **free AdaptSplit** | -790.5 | 1.0452 | never | **109** |
+
+Free reg is catastrophic here: the wrong basin entirely (recovered shear
+(0.1359, 0.0914) against truth (0.05, 0.05)) and a **10.9x resurrection rate**,
+the #104/#117 AdaptSplit signature of lanes dying in the double-squared
+high-coefficient region. Mapper capacity was never the problem — all overflow
+and degeneracy counts stayed zero.
+
+The trace sat at -1142 from step ~120 to ~280 then crept to -794.9, gaining
++347 over the last 50 steps, i.e. still climbing at the cap. That is the "long
+plateau is a reg mode, not convergence" pattern again.
+
+**One thing this artifact cannot settle:** whether the 109 lane deaths are NaN
+deaths (as the truth-bar scan showed for plain Delaunay at inner >= 10) or
+survivable over-regularized-floor deaths (as on KNN). The recorded FoM history
+holds no non-finite entries, but it tracks the *best surviving* lane, so it
+would not show a dead lane's NaN either way. Distinguishing the two needs a
+DelaunayNN truth-bar reg scan at high coefficients, which was not run.
+
+Either way the practical recommendation is unchanged and now evidenced: **use
+fixed/inherited regularization**. Free AdaptSplit costs at least 5x the step
+budget for no benefit, and per #117 free Matern is the better free
+parametrization if a free reg is genuinely required.
