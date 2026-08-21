@@ -230,7 +230,7 @@ with timer.section("model_build"):
     lens = af.Model(al.Galaxy, redshift=0.5, bulge=lens_bulge, mass=mass, shear=shear)
 
     pixelization = al.Pixelization(
-        mesh=al.mesh.RectangularRTUAdaptDensity(shape=mesh_shape),
+        mesh=al.mesh.RectangularBilinearAdaptDensity(shape=mesh_shape),
         regularization=al.reg.Constant(coefficient=1.0),
     )
 
@@ -457,6 +457,9 @@ relocated_grid_raw = jnp.array(relocated_grid.array)
 
 print("\n--- Step 5: Overlay grid (source pixel centres) ---")
 
+# `overlay_grid_from` is the shared lattice-over-extent helper, not a transform:
+# RectangularBilinearAdaptDensity subclasses RectangularRTUAdaptDensity and
+# inherits it, so it lives in (and is imported from) the RTU module for both.
 from autoarray.inversion.mesh.mesh.rectangular_rtu_adapt_density import overlay_grid_from
 
 with timer.section("overlay_grid_eager"):
@@ -800,9 +803,10 @@ def compute_log_evidence(
 # True by default, so the fitted reconstruction is a non-negative (fnnls)
 # solution whose active set is chosen iteratively; a re-solve that lands on a
 # different active set gives a genuinely different s, hence a different chi^2
-# and s^T H s. At this fiducial the fitted solution pins 344 of 1285 parameters
-# at exactly zero, so the boundary is heavily populated and small numerical
-# differences between the eager and JIT solves can move which pixels are active.
+# and s^T H s. At this fiducial the fitted solution pins 362 of 1285 parameters
+# at exactly zero (an unconstrained solve puts 777 of them negative), so the
+# boundary is heavily populated and small numerical differences between the
+# eager and JIT solves can move which pixels are active.
 # That is a real difference in the solution, not floating-point drift in the
 # evidence arithmetic, and it is why the assertion uses the inversion's own
 # reconstruction rather than the re-solved one.
@@ -1112,36 +1116,49 @@ print(f"  Bar chart saved to:    {chart_path}")
 # Regression assertion — realistic-scale deterministic log-evidence
 # ===================================================================
 #
-# RectangularRTUAdaptDensity at prior medians is deterministic across the
+# RectangularBilinearAdaptDensity at prior medians is deterministic across the
 # eager / full-JIT / vmap paths to within rtol=1e-4 — the constant below
 # is the value those three paths agree on.
 #
-# Re-pinned 2026-08-21 for v2026.8.17.1 (was 24746.105672366088, pinned at
-# v2026.5.1.4; the drift is 1.0e-2 relative). The re-pin is backed by a
-# two-implementation cross-check at this fiducial rather than by a single run:
-# the numpy/numba eager path (`xp=np`) gives 25004.71903495436 and the JAX
-# full-pipeline path (`use_jax=True`) gives 25004.72457703401 — two independent
-# implementations of the likelihood agreeing to 2.2e-7 relative, with vmap
-# reproducing the JAX value exactly. Intervening library changes that plausibly
-# move the value at the 1e-2 level include the border PCA stabilization
-# (PyAutoArray 98c817db) and the kernel-CDF numpy fast path (2bfa08ee).
+# This constant is UNCHANGED since it was pinned on 2026-05-11, and that is the
+# point of the mesh choice above. Its history:
 #
-# The mesh rename in this script (RectangularAdaptDensity ->
-# RectangularRTUAdaptDensity, PyAutoArray#461) is value-preserving by
-# construction — RTU is the pure rename of the kernel-CDF class, so it is not a
-# contributor to the drift. The new RectangularBilinearAdaptDensity sibling is a
-# *different* transform and would need its own constant; switching this script's
-# fiducial to it is a campaign decision, not a rename.
+#   2026-05-11  pinned here, when `RectangularAdaptDensity` meant the empirical
+#               rank-CDF transform                             -> 24746.105672366088
+#   2026-07-23  PyAutoArray 22b28463 (#402) consolidated the meshes and gave
+#               that same class name the kernel-CDF transform. The value the
+#               script computed silently changed             -> 25004.71903495436
+#   2026-08-21  PyAutoArray f9aceea3 (#461) split the family: Bilinear restores
+#               the rank-CDF transform, RTU is the kernel-CDF one under a new
+#               name. Naming this script's fiducial explicitly restores the
+#               2026-05-11 value BIT-FOR-BIT.
+#
+# So the 1.0e-2 gap between the two numbers is one identifiable transform swap
+# under an unchanged class name, not accumulated drift. Verified by measurement,
+# not inference: at this fiducial PyAutoArray at f9aceea3^ with the old
+# `RectangularAdaptDensity` and PyAutoArray at f9aceea3 with
+# `RectangularRTUAdaptDensity` both give 25004.71903495436 exactly (RTU really is
+# a pure rename), while `RectangularBilinearAdaptDensity` reproduces
+# 24746.105672366088 exactly. Nothing else in the library moved this value in the
+# intervening 3.5 months — a bit-identical match across that span rules that out.
+#
+# The value is also cross-checked across two independent implementations of the
+# likelihood, so it does not rest on a single code path: the numpy/numba eager
+# path (`xp=np`) and the JAX full pipeline (`use_jax=True`) agree to ~1e-7
+# relative, with vmap reproducing the JAX value.
+#
+# If you switch the mesh above to RectangularRTUAdaptDensity, the expected value
+# becomes 25004.71903495436 (kernel-CDF).
 EXPECTED_LOG_EVIDENCE_HST = (
-    25004.71903495436  # 35x35 = 1225 source pixels, MGE-60 lens light
+    24746.105672366088  # 35x35 = 1225 source pixels, MGE-60 lens light
 )
 
 # The step-by-step path re-solves the reconstruction itself and is asserted
 # separately — see the note above `compute_log_evidence`. The fnnls active set it
 # lands on differs slightly from the fitted one, which moves the evidence by
-# ~1.8e-3 relative. That is a property of the non-negative solve, not a bug, so
+# ~1.5e-3 relative. That is a property of the non-negative solve, not a bug, so
 # it gets its own (looser) pin rather than being silently printed.
-EXPECTED_LOG_EVIDENCE_HST_STEP_BY_STEP = 25050.62518831464
+EXPECTED_LOG_EVIDENCE_HST_STEP_BY_STEP = 24783.19775195945
 
 np.testing.assert_allclose(
     log_evidence_ref,
