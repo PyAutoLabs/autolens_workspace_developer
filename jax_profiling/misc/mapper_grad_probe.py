@@ -1,5 +1,5 @@
 """
-Minimal probe: does the mapping matrix of a RectangularAdaptDensity mapper
+Minimal probe: does the mapping matrix of a RectangularRTUAdaptDensity mapper
 carry gradient w.r.t. a perturbation of the source-plane data grid?
 
 We bypass the FitImaging / Tracer / Inversion wrappers entirely. A synthetic
@@ -89,9 +89,9 @@ pert_over_dir /= np.linalg.norm(pert_over_dir)
 pert_over_dir = jnp.array(pert_over_dir)
 
 mesh_shape = (28, 28)
-mesh = al.mesh.RectangularAdaptDensity(shape=mesh_shape)
+mesh = al.mesh.RectangularRTUAdaptDensity(shape=mesh_shape)
 # Build mesh_grid once from eager grid — not critical for gradient test,
-# because RectangularAdaptDensity rebuilds it inside interpolator_from.
+# because RectangularRTUAdaptDensity rebuilds it inside interpolator_from.
 mesh_grid_dummy = al.Grid2DIrregular(values=src_grid_raw, xp=jnp)
 
 

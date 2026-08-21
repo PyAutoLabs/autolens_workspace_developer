@@ -20,11 +20,11 @@ finite and non-zero.
 | Interferometer, standard `lp.Sersic` | **works** | **yes** (2026-07-09, rel err ≤ ~1e-7 over 14 params; `jax_grad/interferometer.py` variant A) | gradient flows through the DFT visibility transform |
 | Interferometer, `lp_linear.Sersic` | **works** | **yes** (2026-07-09, rel err ≤ ~1e-6 over 13 params) | linear source through NNLS in visibility space |
 | Interferometer, `RectangularUniform` (sparse operator) | **works** | **yes** (2026-07-09, strict FD match, all 7 mass/shear params live; `jax_grad/interferometer.py` variant C) | `TransformerDFT` + `apply_sparse_operator(use_jax=True)`; the gradient-capable mesh for interferometer |
-| Interferometer, `RectangularAdaptDensity` + `reg.Adapt` (sparse operator — **the production config**) | **autodiff correct — but zero everywhere: the staircase, with no escape hatch** | **yes** (2026-07-09; `jax_grad/interferometer.py` variant B) | interferometer pixelization has **no over-sampling**, so mesh queries always coincide with the rank-transform knots — the imaging os_pix=1 staircase applies in full. With no lens light in the model, *every* parameter's gradient is (correctly) ~zero: no usable gradients at all. Fix requires `RectangularUniform` or a smooth-density transform (see below) |
+| Interferometer, `RectangularRTUAdaptDensity` + `reg.Adapt` (sparse operator — **the production config**) | **autodiff correct — but zero everywhere: the staircase, with no escape hatch** | **yes** (2026-07-09; `jax_grad/interferometer.py` variant B) | interferometer pixelization has **no over-sampling**, so mesh queries always coincide with the rank-transform knots — the imaging os_pix=1 staircase applies in full. With no lens light in the model, *every* parameter's gradient is (correctly) ~zero: no usable gradients at all. Fix requires `RectangularUniform` or a smooth-density transform (see below) |
 | Imaging, `RectangularUniform` | **works** | **yes** (2026-07-09: AD = FD to 7 s.f., FD-step-stable, all 14 params; `jax_grad/imaging_pixelization.py` variant A) | non-adaptive mesh: fully smooth likelihood, ready for gradient-based inference |
-| Imaging, `RectangularAdaptDensity` (pixelization over-sampling 1) | **autodiff correct — likelihood is a staircase in mass/shear** | **yes** (see below) | lens-light params FD-matched (≤2e-8); mass/shear: LL is *bit-identical* under ≤1e-6 parameter shifts, so AD's ~zero is the true a.e. derivative and larger-step FD only measures discrete rank-reordering jumps. Gradient-based **mass** inference impossible in this config — a likelihood-design property, not an AD bug (see "Rectangular adaptive mesh" section) |
-| Imaging, `RectangularAdaptDensity` (pixelization over-sampling 4) | **works** | **yes** (2026-07-09: all 14 params live, AD ≈ FD(h=1e-7) ≤ ~3%, FD converges to AD as h→0; variant D of `jax_grad/imaging_pixelization.py`) | sub-pixel strain between interp queries and knots carries smooth mass information; residual AD-FD gap is micro-staircase contamination of FD, not AD error |
-| Imaging, `RectangularAdaptImage` + `reg.Adapt` + adapt images + border relocator (pixelization over-sampling 4 — **the production config**) | **works** | **yes** (2026-07-09: all 14 params live, AD ≈ FD(h=1e-7) ≤ ~1%, lens light to 6 digits; variant C of `jax_grad/imaging_pixelization.py`) | full production shape incl. `AdaptImages` weight map and border relocator; mixed precision off in the test (FD needs float64) |
+| Imaging, `RectangularRTUAdaptDensity` (pixelization over-sampling 1) | **autodiff correct — likelihood is a staircase in mass/shear** | **yes** (see below) | lens-light params FD-matched (≤2e-8); mass/shear: LL is *bit-identical* under ≤1e-6 parameter shifts, so AD's ~zero is the true a.e. derivative and larger-step FD only measures discrete rank-reordering jumps. Gradient-based **mass** inference impossible in this config — a likelihood-design property, not an AD bug (see "Rectangular adaptive mesh" section) |
+| Imaging, `RectangularRTUAdaptDensity` (pixelization over-sampling 4) | **works** | **yes** (2026-07-09: all 14 params live, AD ≈ FD(h=1e-7) ≤ ~3%, FD converges to AD as h→0; variant D of `jax_grad/imaging_pixelization.py`) | sub-pixel strain between interp queries and knots carries smooth mass information; residual AD-FD gap is micro-staircase contamination of FD, not AD error |
+| Imaging, `RectangularRTUAdaptImage` + `reg.Adapt` + adapt images + border relocator (pixelization over-sampling 4 — **the production config**) | **works** | **yes** (2026-07-09: all 14 params live, AD ≈ FD(h=1e-7) ≤ ~1%, lens light to 6 digits; variant C of `jax_grad/imaging_pixelization.py`) | full production shape incl. `AdaptImages` weight map and border relocator; mixed precision off in the test (FD needs float64) |
 | Imaging, `RectangularKernelAdaptDensity` (os_pix=1, bandwidth=0.1) | **works — the os_pix=1 staircase corner is fixed** | **yes** (2026-07-10: all 14 params incl. mass/shear at STRICT tolerances via FD-step-sweep; variant E of `jax_grad/imaging_pixelization.py`) | kernel-density CDF mesh (PyAutoArray#374): no ranks/sorts, C^∞ transform; FoM *beats* the linear `AdaptDensity` by 4.1e-2 relative at bandwidth 0.1 (value-parity is undefined at os_pix=1 — the linear mesh there is the staircase) |
 | Imaging, `RectangularKernelAdaptDensity` (os_pix=4) | **works** | **yes** (2026-07-10: strict FD-step-sweep, all 14 params; variant F) | FoM parity with linear `AdaptDensity` = 2.7e-5 relative at default bandwidth |
 | Imaging, `RectangularKernelAdaptImage` + `reg.Adapt` + adapt images + border relocator (os_pix=4, bandwidth=0.1) | **works** | **yes** (2026-07-10: strict FD-step-sweep, all 14 params; variant G) | full production shape; FoM parity floor 6.3e-4 relative (intrinsic: the kernel smooths the adapt-image weights over its bandwidth; swept bandwidth×n_knots 2026-07-10) |
@@ -47,7 +47,7 @@ finite and non-zero.
 
 ## Rectangular adaptive mesh: the staircase verdict (phase 2b, 2026-07-09)
 
-The adaptive mesh (`RectangularAdaptDensity`) maps ray-traced source-plane points to
+The adaptive mesh (`RectangularRTUAdaptDensity`) maps ray-traced source-plane points to
 rank space via `create_transforms` (`PyAutoArray/autoarray/inversion/mesh/interpolator/rectangular.py`):
 a per-axis sort + `jnp.interp` CDF transform — an implementation of the "ray-guided
 transformed uniform grid" of **arXiv:2606.30620** (Enzi, Krawczyk, Li & Collett).
@@ -76,10 +76,10 @@ interpolator refactor). On the refactored main there is no explosion and no
   not lost by autodiff.
 - With over-sampling > 1 the sub-pixel queries sit between knots and pick up local
   strain, restoring a genuine smooth mass gradient that autodiff tracks. Full
-  14-parameter FD sweeps at os_pix=4 (2026-07-09): `RectangularAdaptImage` in the
+  14-parameter FD sweeps at os_pix=4 (2026-07-09): `RectangularRTUAdaptImage` in the
   production shape (`reg.Adapt`, `AdaptImages`, border relocator) agrees with
   FD(h=1e-7) to ≤ ~1% on mass/shear and 6 digits on lens light;
-  `RectangularAdaptDensity` to ≤ ~3% (worst: einstein_radius). In both cases the
+  `RectangularRTUAdaptDensity` to ≤ ~3% (worst: einstein_radius). In both cases the
   FD values drift with step size while AD is h-consistent — the residual gap is
   micro-staircase contamination of the finite differences, not an autodiff error.
 - The uniform mesh has no transform and is exactly smooth-differentiable.
@@ -190,15 +190,15 @@ frozen-triangulation gradients the same way as the rectangular mesh.
 ## Final assessment: rectangular-mesh pixelized-source gradients (2026-07-26)
 
 Post-consolidation (PyAutoArray#403 — the kernel-CDF meshes now ARE
-`RectangularAdaptDensity` / `RectangularAdaptImage`; the FD tests are variants
+`RectangularRTUAdaptDensity` / `RectangularRTUAdaptImage`; the FD tests are variants
 A–D of `autolens_workspace_test/scripts/imaging/jax_grad/pixelization.py`), a
 final certification re-run plus a linear-algebra precision probe (fresh
 environment, jax 0.10.2 CPU, float64) settles the two standing questions.
 
 **Do the gradients work?** Yes — re-certified. All four variants pass strict
 FD on all 14 parameters: `RectangularUniform` rel err ≤ 2e-7,
-`RectangularAdaptDensity` os_pix=4 ≤ 1.7e-7, and the full production shape
-(`RectangularAdaptImage` + `reg.Adapt` + `AdaptImages` + border relocator,
+`RectangularRTUAdaptDensity` os_pix=4 ≤ 1.7e-7, and the full production shape
+(`RectangularRTUAdaptImage` + `reg.Adapt` + `AdaptImages` + border relocator,
 os_pix=4) ≤ 6.2e-8, with typical parameters at 1e-9–1e-11. The one standing
 exclusion (os_pix=1 `einstein_radius`) reproduces exactly as documented: all
 three FD steps land on branch flips (FD values 5.4e8 / −5.4e7 / −5.3e6 against
@@ -245,7 +245,7 @@ which affects reconstruction quality, not differentiability.
 ## Regularization × mesh gradient matrix (2026-07-26 sweep)
 
 Every ``al.reg`` scheme swept against the gradient-capable meshes
-(``RectangularAdaptDensity`` os_pix=4; ``KNearestNeighbor`` /
+(``RectangularRTUAdaptDensity`` os_pix=4; ``KNearestNeighbor`` /
 ``KNNBarycentric`` with Hilbert image mesh + edge zeroing, os_pix=1), on the
 jax_test 14-parameter fiducial. Positive results are pinned by
 ``autolens_workspace_test/scripts/imaging/jax_grad/regularization.py``;

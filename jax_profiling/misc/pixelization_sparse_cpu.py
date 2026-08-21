@@ -217,7 +217,7 @@ with timer.section("model_build"):
     lens = af.Model(al.Galaxy, redshift=0.5, bulge=lens_bulge, mass=mass, shear=shear)
 
     pixelization = al.Pixelization(
-        mesh=al.mesh.RectangularAdaptDensity(shape=mesh_shape),
+        mesh=al.mesh.RectangularRTUAdaptDensity(shape=mesh_shape),
         regularization=al.reg.Constant(coefficient=1.0),
     )
 
