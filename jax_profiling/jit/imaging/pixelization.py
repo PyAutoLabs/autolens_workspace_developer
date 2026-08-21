@@ -1147,6 +1147,18 @@ print(f"  Bar chart saved to:    {chart_path}")
 # path (`xp=np`) and the JAX full pipeline (`use_jax=True`) agree to ~1e-7
 # relative, with vmap reproducing the JAX value.
 #
+# And it is corroborated by this script's own committed profiling artifacts from
+# the rank-CDF era, which are independent of the pin — every fp64 run recorded
+# `eager_log_evidence` bit-identical to the constant, across two GPUs, CPU and
+# two library versions:
+#
+#   results/jit/imaging/pixelization/hpc_a100_fp64.json   A100 80GB, v2026.5.1.4
+#   results/jit/imaging/pixelization/local_gpu_fp64.json  RTX 2060,  v2026.5.8.2
+#   results/jit/imaging/pixelization/local_cpu_fp64.json  CPU,       v2026.5.8.2
+#
+# (the `_mp.json` siblings record 24746.105678802393 — the same run in mixed
+# precision, differing only in the 7th decimal, as expected.)
+#
 # If you switch the mesh above to RectangularRTUAdaptDensity, the expected value
 # becomes 25004.71903495436 (kernel-CDF).
 EXPECTED_LOG_EVIDENCE_HST = (
