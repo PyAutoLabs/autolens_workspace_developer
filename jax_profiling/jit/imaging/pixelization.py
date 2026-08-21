@@ -230,7 +230,7 @@ with timer.section("model_build"):
     lens = af.Model(al.Galaxy, redshift=0.5, bulge=lens_bulge, mass=mass, shear=shear)
 
     pixelization = al.Pixelization(
-        mesh=al.mesh.RectangularAdaptDensity(shape=mesh_shape),
+        mesh=al.mesh.RectangularBilinearAdaptDensity(shape=mesh_shape),
         regularization=al.reg.Constant(coefficient=1.0),
     )
 
@@ -457,7 +457,10 @@ relocated_grid_raw = jnp.array(relocated_grid.array)
 
 print("\n--- Step 5: Overlay grid (source pixel centres) ---")
 
-from autoarray.inversion.mesh.mesh.rectangular_adapt_density import overlay_grid_from
+# `overlay_grid_from` is the shared lattice-over-extent helper, not a transform:
+# RectangularBilinearAdaptDensity subclasses RectangularRTUAdaptDensity and
+# inherits it, so it lives in (and is imported from) the RTU module for both.
+from autoarray.inversion.mesh.mesh.rectangular_rtu_adapt_density import overlay_grid_from
 
 with timer.section("overlay_grid_eager"):
     mesh_grid = overlay_grid_from(
@@ -673,6 +676,24 @@ likelihood_steps.append(("Regularization matrix (H)", timer.records[-1][1] / 10)
 
 print(f"  regularization_matrix shape: {regularization_matrix.shape}")
 
+# The H built above spans the *mapper* only (1225 source pixels) — that is the
+# quantity the timing above measures. The linear system actually solved spans
+# every linear object, which at this fiducial is 1225 source pixels + the 60
+# linear MGE lens-light Gaussians (1285 columns in `operated_mapping_matrix`).
+# Take the assembled H from the inversion for the maths, exactly as the mapping
+# and curvature matrices above are taken from it.
+regularization_matrix = jnp.array(inversion.regularization_matrix)
+
+# The MGE columns are unregularized, so the full H is singular (60 zero rows)
+# and its log-determinant is -inf. `Inversion.log_det_*` therefore evaluates
+# both log-det terms on the *reduced* matrices — the mapper block alone. Mirror
+# that here, or the evidence is not the quantity `figure_of_merit` reports.
+curvature_reg_reduced = jnp.array(inversion.curvature_reg_matrix_reduced)
+regularization_reduced = jnp.array(inversion.regularization_matrix_reduced)
+
+print(f"  regularization_matrix shape (inversion): {regularization_matrix.shape}")
+print(f"  reduced (log-det) matrix shape:          {curvature_reg_reduced.shape}")
+
 # ---------------------------------------------------------------------------
 # Step 12: Regularized reconstruction: s = (F + H)^{-1} D
 # ---------------------------------------------------------------------------
@@ -721,12 +742,18 @@ def compute_log_evidence(
     blurred_image,
     blurred_mapping_matrix,
     reconstruction,
-    curvature_matrix,
     regularization_matrix,
+    curvature_reg_matrix_reduced,
+    regularization_matrix_reduced,
 ):
     """Compute the full log evidence including all five terms:
 
     -2 ln e = chi^2 + s^T H s + ln[det(F+H)] - ln[det(H)] + noise_norm
+
+    The chi-squared and s^T H s terms span every linear object (source pixels +
+    linear MGE lens light); the two log-determinant terms span the reduced
+    (mapper-only) block, because unregularized linear objects make the full H
+    singular. This is the decomposition `FitDataset.log_evidence` uses.
     """
     # Map reconstruction to image
     mapped_recon = al.util.inversion.mapped_reconstructed_data_via_mapping_matrix_from(
@@ -747,12 +774,9 @@ def compute_log_evidence(
         reconstruction, jnp.dot(regularization_matrix, reconstruction)
     )
 
-    # Curvature + regularization matrix
-    curvature_reg_matrix = curvature_matrix + regularization_matrix
-
-    # Log determinant terms
-    sign_cr, log_det_curvature_reg = jnp.linalg.slogdet(curvature_reg_matrix)
-    sign_r, log_det_regularization = jnp.linalg.slogdet(regularization_matrix)
+    # Log determinant terms (reduced block — see docstring)
+    sign_cr, log_det_curvature_reg = jnp.linalg.slogdet(curvature_reg_matrix_reduced)
+    sign_r, log_det_regularization = jnp.linalg.slogdet(regularization_matrix_reduced)
 
     # Noise normalization
     noise_normalization = jnp.sum(jnp.log(2 * jnp.pi * noise_map**2))
@@ -766,14 +790,29 @@ def compute_log_evidence(
     )
 
 
-# For the JIT profiling we use the step-by-step matrices for timing.
-# For the correctness assertion we use the inversion's own matrices, because
-# cumulative floating-point differences between JIT-compiled and eager paths
-# (especially through ill-conditioned solves) can compound significantly.
+# Two log-evidence values are reported below and they measure different things:
+#
+#   log_evidence (step-by-step) — the value implied by the reconstruction this
+#     script solved for itself in Step 12. This is the *timing* path: every
+#     matrix it consumes was built and timed step by step above.
+#   log_evidence (inv matrices) — the same five-term formula evaluated on the
+#     inversion's own reconstruction. This is the *correctness* path, and it is
+#     what the assertion below checks against `FitImaging.figure_of_merit`.
+#
+# They are not guaranteed to agree to round-off. `use_positive_only_solver` is
+# True by default, so the fitted reconstruction is a non-negative (fnnls)
+# solution whose active set is chosen iteratively; a re-solve that lands on a
+# different active set gives a genuinely different s, hence a different chi^2
+# and s^T H s. At this fiducial the fitted solution pins 362 of 1285 parameters
+# at exactly zero (an unconstrained solve puts 777 of them negative), so the
+# boundary is heavily populated and small numerical differences between the
+# eager and JIT solves can move which pixels are active.
+# That is a real difference in the solution, not floating-point drift in the
+# evidence arithmetic, and it is why the assertion uses the inversion's own
+# reconstruction rather than the re-solved one.
 
 blurred_img_jnp = jnp.array(blurred_image.array)
 recon_jnp = jnp.array(reconstruction)
-curv_jnp = jnp.array(curvature_matrix)
 reg_jnp = jnp.array(regularization_matrix)
 
 with timer.section("log_evidence_eager"):
@@ -783,8 +822,9 @@ with timer.section("log_evidence_eager"):
         blurred_img_jnp,
         bmm_jnp,
         recon_jnp,
-        curv_jnp,
         reg_jnp,
+        curvature_reg_reduced,
+        regularization_reduced,
     )
     block(log_evidence)
 
@@ -796,17 +836,16 @@ _, log_evidence = jit_profile(
     blurred_img_jnp,
     bmm_jnp,
     recon_jnp,
-    curv_jnp,
     reg_jnp,
+    curvature_reg_reduced,
+    regularization_reduced,
 )
 likelihood_steps.append(("Mapped recon + log evidence", timer.records[-1][1] / 10))
 
 print(f"  log_evidence (step-by-step) = {log_evidence}")
 
-# Correctness check: recompute log_evidence using the inversion's own
-# reconstruction and curvature matrix to avoid accumulated FP drift.
+# Correctness check: the same formula on the inversion's own reconstruction.
 inv_recon_jnp = jnp.array(inversion.reconstruction)
-inv_curv_jnp = jnp.array(inversion.curvature_matrix)
 
 log_evidence_check = compute_log_evidence(
     data_array,
@@ -814,8 +853,9 @@ log_evidence_check = compute_log_evidence(
     blurred_img_jnp,
     bmm_jnp,
     inv_recon_jnp,
-    inv_curv_jnp,
     reg_jnp,
+    curvature_reg_reduced,
+    regularization_reduced,
 )
 print(f"  log_evidence (inv matrices) = {log_evidence_check}")
 print(f"  log_evidence (reference)    = {log_evidence_ref}")
@@ -1076,12 +1116,61 @@ print(f"  Bar chart saved to:    {chart_path}")
 # Regression assertion — realistic-scale deterministic log-evidence
 # ===================================================================
 #
-# RectangularAdaptDensity at prior medians is deterministic across the
+# RectangularBilinearAdaptDensity at prior medians is deterministic across the
 # eager / full-JIT / vmap paths to within rtol=1e-4 — the constant below
 # is the value those three paths agree on.
+#
+# This constant is UNCHANGED since it was pinned on 2026-05-11, and that is the
+# point of the mesh choice above. Its history:
+#
+#   2026-05-11  pinned here, when `RectangularAdaptDensity` meant the empirical
+#               rank-CDF transform                             -> 24746.105672366088
+#   2026-07-23  PyAutoArray 22b28463 (#402) consolidated the meshes and gave
+#               that same class name the kernel-CDF transform. The value the
+#               script computed silently changed             -> 25004.71903495436
+#   2026-08-21  PyAutoArray f9aceea3 (#461) split the family: Bilinear restores
+#               the rank-CDF transform, RTU is the kernel-CDF one under a new
+#               name. Naming this script's fiducial explicitly restores the
+#               2026-05-11 value BIT-FOR-BIT.
+#
+# So the 1.0e-2 gap between the two numbers is one identifiable transform swap
+# under an unchanged class name, not accumulated drift. Verified by measurement,
+# not inference: at this fiducial PyAutoArray at f9aceea3^ with the old
+# `RectangularAdaptDensity` and PyAutoArray at f9aceea3 with
+# `RectangularRTUAdaptDensity` both give 25004.71903495436 exactly (RTU really is
+# a pure rename), while `RectangularBilinearAdaptDensity` reproduces
+# 24746.105672366088 exactly. Nothing else in the library moved this value in the
+# intervening 3.5 months — a bit-identical match across that span rules that out.
+#
+# The value is also cross-checked across two independent implementations of the
+# likelihood, so it does not rest on a single code path: the numpy/numba eager
+# path (`xp=np`) and the JAX full pipeline (`use_jax=True`) agree to ~1e-7
+# relative, with vmap reproducing the JAX value.
+#
+# And it is corroborated by this script's own committed profiling artifacts from
+# the rank-CDF era, which are independent of the pin — every fp64 run recorded
+# `eager_log_evidence` bit-identical to the constant, across two GPUs, CPU and
+# two library versions:
+#
+#   results/jit/imaging/pixelization/hpc_a100_fp64.json   A100 80GB, v2026.5.1.4
+#   results/jit/imaging/pixelization/local_gpu_fp64.json  RTX 2060,  v2026.5.8.2
+#   results/jit/imaging/pixelization/local_cpu_fp64.json  CPU,       v2026.5.8.2
+#
+# (the `_mp.json` siblings record 24746.105678802393 — the same run in mixed
+# precision, differing only in the 7th decimal, as expected.)
+#
+# If you switch the mesh above to RectangularRTUAdaptDensity, the expected value
+# becomes 25004.71903495436 (kernel-CDF).
 EXPECTED_LOG_EVIDENCE_HST = (
     24746.105672366088  # 35x35 = 1225 source pixels, MGE-60 lens light
 )
+
+# The step-by-step path re-solves the reconstruction itself and is asserted
+# separately — see the note above `compute_log_evidence`. The fnnls active set it
+# lands on differs slightly from the fitted one, which moves the evidence by
+# ~1.5e-3 relative. That is a property of the non-negative solve, not a bug, so
+# it gets its own (looser) pin rather than being silently printed.
+EXPECTED_LOG_EVIDENCE_HST_STEP_BY_STEP = 24783.19775195945
 
 np.testing.assert_allclose(
     log_evidence_ref,
@@ -1110,4 +1199,18 @@ np.testing.assert_allclose(
 )
 print(
     f"  Regression assertion PASSED: log_evidence matches {EXPECTED_LOG_EVIDENCE_HST:.6f}"
+)
+np.testing.assert_allclose(
+    float(log_evidence),
+    EXPECTED_LOG_EVIDENCE_HST_STEP_BY_STEP,
+    rtol=1e-3,
+    err_msg=(
+        f"imaging/pixelization[{instrument}]: regression — step-by-step log_evidence "
+        f"drifted (got {float(log_evidence)}, expected "
+        f"{EXPECTED_LOG_EVIDENCE_HST_STEP_BY_STEP})"
+    ),
+)
+print(
+    f"  Step-by-step regression assertion PASSED: log_evidence matches "
+    f"{EXPECTED_LOG_EVIDENCE_HST_STEP_BY_STEP:.6f}"
 )
