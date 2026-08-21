@@ -14,7 +14,7 @@ Run from the workspace root:
 Historical bug: rectangular interpolator gradient explosion
 -----------------------------------------------------------
 Steps 4-6 (mapping matrix, data vector D, curvature matrix F) used to
-emit gradients of order ~1e-24 for ``RectangularRTUAdaptDensity`` -- i.e.
+emit gradients of order ~1e-24 for ``RectangularBilinearAdaptDensity`` -- i.e.
 effectively zero, and NaN-poisoning the downstream NNLS. Root cause
 lived inside
 ``autoarray.inversion.mesh.interpolator.rectangular.create_transforms``:
@@ -234,7 +234,7 @@ lens = af.Model(
 )
 
 pixelization = al.Pixelization(
-    mesh=al.mesh.RectangularRTUAdaptDensity(shape=mesh_shape),
+    mesh=al.mesh.RectangularBilinearAdaptDensity(shape=mesh_shape),
     regularization=al.reg.Constant(coefficient=1.0),
 )
 source = af.Model(al.Galaxy, redshift=1.0, pixelization=pixelization)
