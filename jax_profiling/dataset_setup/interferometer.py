@@ -62,9 +62,14 @@ INSTRUMENTS = {
     },
     "alma_high_res": {
         # ALMA-style 5000-vis coverage at 0.025"/px on a 512x512 real-space
-        # grid. Simulator uses pynufft because (a) DFT would need a dense
-        # (n_vis x n_real_space) matrix = ~20GB and OOM on a 15GB laptop,
-        # and (b) nufftax requires Python >= 3.12 (PyAutoGPU venv is 3.10).
+        # grid. Simulator uses the nufftax-backed NUFFT because a DFT would
+        # need a dense (n_vis x n_real_space) matrix = ~20GB and OOM on a 15GB
+        # laptop: 5000 vis x 512x512 = 1.31e9, far above the ~1e7 n_vis*n_pix
+        # crossover past which the NUFFT is the only feasible path.
+        # This was pynufft until 2026-08-23; TransformerNUFFTPyNUFFT was
+        # deleted by PyAutoArray#475. The old "nufftax needs Python >= 3.12
+        # but the PyAutoGPU venv is 3.10" caveat is moot — the whole stack now
+        # declares requires-python >= 3.12, so a 3.10 venv cannot run it at all.
         # Likelihood scripts can still use TransformerDFT downstream — they
         # only read uv_wavelengths from this file.
         "n_visibilities": 5000,
@@ -73,7 +78,7 @@ INSTRUMENTS = {
         "shape_native": (512, 512),
         "noise_sigma": 100.0,
         "seed": 1,
-        "transformer_class": "nufft_pynufft",
+        "transformer_class": "nufft",
     },
     "hannah": {
         "n_visibilities": 16984,
@@ -137,7 +142,6 @@ def simulate(instrument: str):
     transformer_class = {
         "dft": al.TransformerDFT,
         "nufft": al.TransformerNUFFT,
-        "nufft_pynufft": al.TransformerNUFFTPyNUFFT,
     }[transformer_choice]
 
     simulator = al.SimulatorInterferometer(
