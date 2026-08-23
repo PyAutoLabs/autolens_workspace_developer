@@ -64,8 +64,11 @@ still apply:
 
 - ``dataset.transformer.transform_mapping_matrix`` is JIT-friendly for
   ``TransformerDFT`` (a single matrix multiply) and the default SMA preset
-  uses it. ``TransformerNUFFT`` (pynufft-based) is not JIT-friendly; if you
-  swap the transformer the step-8 timing will fall back to eager-only.
+  uses it. ``TransformerNUFFT`` (nufftax-backed) is JIT-friendly *too*, but
+  only when called with ``xp=jnp``: ``xp`` is a per-call argument that
+  defaults to ``np``, and the numpy path raises
+  ``TracerArrayConversionError`` under ``jax.jit``. Verified 2026-08-23 —
+  the two paths agree to 5e-16 relative.
 - The visibility-space χ² in step 13 separates the complex visibilities and
   noise into real/imag components inside the JIT body (matching the
   ``pixelization/likelihood_function.py`` reference). Complex-valued JIT
@@ -214,8 +217,12 @@ with timer.section("dataset_load"):
         real_space_mask=real_space_mask,
         transformer_class=al.TransformerDFT,
         # DFT is intentional even at ALMA-scale visibility counts — profiling
-        # the JAX-traceable path is the goal, NUFFT (pynufft) is not yet
-        # JIT-friendly.
+        # the JAX-traceable path is the goal. NOTE (2026-08-23): the old
+        # reason given here, "NUFFT (pynufft) is not yet JIT-friendly", is no
+        # longer true — the pynufft backend is deleted and the nufftax-backed
+        # TransformerNUFFT jits fine via xp=jnp. DFT is left in place here so
+        # existing profiling baselines stay comparable, not because NUFFT
+        # cannot be traced; revisit if NUFFT-path timings are wanted.
         raise_error_dft_visibilities_limit=False,
     )
 
@@ -553,8 +560,9 @@ print(f"  mapping_matrix shape: {mapping_matrix.shape}")
 # For ``TransformerDFT`` this is a single complex matrix multiply
 # ``D @ M`` where D is the discrete Fourier matrix (n_vis × n_image) and
 # M is the real mapping matrix (n_image × source_pixels). JIT-friendly.
-# For ``TransformerNUFFT`` (pynufft-based, ALMA-scale) this step would fall
-# back to eager — flag if you swap the transformer.
+# For ``TransformerNUFFT`` (nufftax-backed, ALMA-scale) this step also jits,
+# provided ``transform_mapping_matrix`` is called with ``xp=jnp``; with the
+# default ``xp=np`` it raises ``TracerArrayConversionError`` under jit.
 
 print("\n--- Step 8: Transformed mapping matrix (NUFFT) ---")
 

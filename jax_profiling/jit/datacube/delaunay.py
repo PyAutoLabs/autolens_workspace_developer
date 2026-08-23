@@ -231,8 +231,12 @@ with timer.section("dataset_list_load"):
             real_space_mask=real_space_mask,
             transformer_class=al.TransformerDFT,
             # DFT is intentional even at ALMA-scale visibility counts — profiling
-            # the JAX-traceable path is the goal, NUFFT (pynufft) is not yet
-            # JIT-friendly.
+            # the JAX-traceable path is the goal. NOTE (2026-08-23): the old
+            # reason given here, "NUFFT (pynufft) is not yet JIT-friendly", is
+            # no longer true — the pynufft backend is deleted and the
+            # nufftax-backed TransformerNUFFT jits fine via xp=jnp. DFT is left
+            # in place so existing profiling baselines stay comparable; revisit
+            # if NUFFT-path timings are wanted.
             raise_error_dft_visibilities_limit=False,
         ).apply_sparse_operator(use_jax=True, show_progress=False)
         for _ in range(n_channels)
