@@ -275,7 +275,30 @@ log_likelihood_ref = fit.log_likelihood
 print(f"  log_evidence   = {log_evidence_ref}")
 print(f"  log_likelihood = {log_likelihood_ref}")
 
-EXPECTED_LOG_EVIDENCE_HST = -66270.78281169113
+# Regression pin — eager log_evidence at the simulator-truth instance.
+#
+# Re-measured 2026-08-26 (was -66270.78281169113, pinned 2026-04-24 in cfa5378
+# and carried unchanged through the jax_profiling restructure). Nothing on this
+# side moved in between: the fixture jax_profiling/dataset/imaging/hst is a pure
+# rename at f8a5cef (R100, identical blobs) and this script's model, mask and
+# over-sampling are byte-identical to the pinning commit — so the whole move is
+# library-side.
+#
+# Most of it is PyAutoArray 72fb01d1 (#490), which corrected the mirrored
+# bilinear ROW weights and the round-off-dependent cell assignment in the
+# adaptive rectangular mapper this mesh shares. Both legs measured here on one
+# host and one library set, differing only in that commit:
+#
+#   72fb01d1^  (pre-fix)   -84633.30874141103   18362 (27.7%) below the old pin
+#   72fb01d1   (fixed)     -64156.79838547805    2114  (3.2%) above it  <- pinned
+#
+# The remaining 3.2% is older drift and is NOT attributed here. It is specific
+# to this fiducial (Sersic + Isothermal + Constant reg): jit/imaging/
+# pixelization.py, pinned 2026-05-11, still reproduces its own pre-#490 value
+# bit-for-bit, so whatever moved this one left the shared adaptive-mesh path
+# alone. Tracked in PyAutoMind as
+# draft/bug/workspaces/gradient_pixelization_pin_residual_drift.md.
+EXPECTED_LOG_EVIDENCE_HST = -64156.79838547805
 
 np.testing.assert_allclose(
     log_evidence_ref,
