@@ -334,10 +334,25 @@ with timer.section("fit_sparse_build_and_eval"):
 print(f"  log_evidence   = {log_evidence_sparse}")
 print(f"  log_likelihood = {log_likelihood_sparse}")
 
-# --- Reference 3: JAX gold value imported from pixelization.py ---------------
-# Must stay in sync with pixelization.py's EXPECTED_LOG_EVIDENCE_HST.
+# --- Reference 3: the pinned gold value for THIS fiducial --------------------
+# Not jit/imaging/pixelization.py's constant, despite the older comment here:
+# that cell profiles a 35x35 MGE-lens model, this one a 28x28 Sersic-lens model,
+# so the two numbers have no reason to agree and have not for some time.
+#
+# Re-measured 2026-08-26 after PyAutoArray 72fb01d1 (#490) corrected the
+# mirrored bilinear ROW weights and the round-off-dependent cell assignment in
+# the adaptive rectangular mapper this mesh shares. Both legs measured here on
+# one host and one library set, differing only in that commit:
+#
+#   72fb01d1^ (pre-fix)  26232.068573758894  <- the old pin, to 5e-14
+#   72fb01d1  (fixed)    29030.638937466174  <- pinned below
+#
+# The pre-fix leg reproducing the old pin is what makes the new one attributable
+# to #490 rather than to accumulated drift. Both CPU paths (non-sparse and
+# sparse-operator) returned that value bit-identically on each leg, so the
+# sparse-vs-non-sparse assertion below is unaffected by the change.
 
-EXPECTED_LOG_EVIDENCE_HST = 26232.068573757562
+EXPECTED_LOG_EVIDENCE_HST = 29030.638937466174
 
 # --- Three-way comparison ----------------------------------------------------
 

@@ -1120,8 +1120,8 @@ print(f"  Bar chart saved to:    {chart_path}")
 # eager / full-JIT / vmap paths to within rtol=1e-4 — the constant below
 # is the value those three paths agree on.
 #
-# This constant is UNCHANGED since it was pinned on 2026-05-11, and that is the
-# point of the mesh choice above. Its history:
+# This constant held BIT-FOR-BIT from its 2026-05-11 pinning until 2026-08-26,
+# when a library bug fix moved it. Its history:
 #
 #   2026-05-11  pinned here, when `RectangularAdaptDensity` meant the empirical
 #               rank-CDF transform                             -> 24746.105672366088
@@ -1130,27 +1130,37 @@ print(f"  Bar chart saved to:    {chart_path}")
 #               script computed silently changed             -> 25004.71903495436
 #   2026-08-21  PyAutoArray f9aceea3 (#461) split the family: Bilinear restores
 #               the rank-CDF transform, RTU is the kernel-CDF one under a new
-#               name. Naming this script's fiducial explicitly restores the
+#               name. Naming this script's fiducial explicitly restored the
 #               2026-05-11 value BIT-FOR-BIT.
+#   2026-08-26  PyAutoArray 72fb01d1 (#490) fixed the adaptive rectangular
+#               mapper every one of those meshes shares: its bilinear ROW
+#               weights were mirrored (the `up` node carried `1 - t_row`) and
+#               the bracketing cell collapsed wherever the index coordinate was
+#               exactly integral. A real behaviour change — the reconstruction
+#               moves, to a better fit                        -> 26927.750842071207
 #
-# So the 1.0e-2 gap between the two numbers is one identifiable transform swap
-# under an unchanged class name, not accumulated drift. Verified by measurement,
-# not inference: at this fiducial PyAutoArray at f9aceea3^ with the old
-# `RectangularAdaptDensity` and PyAutoArray at f9aceea3 with
+# So the 1.0e-2 gap between the first two numbers is one identifiable transform
+# swap under an unchanged class name, and the 8.8e-2 jump to the last is one
+# identifiable mapper fix — neither is accumulated drift. Verified by
+# measurement, not inference: at this fiducial PyAutoArray at f9aceea3^ with the
+# old `RectangularAdaptDensity` and PyAutoArray at f9aceea3 with
 # `RectangularRTUAdaptDensity` both give 25004.71903495436 exactly (RTU really is
 # a pure rename), while `RectangularBilinearAdaptDensity` reproduces
-# 24746.105672366088 exactly. Nothing else in the library moved this value in the
-# intervening 3.5 months — a bit-identical match across that span rules that out.
+# 24746.105672366088 exactly. Re-measured against 72fb01d1^ on 2026-08-26 — this
+# fiducial still gives 24746.10567236643 and the step-by-step path
+# 24783.19775195944, i.e. the pre-#490 pins to fp64 noise — so the whole
+# 2026-05-11 -> 2026-08-26 move is #490 and nothing else.
 #
 # The value is also cross-checked across two independent implementations of the
 # likelihood, so it does not rest on a single code path: the numpy/numba eager
 # path (`xp=np`) and the JAX full pipeline (`use_jax=True`) agree to ~1e-7
 # relative, with vmap reproducing the JAX value.
 #
-# And it is corroborated by this script's own committed profiling artifacts from
-# the rank-CDF era, which are independent of the pin — every fp64 run recorded
-# `eager_log_evidence` bit-identical to the constant, across two GPUs, CPU and
-# two library versions:
+# And the 2026-05-11 value is corroborated by this script's own committed
+# profiling artifacts from the rank-CDF era, which are independent of the pin —
+# every fp64 run recorded `eager_log_evidence` bit-identical to it, across two
+# GPUs, CPU and two library versions (they predate #490, so they attest to the
+# old value, not the current one):
 #
 #   results/jit/imaging/pixelization/hpc_a100_fp64.json   A100 80GB, v2026.5.1.4
 #   results/jit/imaging/pixelization/local_gpu_fp64.json  RTX 2060,  v2026.5.8.2
@@ -1160,9 +1170,10 @@ print(f"  Bar chart saved to:    {chart_path}")
 # precision, differing only in the 7th decimal, as expected.)
 #
 # If you switch the mesh above to RectangularRTUAdaptDensity, the expected value
-# becomes 25004.71903495436 (kernel-CDF).
+# becomes 26903.317185248623 (kernel-CDF, measured 2026-08-26 with #490; it was
+# 25004.71903495436 before that fix).
 EXPECTED_LOG_EVIDENCE_HST = (
-    24746.105672366088  # 35x35 = 1225 source pixels, MGE-60 lens light
+    26927.750842071207  # 35x35 = 1225 source pixels, MGE-60 lens light
 )
 
 # The step-by-step path re-solves the reconstruction itself and is asserted
@@ -1170,7 +1181,7 @@ EXPECTED_LOG_EVIDENCE_HST = (
 # lands on differs slightly from the fitted one, which moves the evidence by
 # ~1.5e-3 relative. That is a property of the non-negative solve, not a bug, so
 # it gets its own (looser) pin rather than being silently printed.
-EXPECTED_LOG_EVIDENCE_HST_STEP_BY_STEP = 24783.19775195945
+EXPECTED_LOG_EVIDENCE_HST_STEP_BY_STEP = 26965.86747641576
 
 np.testing.assert_allclose(
     log_evidence_ref,
