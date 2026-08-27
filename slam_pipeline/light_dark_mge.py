@@ -195,7 +195,7 @@ def fit():
         settings_search=settings_search,
         analysis=analysis,
         source_lp_result=source_lp_result,
-        mesh_init=af.Model(al.mesh.RectangularAdaptDensity, shape=mesh_shape),
+        mesh_init=af.Model(al.mesh.RectangularBilinearAdaptDensity, shape=mesh_shape),
         regularization_init=al.reg.Adapt,
     )
 
@@ -221,7 +221,7 @@ def fit():
         analysis=analysis,
         source_lp_result=source_lp_result,
         source_pix_result_1=source_pix_result_1,
-        mesh=af.Model(al.mesh.RectangularAdaptImage, shape=mesh_shape),
+        mesh=af.Model(al.mesh.RectangularBilinearAdaptImage, shape=mesh_shape),
         regularization=al.reg.Adapt,
     )
 

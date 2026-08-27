@@ -19,11 +19,14 @@ Model (SLaM SOURCE_PIX[1] style):
   - source     : one of four gradient-certified pixelized meshes,
                  selected by ``PIX_MESH`` (autolens_workspace_developer#117):
 
-    - ``rectangular`` (default): ``RectangularAdaptDensity(bandwidth=0.1)`` +
-      free ``reg.Constant`` — the kernel-CDF mesh (C^inf continuous-density
-      transform, differentiable at os_pix=1). This is the #100/#101 objective;
-      the class took the plain name in the rectangular-mesh consolidation
-      (formerly ``RectangularKernelAdaptDensity``).
+    - ``rectangular`` (default): ``RectangularRTUAdaptDensity(bandwidth=0.1)``
+      + free ``reg.Constant`` — the kernel-CDF mesh (C^inf continuous-density
+      transform, differentiable at os_pix=1). This is the #100/#101 objective.
+      The class has been renamed twice: ``RectangularKernelAdaptDensity`` took
+      the plain name ``RectangularAdaptDensity`` in the 2026-07-23 mesh
+      consolidation (PyAutoArray#403), then became
+      ``RectangularRTUAdaptDensity`` when the 2026-08-21 split (PyAutoArray#461)
+      gave the rank-CDF and kernel-CDF transforms separate names.
     - ``knn``: ``KNearestNeighbor(pixels=300, zeroed_pixels=30)`` + free
       ``reg.AdaptSplit`` — Wendland-C4 weights, pure JAX. The neighbour-based
       ``reg.Constant``/``reg.Adapt`` schemes call scipy Delaunay on the traced
@@ -134,7 +137,7 @@ def mesh_and_regularization():
         return regularization
 
     if PIX_MESH == "rectangular":
-        mesh = al.mesh.RectangularAdaptDensity(
+        mesh = al.mesh.RectangularRTUAdaptDensity(
             shape=MESH_SHAPE, bandwidth=PIX_BANDWIDTH
         )
         if PIX_REG == "matern":
@@ -291,7 +294,7 @@ def main() -> None:
         f"Sampler: {which}  n_starts={n_starts}  batch_size={batch_size}  lr={PIX_LR or 'default'}"
     )
     mesh_desc = (
-        f"RectangularAdaptDensity{MESH_SHAPE} bandwidth=0.1"
+        f"RectangularRTUAdaptDensity{MESH_SHAPE} bandwidth={PIX_BANDWIDTH}"
         if PIX_MESH == "rectangular"
         else f"{PIX_MESH} pixels={MESH_PIXELS} zeroed={EDGE_PIXELS} (Hilbert+AdaptImages)"
     )

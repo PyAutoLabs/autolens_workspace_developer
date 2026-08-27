@@ -16,6 +16,13 @@ centroids agree with the trusted references (uniform imshow, Delaunay
 tripcolor) and the true source position to well under one mesh pixel — the
 pre-fix uniform [0, 1] edge partition was off by up to ~1.5 mesh pixels in y.
 
+Mesh names: the 2026-08-21 split (PyAutoArray#461) gave the two adaptive
+rectangular transforms separate names, so the arms below are labelled by the
+transform they exercise — ``bilinear_*`` is the empirical rank CDF, ``rtu_*``
+the kernel-density CDF this script was originally written for. Both are
+covered here; the file keeps its ``kernel_cdf`` name for continuity with
+PyAutoArray#373/PR#374.
+
 Run ``plotting_alignment/simulator.py`` first if the dataset is absent.
 """
 
@@ -114,17 +121,20 @@ results = {}
 for label, mesh in [
     ("uniform", al.mesh.RectangularUniform(shape=mesh_shape)),
     (
-        "adapt_image",
-        al.mesh.RectangularAdaptImage(shape=mesh_shape, weight_power=1.0),
-    ),
-    ("adapt_density", al.mesh.RectangularAdaptDensity(shape=mesh_shape)),
-    (
-        "kernel_adapt_density",
-        al.mesh.RectangularKernelAdaptDensity(shape=mesh_shape, bandwidth=0.1),
+        "bilinear_adapt_image",
+        al.mesh.RectangularBilinearAdaptImage(shape=mesh_shape, weight_power=1.0),
     ),
     (
-        "kernel_adapt_image",
-        al.mesh.RectangularKernelAdaptImage(
+        "bilinear_adapt_density",
+        al.mesh.RectangularBilinearAdaptDensity(shape=mesh_shape),
+    ),
+    (
+        "rtu_adapt_density",
+        al.mesh.RectangularRTUAdaptDensity(shape=mesh_shape, bandwidth=0.1),
+    ),
+    (
+        "rtu_adapt_image",
+        al.mesh.RectangularRTUAdaptImage(
             shape=mesh_shape, weight_power=1.0, bandwidth=0.1
         ),
     ),
@@ -208,22 +218,25 @@ B. **Mapper-faithfulness** — scatter one over-sampled point's bilinear weights
 from autoarray.inversion.mesh.interpolator.rectangular import (
     adaptive_rectangular_transformed_grid_from,
 )
-from autoarray.inversion.mesh.interpolator.rectangular_kernel import (
-    adaptive_rectangular_transformed_grid_from_kernel,
-)
 
 n_y, n_x = mesh_shape
 
 for label, mesh in [
-    ("adapt_image", al.mesh.RectangularAdaptImage(shape=mesh_shape, weight_power=1.0)),
-    ("adapt_density", al.mesh.RectangularAdaptDensity(shape=mesh_shape)),
     (
-        "kernel_adapt_density",
-        al.mesh.RectangularKernelAdaptDensity(shape=mesh_shape, bandwidth=0.1),
+        "bilinear_adapt_image",
+        al.mesh.RectangularBilinearAdaptImage(shape=mesh_shape, weight_power=1.0),
     ),
     (
-        "kernel_adapt_image",
-        al.mesh.RectangularKernelAdaptImage(
+        "bilinear_adapt_density",
+        al.mesh.RectangularBilinearAdaptDensity(shape=mesh_shape),
+    ),
+    (
+        "rtu_adapt_density",
+        al.mesh.RectangularRTUAdaptDensity(shape=mesh_shape, bandwidth=0.1),
+    ),
+    (
+        "rtu_adapt_image",
+        al.mesh.RectangularRTUAdaptImage(
             shape=mesh_shape, weight_power=1.0, bandwidth=0.1
         ),
     ),
@@ -237,19 +250,19 @@ for label, mesh in [
     U_x_nodes = (np.arange(n_x) - 1.0) / (n_x - 3)
     U_nodes = np.stack([U_y_nodes, U_x_nodes]).T
     data_grid = np.asarray(interpolator.data_grid.array)
-    if "kernel" in label:
-        nodes_t = adaptive_rectangular_transformed_grid_from_kernel(
-            data_grid,
-            U_nodes,
-            mesh_pixels=n_y,
-            mesh_weight_map=interpolator.mesh_weight_map,
-            bandwidth=interpolator.bandwidth,
-            n_knots=interpolator.n_knots,
-        )
-    else:
-        nodes_t = adaptive_rectangular_transformed_grid_from(
-            data_grid, U_nodes, mesh_weight_map=interpolator.mesh_weight_map
-        )
+    # Route through whichever CDF the mapper itself used: the interpolator
+    # carries the rank/kernel selector the 2026-08-21 mesh split introduced
+    # (PyAutoArray#461), so this cannot drift from the mesh under test the way
+    # the old label-string dispatch could.
+    nodes_t = adaptive_rectangular_transformed_grid_from(
+        data_grid,
+        U_nodes,
+        mesh_pixels=n_y,
+        mesh_weight_map=interpolator.mesh_weight_map,
+        bandwidth=interpolator.bandwidth,
+        n_knots=interpolator.n_knots,
+        transform=interpolator.transform,
+    )
     node_y, node_x = np.asarray(nodes_t).T
 
     y_edges, x_edges = np.asarray(mapper.mesh_geometry.edges_transformed).T
