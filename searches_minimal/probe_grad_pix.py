@@ -9,7 +9,7 @@ confirms it for *the objective this experiment optimises* (autolens_workspace_de
 
   - lens light: MGE **linear**, non-linear geometry **fixed** at truth (SLaM pix-1),
   - lens mass: Isothermal + ExternalShear **free** (what the samplers optimise),
-  - source: **kernel-CDF mesh** ``RectangularKernelAdaptDensity(bandwidth=0.1)`` —
+  - source: **kernel-CDF mesh** ``RectangularRTUAdaptDensity(bandwidth=0.1)`` —
     a C^inf continuous-density transform, strict-FD certified on ALL params
     (incl. mass/shear) even at pixelization over-sampling 1,
   - regularization coefficient free.
@@ -72,7 +72,7 @@ def build_pix_model(mesh_shape: tuple[int, int] = (30, 30)) -> af.Collection:
 
     pixelization = af.Model(
         al.Pixelization,
-        mesh=al.mesh.RectangularKernelAdaptDensity(shape=mesh_shape, bandwidth=0.1),
+        mesh=al.mesh.RectangularRTUAdaptDensity(shape=mesh_shape, bandwidth=0.1),
         regularization=al.reg.Constant,
     )
     pixelization.regularization.coefficient = af.GaussianPrior(mean=1.0, sigma=0.1)
@@ -92,7 +92,7 @@ def build_probe_analysis(dataset):
 
 def main() -> None:
     print(f"JAX backend: {jax.default_backend()}  x64={jax.config.jax_enable_x64}")
-    print(f"Mesh: RectangularKernelAdaptDensity(bandwidth=0.1)  os_pix={OS_PIX}")
+    print(f"Mesh: RectangularRTUAdaptDensity(bandwidth=0.1)  os_pix={OS_PIX}")
 
     dataset = build_dataset()
     analysis = build_probe_analysis(dataset)

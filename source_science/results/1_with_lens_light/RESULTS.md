@@ -169,7 +169,7 @@ fit.
   more robust than this comparison suggests.
 
 - The next major experiment, per the original prompt, is the
-  `RectangularAdaptImage` and `Delaunay` pixelization fits. Those should
+  `RectangularBilinearAdaptImage` and `Delaunay` pixelization fits. Those should
   resolve the diffuse-halo question: if they recover the truth flux within
   uncertainty, the MGE source pathology is specifically an artefact of
   the linear-Gaussian basis. If they show the same bias, the problem is

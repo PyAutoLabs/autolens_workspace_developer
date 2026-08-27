@@ -212,7 +212,7 @@ the within-mask, lensed flux nearly unchanged).
    source-side or whether it needs an explicit decoupling of the two
    basis sets.
 
-4. **Test 5 — pixelization sources** (`RectangularAdaptImage`,
+4. **Test 5 — pixelization sources** (`RectangularBilinearAdaptImage`,
    `Delaunay`) on the no-lens-light dataset first, then on the
    with-lens-light dataset. Tests whether the pathology generalises
    beyond MGE.

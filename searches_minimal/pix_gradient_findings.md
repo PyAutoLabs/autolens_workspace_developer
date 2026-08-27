@@ -13,10 +13,10 @@ This is already **certified** in
 ALL parameters (incl. lens mass + shear). Re-run 2026-07-14 confirms:
 
 - `RectangularUniform` (os_pix=1): autodiff = FD on all params (7 sig figs).
-- `RectangularAdaptImage` + `reg.Adapt` + adapt images + border relocator
+- `RectangularBilinearAdaptImage` + `reg.Adapt` + adapt images + border relocator
   (**os_pix=4**): all gradients live and FD-matched (5%).
-- `RectangularAdaptDensity` (**os_pix=4**): all gradients live and FD-matched.
-- `RectangularKernelAdaptDensity` / `RectangularKernelAdaptImage`
+- `RectangularBilinearAdaptDensity` (**os_pix=4**): all gradients live and FD-matched.
+- `RectangularRTUAdaptDensity` / `RectangularRTUAdaptImage`
   (`bandwidth=0.1`): C^inf continuous-density transform, **strict FD on ALL
   params including mass/shear even at os_pix=1** — the meshes built precisely for
   gradient inference.
@@ -33,7 +33,7 @@ probe, not the library:
    (differentiable at os_pix=1).
 2. **Wrong mesh.** I tested `SplineAdaptDensity` / `SplineAdaptImage`. The
    certified differentiable meshes are the **kernel-CDF** ones
-   (`RectangularKernelAdapt*`) and adaptive-at-os_pix=4.
+   (`RectangularRTUAdapt*`) and adaptive-at-os_pix=4.
 3. **Garbage evaluation points.** Broad `UniformPrior`s → random near-median
    points with logL ~ -5e5 (source arcs miss the mesh). The certified harness
    uses **truth-centred `GaussianPrior`s** so the arcs land on the mesh and every
@@ -46,9 +46,9 @@ probe, not the library:
 
 Build the pixelized objective mirroring the certified harness:
 
-- Mesh: **`RectangularKernelAdaptDensity(shape, bandwidth=0.1)`** (simplest,
+- Mesh: **`RectangularRTUAdaptDensity(shape, bandwidth=0.1)`** (simplest,
   differentiable at os_pix=1, no adapt image) — or the production
-  `RectangularKernelAdaptImage` + `reg.Adapt` + `AdaptImages` + os_pix=4 +
+  `RectangularRTUAdaptImage` + `reg.Adapt` + `AdaptImages` + os_pix=4 +
   `al.Settings(use_border_relocator=True, use_positive_only_solver=True)`.
 - **`dataset.apply_over_sampling(over_sample_size_lp=4, over_sample_size_pixelization=…)`**
   (1 for kernel-CDF, 4 for adaptive).
