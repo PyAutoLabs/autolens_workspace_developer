@@ -183,7 +183,7 @@ with timer.section("mask_and_oversample"):
 
     over_sample_size = al.util.over_sample.over_sample_size_via_radial_bins_from(
         grid=dataset.grid,
-        sub_size_list=[4, 2, 1],
+        sub_size_list=[4, 2, 2],
         radial_list=[0.3, 0.6],
         centre_list=[(0.0, 0.0)],
     )
@@ -1172,6 +1172,7 @@ print(f"  Bar chart saved to:    {chart_path}")
 # If you switch the mesh above to RectangularRTUAdaptDensity, the expected value
 # becomes 26903.317185248623 (kernel-CDF, measured 2026-08-26 with #490; it was
 # 25004.71903495436 before that fix).
+# lp bins [4,2,2] since 2026-09-08 (autolens_profiling#235); expected value not re-measured
 EXPECTED_LOG_EVIDENCE_HST = (
     26927.750842071207  # 35x35 = 1225 source pixels, MGE-60 lens light
 )
@@ -1181,6 +1182,7 @@ EXPECTED_LOG_EVIDENCE_HST = (
 # lands on differs slightly from the fitted one, which moves the evidence by
 # ~1.5e-3 relative. That is a property of the non-negative solve, not a bug, so
 # it gets its own (looser) pin rather than being silently printed.
+# lp bins [4,2,2] since 2026-09-08 (autolens_profiling#235); expected value not re-measured
 EXPECTED_LOG_EVIDENCE_HST_STEP_BY_STEP = 26965.86747641576
 
 np.testing.assert_allclose(

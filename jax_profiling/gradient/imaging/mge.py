@@ -178,7 +178,7 @@ dataset = dataset.apply_over_sampling(over_sample_size_lp=4)
 
 over_sample_size = al.util.over_sample.over_sample_size_via_radial_bins_from(
     grid=dataset.grid,
-    sub_size_list=[4, 2, 1],
+    sub_size_list=[4, 2, 2],
     radial_list=[0.3, 0.6],
     centre_list=[(0.0, 0.0)],
 )
@@ -258,6 +258,7 @@ log_likelihood_ref = fit.log_likelihood
 
 print(f"  log_likelihood = {log_likelihood_ref}")
 
+# lp bins [4,2,2] since 2026-09-08 (autolens_profiling#235); expected value not re-measured
 EXPECTED_LOG_LIKELIHOOD_HST = -21422.287038200637
 
 np.testing.assert_allclose(

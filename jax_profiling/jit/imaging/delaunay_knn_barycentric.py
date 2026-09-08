@@ -205,7 +205,7 @@ with timer.section("mask_and_oversample"):
 
     over_sample_size = al.util.over_sample.over_sample_size_via_radial_bins_from(
         grid=dataset.grid,
-        sub_size_list=[4, 2, 1],
+        sub_size_list=[4, 2, 2],
         radial_list=[0.3, 0.6],
         centre_list=[(0.0, 0.0)],
     )
@@ -1189,6 +1189,7 @@ print(f"  Bar chart saved to:    {chart_path}")
 # but not asserted, so future invocations of the script remain informative
 # even though the verdict is already settled.
 
+# lp bins [4,2,2] since 2026-09-08 (autolens_profiling#235); expected value not re-measured
 EXPECTED_KNNBARY_LOG_EVIDENCE_HST = 26872.328684558823  # observed 2026-05-16
 DELAUNAY_HST_REFERENCE = (
     26288.321397232066  # Delaunay value at same fiducial (from delaunay.py)

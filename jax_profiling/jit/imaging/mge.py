@@ -198,7 +198,7 @@ with timer.section("mask_and_oversample"):
 
     over_sample_size = al.util.over_sample.over_sample_size_via_radial_bins_from(
         grid=dataset.grid,
-        sub_size_list=[4, 2, 1],
+        sub_size_list=[4, 2, 2],
         radial_list=[0.3, 0.6],
         centre_list=[(0.0, 0.0)],
     )
@@ -850,6 +850,7 @@ print(f"  Bar chart saved to:    {chart_path}")
 # default centre/ell_comps priors) put the evaluation point at the
 # physically-meaningful truth operating point. Eager, JIT, and vmap all
 # agree to ~1e-11 precision.
+# lp bins [4,2,2] since 2026-09-08 (autolens_profiling#235); expected value not re-measured
 EXPECTED_LOG_LIKELIHOOD_HST = 27379.38890685539
 
 np.testing.assert_allclose(
