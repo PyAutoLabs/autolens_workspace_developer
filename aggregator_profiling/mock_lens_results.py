@@ -11,8 +11,8 @@ bypass (`PYAUTO_TEST_MODE=2` + `PYAUTO_TEST_MODE_SAMPLES=N`, PyAutoFit#1381), so
 every file — including a `samples.csv` whose row count and byte size are
 representative of a production run — is produced by the canonical library write
 path. The template is then stamped `n_results` times with `shutil.copytree`,
-giving each copy a unique `dataset_name` metadata entry and `unique_tag` in its
-`search.json` — mirroring the autofit harness
+giving each copy a unique `unique_tag` in its `files/search.json` — mirroring the
+autofit harness
 (`autofit_workspace_test/scripts/profiling/aggregator/mock_results.py`).
 
 Run from the `autolens_workspace_developer` root, e.g.:
@@ -79,7 +79,8 @@ def test_mode_bypass(n_samples: int):
 def write_template(root: Path, n_samples: int) -> Path:
     """
     Write one full lens search-output directory via a test-mode bypass fit and
-    return the leaf directory (the one containing the `metadata` file).
+    return the leaf directory (the one containing the `files/search.json` that
+    `Aggregator.from_directory` discovers results by).
     """
     conf.instance.push(new_path="config", output_path=str(root))
 
@@ -91,8 +92,8 @@ def write_template(root: Path, n_samples: int) -> Path:
     model = model_from()
     analysis = fixtures.make_analysis_imaging_7x7()
 
-    # A stale template would append duplicate metadata lines (the file is opened in
-    # append mode), so remove any previous template for this config first.
+    # A stale template from an earlier configuration would be resumed rather than
+    # rewritten by the fit below, so remove any previous template for this config first.
     for candidate in (
         root / "test_mode" / "_template" / f"s{n_samples}",
         root / "_template" / f"s{n_samples}",
@@ -113,8 +114,8 @@ def write_template(root: Path, n_samples: int) -> Path:
 
 def stamp_results(template_leaf: Path, results_root: Path, n_results: int):
     """
-    Copy the template `n_results` times, each copy distinguishable by metadata
-    `dataset_name` and by `unique_tag` in its search.json (the identifier input).
+    Copy the template `n_results` times, each copy distinguishable by the
+    `unique_tag` in its `files/search.json` (the identifier input).
     """
     search_json_path = template_leaf / "files" / "search.json"
     search_dict = json.loads(search_json_path.read_text())
@@ -123,8 +124,6 @@ def stamp_results(template_leaf: Path, results_root: Path, n_results: int):
         dataset_name = f"dataset_{i:04d}"
         destination = results_root / dataset_name / "fit"
         shutil.copytree(template_leaf, destination)
-        with open(destination / "metadata", "a") as f:
-            f.write(f"\ndataset_name={dataset_name}")
         search_dict["arguments"]["unique_tag"] = dataset_name
         (destination / "files" / "search.json").write_text(json.dumps(search_dict))
 
