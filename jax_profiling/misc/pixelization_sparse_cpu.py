@@ -168,7 +168,7 @@ with timer.section("mask_and_oversample"):
 
     over_sample_size = al.util.over_sample.over_sample_size_via_radial_bins_from(
         grid=dataset.grid,
-        sub_size_list=[4, 2, 1],
+        sub_size_list=[4, 2, 2],
         radial_list=[0.3, 0.6],
         centre_list=[(0.0, 0.0)],
     )
@@ -352,6 +352,7 @@ print(f"  log_likelihood = {log_likelihood_sparse}")
 # sparse-operator) returned that value bit-identically on each leg, so the
 # sparse-vs-non-sparse assertion below is unaffected by the change.
 
+# lp bins [4,2,2] since 2026-09-08 (autolens_profiling#235); expected value not re-measured
 EXPECTED_LOG_EVIDENCE_HST = 29030.638937466174
 
 # --- Three-way comparison ----------------------------------------------------

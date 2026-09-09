@@ -190,7 +190,7 @@ dataset = dataset.apply_over_sampling(
 
 over_sample_size = al.util.over_sample.over_sample_size_via_radial_bins_from(
     grid=dataset.grid,
-    sub_size_list=[4, 2, 1],
+    sub_size_list=[4, 2, 2],
     radial_list=[0.3, 0.6],
     centre_list=[(0.0, 0.0)],
 )
@@ -323,6 +323,7 @@ print(f"  log_likelihood = {log_likelihood_ref}")
 # Reference value for the perturbed-params setup (PRNGKey(42), uniform 0.01-0.05).
 # Differs from delaunay.py's +29179.95 (un-perturbed prior medians) — same
 # pattern as pixelization_gradients.py vs pixelization.py.
+# lp bins [4,2,2] since 2026-09-08 (autolens_profiling#235); expected value not re-measured
 EXPECTED_LOG_EVIDENCE_HST = -62305.31055677842
 
 np.testing.assert_allclose(
