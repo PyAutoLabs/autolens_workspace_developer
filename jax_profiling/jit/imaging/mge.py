@@ -850,8 +850,11 @@ print(f"  Bar chart saved to:    {chart_path}")
 # default centre/ell_comps priors) put the evaluation point at the
 # physically-meaningful truth operating point. Eager, JIT, and vmap all
 # agree to ~1e-11 precision.
-# lp bins [4,2,2] since 2026-09-08 (autolens_profiling#235); expected value not re-measured
-EXPECTED_LOG_LIKELIHOOD_HST = 27379.38890685539
+# lp bins [4,2,2] since 2026-09-08 (autolens_profiling#235). Re-measured and
+# re-pinned 2026-09-09 against PyAutoLens 7d1b04d / PyAutoArray 35aa681: the
+# bins change moved the likelihood by 2.3e-4 relative, from the [4,2,1] value
+# 27379.38890685539, which is outside this block's rtol=1e-4.
+EXPECTED_LOG_LIKELIHOOD_HST = 27373.152646517716
 
 np.testing.assert_allclose(
     log_likelihood_ref,
