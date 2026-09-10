@@ -19,6 +19,8 @@ Run from the workspace root:  python -m searches_minimal.sv_cmaes
 Requirements: evosax (JAX-native).
 """
 
+from autolens import jax_wrapper  # noqa: F401 — must be first
+
 import dataclasses
 import time
 

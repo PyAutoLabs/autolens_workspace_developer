@@ -27,6 +27,8 @@ Requirements:
     pip install pocomc
 """
 
+from autolens import jax_wrapper  # noqa: F401 — must be first
+
 import os
 
 # JAX preallocates 75% of GPU memory by default; PocoMC trains a Zuko

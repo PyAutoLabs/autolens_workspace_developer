@@ -33,6 +33,8 @@ Default model-fit scripts elsewhere in the workspace leave both flags at
 ``False`` and are therefore untouched by this change.
 """
 
+from autolens import jax_wrapper  # noqa: F401 — must be first
+
 import shutil
 import time
 from pathlib import Path

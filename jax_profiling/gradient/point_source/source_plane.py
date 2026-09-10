@@ -56,6 +56,8 @@ probes -- it confirms both the forward-JIT and gradient paths are usable
 for the source-plane likelihood.
 """
 
+from autolens import jax_wrapper  # noqa: F401 — must be first
+
 import numpy as np
 import jax
 import jax.numpy as jnp

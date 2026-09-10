@@ -87,6 +87,8 @@ require a different graph shape and isn't the bottleneck we care about for
 the shared-``Lᵀ W̃ L`` optimisation.
 """
 
+from autolens import jax_wrapper  # noqa: F401 — must be first
+
 import numpy as np
 import jax
 import jax.numpy as jnp

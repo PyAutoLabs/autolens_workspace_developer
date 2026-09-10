@@ -21,6 +21,8 @@ the 6 GB ceiling is irrelevant; locally, drop ``c7_more_particles`` if
 you hit OOM and want to keep the rest of the sweep going.
 """
 
+from autolens import jax_wrapper  # noqa: F401 — must be first
+
 import csv
 import sys
 import time

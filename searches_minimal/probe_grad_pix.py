@@ -30,6 +30,8 @@ Isothermal einstein_radius=1.6, centre=(0,0), q=0.9/45deg; shear=(0.05, 0.05).
 
 from __future__ import annotations
 
+from autolens import jax_wrapper  # noqa: F401 — must be first
+
 import numpy as np
 import jax
 

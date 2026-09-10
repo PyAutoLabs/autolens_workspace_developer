@@ -24,6 +24,8 @@ convolved with the PSF. This operated light profile is then fitted directly to t
 discussed above shows the PSF features.
 """
 
+from autolens import jax_wrapper  # noqa: F401 — must be first
+
 # %matplotlib inline
 # from pyprojroot import here
 # workspace_path = str(here())

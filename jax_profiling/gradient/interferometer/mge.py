@@ -12,6 +12,8 @@ per-step bodies swap PSF-blurring for NUFFT/DFT visibility transforms and
 work in complex visibility space for D, F, residuals, and the log likelihood.
 """
 
+from autolens import jax_wrapper  # noqa: F401 — must be first
+
 import numpy as np
 import jax
 import jax.numpy as jnp

@@ -16,6 +16,8 @@ Final verdict line is one of:
   OK_HMC_VIABLE   WARN_ILL_CONDITIONED   FAIL_NAN_OR_INF   FAIL_FD_MISMATCH
 """
 
+from autolens import jax_wrapper  # noqa: F401 — must be first
+
 import sys
 import time
 from pathlib import Path

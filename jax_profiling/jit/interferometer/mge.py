@@ -39,6 +39,8 @@ registration (``autofit.jax.register_model``). This matches the pattern in
 support landed in PyAutoFit#1222.
 """
 
+from autolens import jax_wrapper  # noqa: F401 — must be first
+
 import numpy as np
 import jax
 import jax.numpy as jnp

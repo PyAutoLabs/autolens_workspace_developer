@@ -64,6 +64,8 @@ certification of the rule lives in
 quantizes at ``pixel_scale_precision``, so naive FD reads a staircase).
 """
 
+from autolens import jax_wrapper  # noqa: F401 — must be first
+
 import numpy as np
 import jax
 import jax.numpy as jnp

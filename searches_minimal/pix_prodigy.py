@@ -43,6 +43,8 @@ Env: ``PIX_MESH`` (rectangular), ``PIX_N_STARTS`` (16), ``PIX_N_STEPS`` (300),
 
 from __future__ import annotations
 
+from autolens import jax_wrapper  # noqa: F401 — must be first
+
 from datetime import datetime, timezone
 import json
 import os

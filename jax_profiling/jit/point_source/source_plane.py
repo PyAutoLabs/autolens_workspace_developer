@@ -19,6 +19,8 @@ pytree registration (``autofit.jax.register_model``, PR #1220 / #1221 / #1222).
 The JIT'd closure consumes the registered instance directly.
 """
 
+from autolens import jax_wrapper  # noqa: F401 — must be first
+
 import json
 import time
 import subprocess

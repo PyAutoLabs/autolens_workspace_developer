@@ -18,6 +18,8 @@ JAX nor PyTorch necessarily releases memory cleanly between configs. The
 6 GB card; lower-resource configs work locally.
 """
 
+from autolens import jax_wrapper  # noqa: F401 — must be first
+
 import os
 
 # Cap JAX VRAM at 50% so PyTorch (Zuko flow) has headroom on small cards.

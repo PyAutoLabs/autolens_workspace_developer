@@ -31,6 +31,8 @@ for identifying which step dominates.
 All JAX timings use `block_until_ready()` to force synchronous measurement.
 """
 
+from autolens import jax_wrapper  # noqa: F401 — must be first
+
 import numpy as np
 import jax
 import jax.numpy as jnp
