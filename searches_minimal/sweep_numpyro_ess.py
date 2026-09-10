@@ -19,6 +19,8 @@ config (n_chains=128) is HPC-targeted and may OOM on a 6 GB card; lower-
 chain configs work locally.
 """
 
+from autolens import jax_wrapper  # noqa: F401 — must be first
+
 import csv
 import sys
 import time

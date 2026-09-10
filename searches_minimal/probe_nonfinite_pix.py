@@ -76,6 +76,8 @@ mirror ``lr_free_multistart``'s broad band).
 
 from __future__ import annotations
 
+from autolens import jax_wrapper  # noqa: F401 — must be first
+
 import argparse
 import os
 import time

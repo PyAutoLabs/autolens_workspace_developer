@@ -44,6 +44,8 @@ Env overrides: ``MULTISTART_N_STARTS`` (default 12), ``MULTISTART_N_STEPS``
 Requirements: optax >= 0.2.5 (contrib rules).
 """
 
+from autolens import jax_wrapper  # noqa: F401 — must be first
+
 import os
 import sys
 import time

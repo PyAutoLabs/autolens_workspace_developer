@@ -11,6 +11,8 @@ interpolator is differentiable. If it is ~1e-20, the gradient chain is
 broken somewhere inside the mapper/interpolator path.
 """
 
+from autolens import jax_wrapper  # noqa: F401 — must be first
+
 import numpy as np
 import jax
 import jax.numpy as jnp

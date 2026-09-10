@@ -19,6 +19,8 @@ Run from the workspace root:
 Requirements: optax (JAX).
 """
 
+from autolens import jax_wrapper  # noqa: F401 — must be first
+
 import time
 
 import numpy as np

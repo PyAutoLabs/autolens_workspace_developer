@@ -35,6 +35,8 @@ Usage
 
 from __future__ import annotations
 
+from autolens import jax_wrapper  # noqa: F401 — must be first
+
 import time
 from dataclasses import dataclass
 from pathlib import Path

@@ -20,6 +20,8 @@ Run from the workspace root:  python -m searches_minimal.svgd
 Requirements: blackjax, optax (JAX).
 """
 
+from autolens import jax_wrapper  # noqa: F401 — must be first
+
 import time
 
 import numpy as np

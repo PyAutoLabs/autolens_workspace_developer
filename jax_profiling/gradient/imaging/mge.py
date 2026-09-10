@@ -21,6 +21,8 @@ Run from this directory:
     python mge_gradients.py
 """
 
+from autolens import jax_wrapper  # noqa: F401 — must be first
+
 import numpy as np
 import jax
 import jax.numpy as jnp

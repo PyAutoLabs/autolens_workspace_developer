@@ -43,6 +43,8 @@ registration (``autofit.jax.register_model``). Exercises the ``TuplePrior``
 pytree support landed in PyAutoFit#1222.
 """
 
+from autolens import jax_wrapper  # noqa: F401 — must be first
+
 import numpy as np
 import jax
 import jax.numpy as jnp

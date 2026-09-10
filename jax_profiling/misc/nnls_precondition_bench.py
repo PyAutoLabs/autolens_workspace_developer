@@ -8,6 +8,8 @@ JIT-compiled and warmed up before timing. Reports (a) single-solve time,
 `_build_Q_q` pipeline.
 """
 
+from autolens import jax_wrapper  # noqa: F401 — must be first
+
 import time
 import numpy as np
 import jax

@@ -29,6 +29,8 @@ Run:  MULTISTART_N_STARTS=128 python -m searches_minimal.jaxopt_gaussnewton_mult
 Requirements: jaxopt (JAX).
 """
 
+from autolens import jax_wrapper  # noqa: F401 — must be first
+
 import os
 
 import jax

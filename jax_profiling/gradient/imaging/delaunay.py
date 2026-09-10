@@ -55,6 +55,8 @@ Current result on main (PyAutoArray @ 4ea58e1a)
   the Delaunay JVP is added it should run normally.
 """
 
+from autolens import jax_wrapper  # noqa: F401 — must be first
+
 import numpy as np
 import jax
 import jax.numpy as jnp

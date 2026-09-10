@@ -28,6 +28,8 @@ Requirements:
     pip install blackjax
 """
 
+from autolens import jax_wrapper  # noqa: F401 — must be first
+
 import time
 from pathlib import Path
 

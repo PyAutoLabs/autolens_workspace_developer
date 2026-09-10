@@ -13,12 +13,18 @@ Uses the same shared unconstrained z-parameterization and start generation as th
 gradient optimizers, so the only difference from a scaled-down A100 Adam run is
 the precision and the device.
 
-Run from the workspace root (x64 forced on):
+Run from the workspace root:
 
-    JAX_ENABLE_X64=1 python -m searches_minimal.float64_validation
+    python -m searches_minimal.float64_validation
+
+x64 no longer has to be forced on the command line: the ``jax_wrapper`` import
+at the top of this file sets ``JAX_ENABLE_X64`` before JAX is imported. Setting
+it explicitly as well is still valid and still does what it says.
 
 Requirements: optax (JAX).
 """
+
+from autolens import jax_wrapper  # noqa: F401 — must be first
 
 import os
 import time

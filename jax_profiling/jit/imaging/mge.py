@@ -49,6 +49,8 @@ New profiling scripts should follow this pattern. The flat-vector path in
 production likelihood entry point and is intentionally untouched here.
 """
 
+from autolens import jax_wrapper  # noqa: F401 — must be first
+
 import numpy as np
 import jax
 import jax.numpy as jnp

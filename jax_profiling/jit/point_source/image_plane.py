@@ -44,6 +44,8 @@ Three-tier numerical assertions
    bit-stable.
 """
 
+from autolens import jax_wrapper  # noqa: F401 — must be first
+
 import json
 import time
 import subprocess

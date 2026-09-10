@@ -28,6 +28,8 @@ Run from the workspace root:
 Requirements: numpyro, optax (JAX).
 """
 
+from autolens import jax_wrapper  # noqa: F401 — must be first
+
 import time
 from pathlib import Path
 

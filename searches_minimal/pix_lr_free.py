@@ -29,6 +29,8 @@ Usage (from the workspace root; defaults: all rules, 16 starts, batch 4)::
 Env: ``PIX_N_STARTS`` (16), ``PIX_N_STEPS`` (300), ``PIX_BATCH`` (4).
 """
 
+from autolens import jax_wrapper  # noqa: F401 — must be first
+
 import os
 import sys
 import time

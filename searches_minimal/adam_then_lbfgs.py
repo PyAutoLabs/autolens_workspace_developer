@@ -22,6 +22,8 @@ Run on the A100:
 Requirements: optax + jaxopt (JAX).
 """
 
+from autolens import jax_wrapper  # noqa: F401 — must be first
+
 import os
 import time
 
