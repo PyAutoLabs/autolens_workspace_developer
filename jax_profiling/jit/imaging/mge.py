@@ -238,7 +238,8 @@ with timer.section("model_build"):
     shear.gamma_1 = 0.05
     shear.gamma_2 = 0.05
 
-    lens = af.Model(al.Galaxy, redshift=0.5, bulge=lens_bulge, mass=mass, shear=shear)
+    lens = af.Model(al.Galaxy, redshift=0.5, bulge=lens_bulge, mass=mass)
+    field = af.Model(al.MassField, redshift=0.5, shear=shear)
 
     source_bulge = al.model_util.mge_model_from(
         mask_radius=mask_radius, total_gaussians=20, centre_prior_is_uniform=False
@@ -246,7 +247,7 @@ with timer.section("model_build"):
 
     source = af.Model(al.Galaxy, redshift=1.0, bulge=source_bulge)
 
-    model = af.Collection(galaxies=af.Collection(lens=lens, source=source))
+    model = af.Collection(galaxies=af.Collection(lens=lens, source=source), fields=field)
 
 print(f"  Total free parameters: {model.total_free_parameters}")
 
@@ -272,7 +273,7 @@ with timer.section("register_pytrees"):
 # non-JIT setup that needs to read parameter values directly.
 params_tree = jax.tree_util.tree_map(jnp.asarray, instance)
 
-tracer = al.Tracer(galaxies=list(instance.galaxies))
+tracer = al.Tracer(galaxies=list(instance.galaxies), fields=[instance.fields])
 
 print(f"  Tracer planes: {tracer.total_planes}")
 
@@ -397,7 +398,7 @@ def mapping_matrix_from_params(params_tree):
     No flat-vector unpacking inside the trace: ``params_tree`` is the
     structured instance directly (registered as a JAX pytree above).
     """
-    t = al.Tracer(galaxies=list(params_tree.galaxies))
+    t = al.Tracer(galaxies=list(params_tree.galaxies), fields=[params_tree.fields])
     tti = al.TracerToInversion(
         dataset=aa.DatasetInterface(
             data=fit.profile_subtracted_image,
@@ -441,7 +442,7 @@ print(f"  blurred_mapping_matrix shape: {blurred_mapping_matrix.shape}")
 
 def blurred_mm_from_params(params_tree):
     """Compute blurred mapping matrix from a pytree-shaped ``ModelInstance``."""
-    t = al.Tracer(galaxies=list(params_tree.galaxies))
+    t = al.Tracer(galaxies=list(params_tree.galaxies), fields=[params_tree.fields])
     tti = al.TracerToInversion(
         dataset=aa.DatasetInterface(
             data=fit.profile_subtracted_image,

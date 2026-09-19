@@ -90,14 +90,15 @@ shear = af.Model(al.mp.ExternalShear)
 shear.gamma_1 = af.GaussianPrior(mean=0.05, sigma=0.005)
 shear.gamma_2 = af.GaussianPrior(mean=0.05, sigma=0.005)
 
-lens = af.Model(al.Galaxy, redshift=0.5, bulge=lens_bulge, mass=mass, shear=shear)
+lens = af.Model(al.Galaxy, redshift=0.5, bulge=lens_bulge, mass=mass)
+field = af.Model(al.MassField, redshift=0.5, shear=shear)
 
 source_bulge = al.model_util.mge_model_from(
     mask_radius=mask_radius, total_gaussians=20, centre_prior_is_uniform=False
 )
 
 source = af.Model(al.Galaxy, redshift=1.0, bulge=source_bulge)
-model = af.Collection(galaxies=af.Collection(lens=lens, source=source))
+model = af.Collection(galaxies=af.Collection(lens=lens, source=source), fields=field)
 
 jnp_params = jnp.array(model.physical_values_from_prior_medians)
 key = jax.random.PRNGKey(42)
@@ -105,7 +106,7 @@ perturbation = jax.random.uniform(key, shape=jnp_params.shape, minval=0.01, maxv
 jnp_params = jnp_params + perturbation
 
 instance = model.instance_from_vector(vector=jnp_params)
-tracer = al.Tracer(galaxies=list(instance.galaxies))
+tracer = al.Tracer(galaxies=list(instance.galaxies), fields=[instance.fields])
 fit = al.FitImaging(
     dataset=dataset,
     tracer=tracer,
@@ -118,7 +119,7 @@ noise_map_array = jnp.array(dataset.noise_map.array)
 
 def _build_Q_q(params):
     inst = model.instance_from_vector(vector=params, xp=jnp)
-    t = al.Tracer(galaxies=list(inst.galaxies))
+    t = al.Tracer(galaxies=list(inst.galaxies), fields=[inst.fields])
     tti = al.TracerToInversion(
         dataset=aa.DatasetInterface(
             data=fit.profile_subtracted_image,

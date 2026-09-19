@@ -189,8 +189,8 @@ lens = af.Model(
     al.Galaxy,
     redshift=0.5,
     mass=mass,
-    shear=shear,
 )
+field = af.Model(al.MassField, redshift=0.5, shear=shear)
 
 # Source:
 
@@ -212,7 +212,7 @@ source = af.Model(al.Galaxy, redshift=1.0, pixelization=pixelization)
 
 # Overall Lens Model:
 
-model = af.Collection(galaxies=af.Collection(lens=lens, source=source))
+model = af.Collection(galaxies=af.Collection(lens=lens, source=source), fields=field)
 
 galaxy_name_image_dict = {
     "('galaxies', 'lens')": dataset.data,

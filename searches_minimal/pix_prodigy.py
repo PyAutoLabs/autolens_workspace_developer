@@ -311,8 +311,8 @@ def truth_bar() -> None:
     model.galaxies.lens.mass.centre = (0.0, 0.0)
     model.galaxies.lens.mass.ell_comps = TRUTH_MASS_ELL
     model.galaxies.lens.mass.einstein_radius = TRUTH_EINSTEIN_RADIUS
-    model.galaxies.lens.shear.gamma_1 = TRUTH_SHEAR[0]
-    model.galaxies.lens.shear.gamma_2 = TRUTH_SHEAR[1]
+    model.fields.shear.gamma_1 = TRUTH_SHEAR[0]
+    model.fields.shear.gamma_2 = TRUTH_SHEAR[1]
     print(f"truth-bar: mesh={PIX_MESH}  free reg params={model.prior_count}")
 
     coefficients = np.logspace(-2, 4, 13)
@@ -413,7 +413,7 @@ def report(rule: str, result, wall: float, analysis, model) -> None:
                 break
 
     mass = instance.galaxies.lens.mass
-    shear = instance.galaxies.lens.shear
+    shear = instance.fields.shear
     recovered = {
         "centre": [float(value) for value in mass.centre],
         "ell_comps": [float(value) for value in mass.ell_comps],

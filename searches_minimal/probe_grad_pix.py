@@ -69,8 +69,9 @@ def build_pix_model(mesh_shape: tuple[int, int] = (30, 30)) -> af.Collection:
     shear.gamma_2 = af.GaussianPrior(mean=0.05, sigma=0.005)
 
     lens = af.Model(
-        al.Galaxy, redshift=0.5, bulge=lens_bulge, mass=mass, shear=shear
+        al.Galaxy, redshift=0.5, bulge=lens_bulge, mass=mass
     )
+    field = af.Model(al.MassField, redshift=0.5, shear=shear)
 
     pixelization = af.Model(
         al.Pixelization,
@@ -80,7 +81,7 @@ def build_pix_model(mesh_shape: tuple[int, int] = (30, 30)) -> af.Collection:
     pixelization.regularization.coefficient = af.GaussianPrior(mean=1.0, sigma=0.1)
     source = af.Model(al.Galaxy, redshift=1.0, pixelization=pixelization)
 
-    return af.Collection(galaxies=af.Collection(lens=lens, source=source))
+    return af.Collection(galaxies=af.Collection(lens=lens, source=source), fields=field)
 
 
 def build_probe_analysis(dataset):

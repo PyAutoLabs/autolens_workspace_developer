@@ -256,7 +256,9 @@ lens_galaxy = al.Galaxy(
         slope=2.264,
         einstein_radius=1.6,
     ),
-    shear=al.mp.ExternalShear(gamma_1=0.0, gamma_2=0.0),
+)
+field = al.MassField(
+    redshift=z_lens, shear=al.mp.ExternalShear(gamma_1=0.0, gamma_2=0.0)
 )
 
 source_galaxy = al.Galaxy(
@@ -273,7 +275,7 @@ source_galaxy = al.Galaxy(
 
 all_galaxies = los_galaxies + [lens_galaxy, source_galaxy]
 
-tracer = al.Tracer(galaxies=all_galaxies)
+tracer = al.Tracer(galaxies=all_galaxies, fields=[field])
 
 """
 We can plot the tracer's image to see the combined lensing effect of the main lens

@@ -203,7 +203,8 @@ with timer.section("model_build"):
     shear.gamma_1 = af.GaussianPrior(mean=0.05, sigma=0.005)
     shear.gamma_2 = af.GaussianPrior(mean=0.05, sigma=0.005)
 
-    lens = af.Model(al.Galaxy, redshift=0.5, mass=mass, shear=shear)
+    lens = af.Model(al.Galaxy, redshift=0.5, mass=mass)
+    field = af.Model(al.MassField, redshift=0.5, shear=shear)
 
     pixelization = af.Model(
         al.Pixelization,
@@ -213,7 +214,7 @@ with timer.section("model_build"):
 
     source = af.Model(al.Galaxy, redshift=1.0, pixelization=pixelization)
 
-    model = af.Collection(galaxies=af.Collection(lens=lens, source=source))
+    model = af.Collection(galaxies=af.Collection(lens=lens, source=source), fields=field)
 
 print(f"  Total free parameters: {model.total_free_parameters}")
 
@@ -235,7 +236,7 @@ with timer.section("register_pytrees"):
 # baseline below.
 params_tree = jax.tree_util.tree_map(jnp.asarray, instance)
 
-tracer = al.Tracer(galaxies=list(instance.galaxies))
+tracer = al.Tracer(galaxies=list(instance.galaxies), fields=[instance.fields])
 
 print(f"  Tracer planes: {tracer.total_planes}")
 
