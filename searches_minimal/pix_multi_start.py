@@ -187,7 +187,8 @@ def build_model() -> af.Collection:
     # Mass + shear: DEFAULT (broad) priors — the whole point of multi-start.
     mass = af.Model(al.mp.Isothermal)
     shear = af.Model(al.mp.ExternalShear)
-    lens = af.Model(al.Galaxy, redshift=0.5, bulge=lens_bulge, mass=mass, shear=shear)
+    lens = af.Model(al.Galaxy, redshift=0.5, bulge=lens_bulge, mass=mass)
+    field = af.Model(al.MassField, redshift=0.5, shear=shear)
 
     mesh, regularization = mesh_and_regularization()
     pixelization = af.Model(
@@ -197,7 +198,7 @@ def build_model() -> af.Collection:
     )
     source = af.Model(al.Galaxy, redshift=1.0, pixelization=pixelization)
 
-    return af.Collection(galaxies=af.Collection(lens=lens, source=source))
+    return af.Collection(galaxies=af.Collection(lens=lens, source=source), fields=field)
 
 
 def build_adapt_images(dataset) -> al.AdaptImages | None:

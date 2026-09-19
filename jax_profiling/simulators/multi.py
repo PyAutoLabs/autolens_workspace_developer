@@ -153,6 +153,9 @@ with timer.section("setup_galaxies"):
         einstein_radius=1.6,
         ell_comps=al.convert.ell_comps_from(axis_ratio=0.9, angle=45.0),
     )
+    field = al.MassField(
+        redshift=0.5, shear=al.mp.ExternalShear(gamma_1=0.05, gamma_2=0.05)
+    )
     lens_galaxy_list = [
         al.Galaxy(
             redshift=0.5,
@@ -164,7 +167,6 @@ with timer.section("setup_galaxies"):
                 sersic_index=4.0,
             ),
             mass=mass,
-            shear=al.mp.ExternalShear(gamma_1=0.05, gamma_2=0.05),
         )
         for intensity in intensity_list_lens
     ]
@@ -186,7 +188,7 @@ with timer.section("setup_galaxies"):
 
 with timer.section("setup_tracers"):
     tracer_list = [
-        al.Tracer(galaxies=[lens_galaxy, source_galaxy])
+        al.Tracer(galaxies=[lens_galaxy, source_galaxy], fields=[field])
         for lens_galaxy, source_galaxy in zip(lens_galaxy_list, source_galaxy_list)
     ]
 

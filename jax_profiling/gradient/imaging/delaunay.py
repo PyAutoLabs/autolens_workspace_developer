@@ -263,8 +263,8 @@ lens = af.Model(
     redshift=0.5,
     bulge=lens_bulge,
     mass=mass,
-    shear=shear,
 )
+field = af.Model(al.MassField, redshift=0.5, shear=shear)
 
 mesh = al.mesh.Delaunay(
     pixels=n_mesh_vertices,
@@ -276,7 +276,7 @@ pixelization = al.Pixelization(
 )
 source = af.Model(al.Galaxy, redshift=1.0, pixelization=pixelization)
 
-model = af.Collection(galaxies=af.Collection(lens=lens, source=source))
+model = af.Collection(galaxies=af.Collection(lens=lens, source=source), fields=field)
 
 print(f"  Total free parameters: {model.total_free_parameters}")
 print(f"  Delaunay pixels: {n_mesh_vertices}, edge zeroed: {edge_pixels_total}")
@@ -298,7 +298,7 @@ print(f"  param_vector shape: {jnp_params.shape}")
 print("\n--- Eager baseline ---")
 
 instance = model.instance_from_vector(vector=jnp_params)
-tracer = al.Tracer(galaxies=list(instance.galaxies))
+tracer = al.Tracer(galaxies=list(instance.galaxies), fields=[instance.fields])
 
 adapt_images = al.AdaptImages(
     galaxy_image_plane_mesh_grid_dict={
@@ -365,7 +365,7 @@ print("=" * 70)
 
 def step_ray_trace(params):
     inst = model.instance_from_vector(vector=params, xp=jnp)
-    t = al.Tracer(galaxies=list(inst.galaxies))
+    t = al.Tracer(galaxies=list(inst.galaxies), fields=[inst.fields])
     grid_raw = jnp.array(dataset.grids.pixelization.array)
     grid = aa.Grid2DIrregular(values=grid_raw, xp=jnp)
     traced = t.traced_grid_2d_list_from(grid=grid, xp=jnp)
@@ -382,7 +382,7 @@ test_grad("Step 1: Ray-trace grids", step_ray_trace, jnp_params)
 
 def step_blurred_image(params):
     inst = model.instance_from_vector(vector=params, xp=jnp)
-    t = al.Tracer(galaxies=list(inst.galaxies))
+    t = al.Tracer(galaxies=list(inst.galaxies), fields=[inst.fields])
     blurred = t.blurred_image_2d_from(
         grid=grid_lp,
         psf=dataset.psf,
@@ -402,7 +402,7 @@ test_grad("Step 2: Blurred lens light image", step_blurred_image, jnp_params)
 
 def step_profile_subtracted(params):
     inst = model.instance_from_vector(vector=params, xp=jnp)
-    t = al.Tracer(galaxies=list(inst.galaxies))
+    t = al.Tracer(galaxies=list(inst.galaxies), fields=[inst.fields])
     blurred = t.blurred_image_2d_from(
         grid=grid_lp,
         psf=dataset.psf,
@@ -428,7 +428,7 @@ test_grad("Step 3: Profile-subtracted image", step_profile_subtracted, jnp_param
 
 def _fit_jax(params):
     inst = model.instance_from_vector(vector=params, xp=jnp)
-    t = al.Tracer(galaxies=list(inst.galaxies))
+    t = al.Tracer(galaxies=list(inst.galaxies), fields=[inst.fields])
     adapt_images_jax = al.AdaptImages(
         galaxy_image_plane_mesh_grid_dict={
             inst.galaxies.source: image_plane_mesh_grid,
