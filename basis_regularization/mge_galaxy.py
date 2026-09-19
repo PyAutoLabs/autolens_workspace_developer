@@ -25,6 +25,7 @@ completeness and for the occasional overfit-mitigation experiment.
 
 import numpy as np
 from pathlib import Path
+from _repo_path import repo_path
 
 import autofit as af
 import autogalaxy as ag
@@ -39,9 +40,7 @@ the dataset has not been simulated yet, run:
     python autogalaxy_workspace/scripts/imaging/features/multi_gaussian_expansion/simulator.py
 """
 dataset_name = "asymmetric"
-dataset_path = (
-    Path("..") / "autogalaxy_workspace" / "dataset" / "imaging" / dataset_name
-)
+dataset_path = repo_path(Path(__file__).resolve().parents[1], "autogalaxy_workspace") / "dataset" / "imaging" / dataset_name
 
 dataset = ag.Imaging.from_fits(
     data_path=dataset_path / "data.fits",

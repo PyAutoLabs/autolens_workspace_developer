@@ -25,6 +25,7 @@ work). It is preserved here for completeness.
 
 import numpy as np
 from pathlib import Path
+from _repo_path import repo_path
 
 import autofit as af
 import autogalaxy as ag
@@ -37,9 +38,7 @@ Loads `simple__sersic` from the sibling autogalaxy_workspace. If the dataset
 has not been simulated yet, run the corresponding simulator there first.
 """
 dataset_name = "simple__sersic"
-dataset_path = (
-    Path("..") / "autogalaxy_workspace" / "dataset" / "imaging" / dataset_name
-)
+dataset_path = repo_path(Path(__file__).resolve().parents[1], "autogalaxy_workspace") / "dataset" / "imaging" / dataset_name
 
 dataset = ag.Imaging.from_fits(
     data_path=dataset_path / "data.fits",
