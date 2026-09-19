@@ -214,7 +214,8 @@ shear = af.Model(al.mp.ExternalShear)
 shear.gamma_1 = af.GaussianPrior(mean=0.05, sigma=0.005)
 shear.gamma_2 = af.GaussianPrior(mean=0.05, sigma=0.005)
 
-lens = af.Model(al.Galaxy, redshift=0.5, bulge=lens_bulge, mass=mass, shear=shear)
+lens = af.Model(al.Galaxy, redshift=0.5, bulge=lens_bulge, mass=mass)
+field = af.Model(al.MassField, redshift=0.5, shear=shear)
 
 source_bulge = al.model_util.mge_model_from(
     mask_radius=mask_radius, total_gaussians=20, centre_prior_is_uniform=False
@@ -222,7 +223,7 @@ source_bulge = al.model_util.mge_model_from(
 
 source = af.Model(al.Galaxy, redshift=1.0, bulge=source_bulge)
 
-model = af.Collection(galaxies=af.Collection(lens=lens, source=source))
+model = af.Collection(galaxies=af.Collection(lens=lens, source=source), fields=field)
 
 print(f"  Total free parameters: {model.total_free_parameters}")
 
@@ -248,7 +249,7 @@ print(f"  param_vector shape: {jnp_params.shape}")
 print("\n--- Eager baseline ---")
 
 instance = model.instance_from_vector(vector=jnp_params)
-tracer = al.Tracer(galaxies=list(instance.galaxies))
+tracer = al.Tracer(galaxies=list(instance.galaxies), fields=[instance.fields])
 
 fit = al.FitImaging(
     dataset=dataset,
@@ -306,7 +307,7 @@ print("=" * 70)
 
 
 def step_ray_trace(params):
-    t = al.Tracer(galaxies=list(params.galaxies))
+    t = al.Tracer(galaxies=list(params.galaxies), fields=[params.fields])
     grid_raw = jnp.array(grid_lp.array)
     grid = aa.Grid2DIrregular(values=grid_raw, xp=jnp)
     traced = t.traced_grid_2d_list_from(grid=grid, xp=jnp)
@@ -321,7 +322,7 @@ test_grad("Step 1: Ray-trace grids", step_ray_trace, params_tree)
 
 
 def step_mapping_matrix(params):
-    t = al.Tracer(galaxies=list(params.galaxies))
+    t = al.Tracer(galaxies=list(params.galaxies), fields=[params.fields])
     tti = al.TracerToInversion(
         dataset=aa.DatasetInterface(
             data=fit.profile_subtracted_image,
@@ -348,7 +349,7 @@ test_grad("Step 2: Mapping matrix", step_mapping_matrix, params_tree)
 
 
 def step_blurred_mapping_matrix(params):
-    t = al.Tracer(galaxies=list(params.galaxies))
+    t = al.Tracer(galaxies=list(params.galaxies), fields=[params.fields])
     tti = al.TracerToInversion(
         dataset=aa.DatasetInterface(
             data=fit.profile_subtracted_image,
@@ -375,7 +376,7 @@ test_grad("Step 3: Blurred mapping matrix", step_blurred_mapping_matrix, params_
 
 
 def step_data_vector(params):
-    t = al.Tracer(galaxies=list(params.galaxies))
+    t = al.Tracer(galaxies=list(params.galaxies), fields=[params.fields])
 
     tti = al.TracerToInversion(
         dataset=aa.DatasetInterface(
@@ -409,7 +410,7 @@ test_grad("Step 4: Data vector (D)", step_data_vector, params_tree)
 
 
 def step_curvature_matrix(params):
-    t = al.Tracer(galaxies=list(params.galaxies))
+    t = al.Tracer(galaxies=list(params.galaxies), fields=[params.fields])
     tti = al.TracerToInversion(
         dataset=aa.DatasetInterface(
             data=fit.profile_subtracted_image,
@@ -445,7 +446,7 @@ test_grad("Step 5: Curvature matrix (F)", step_curvature_matrix, params_tree)
 
 
 def step_reconstruction(params):
-    t = al.Tracer(galaxies=list(params.galaxies))
+    t = al.Tracer(galaxies=list(params.galaxies), fields=[params.fields])
 
     tti = al.TracerToInversion(
         dataset=aa.DatasetInterface(
@@ -494,7 +495,7 @@ test_grad("Step 6: Reconstruction (NNLS)", step_reconstruction, params_tree)
 
 
 def step_mapped_recon(params):
-    t = al.Tracer(galaxies=list(params.galaxies))
+    t = al.Tracer(galaxies=list(params.galaxies), fields=[params.fields])
 
     tti = al.TracerToInversion(
         dataset=aa.DatasetInterface(
@@ -549,7 +550,7 @@ test_grad("Step 7: Mapped reconstructed image", step_mapped_recon, params_tree)
 
 
 def step_log_likelihood(params):
-    t = al.Tracer(galaxies=list(params.galaxies))
+    t = al.Tracer(galaxies=list(params.galaxies), fields=[params.fields])
 
     tti = al.TracerToInversion(
         dataset=aa.DatasetInterface(
@@ -626,7 +627,7 @@ print("=" * 70)
 
 def _build_Q_q(params):
     """Rebuild (curvature_reg_matrix, data_vector) for the given params."""
-    t = al.Tracer(galaxies=list(params.galaxies))
+    t = al.Tracer(galaxies=list(params.galaxies), fields=[params.fields])
     tti = al.TracerToInversion(
         dataset=aa.DatasetInterface(
             data=fit.profile_subtracted_image,

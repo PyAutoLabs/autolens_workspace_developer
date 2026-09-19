@@ -83,12 +83,13 @@ def model_for(mesh):
     shear = af.Model(al.mp.ExternalShear)
     shear.gamma_1 = 0.0
     shear.gamma_2 = 0.0
-    lens = af.Model(al.Galaxy, redshift=0.5, mass=mass, shear=shear)
+    lens = af.Model(al.Galaxy, redshift=0.5, mass=mass)
+    field = af.Model(al.MassField, redshift=0.5, shear=shear)
     pixelization = al.Pixelization(
         mesh=mesh, regularization=al.reg.Constant(coefficient=1.0)
     )
     source = af.Model(al.Galaxy, redshift=1.0, pixelization=pixelization)
-    return af.Collection(galaxies=af.Collection(lens=lens, source=source))
+    return af.Collection(galaxies=af.Collection(lens=lens, source=source), fields=field)
 
 
 def fit_for(mesh):

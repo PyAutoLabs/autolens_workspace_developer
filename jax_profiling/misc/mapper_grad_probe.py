@@ -65,9 +65,10 @@ mass = al.mp.Isothermal(
     ell_comps=al.convert.ell_comps_from(axis_ratio=0.9, angle=45.0),
 )
 shear = al.mp.ExternalShear(gamma_1=0.05, gamma_2=0.05)
-lens = al.Galaxy(redshift=0.5, mass=mass, shear=shear)
+lens = al.Galaxy(redshift=0.5, mass=mass)
+field = al.MassField(redshift=0.5, shear=shear)
 source = al.Galaxy(redshift=1.0)
-tracer = al.Tracer(galaxies=[lens, source])
+tracer = al.Tracer(galaxies=[lens, source], fields=[field])
 
 traced = tracer.traced_grid_2d_list_from(grid=dataset.grids.pixelization, xp=jnp)
 src_grid = traced[-1]

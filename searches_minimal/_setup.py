@@ -81,7 +81,8 @@ def build_model(
     )
     mass = af.Model(al.mp.Isothermal)
     shear = af.Model(al.mp.ExternalShear)
-    lens = af.Model(al.Galaxy, redshift=0.5, bulge=lens_bulge, mass=mass, shear=shear)
+    lens = af.Model(al.Galaxy, redshift=0.5, bulge=lens_bulge, mass=mass)
+    field = af.Model(al.MassField, redshift=0.5, shear=shear)
 
     source_bulge = al.model_util.mge_model_from(
         mask_radius=mask_radius,
@@ -90,7 +91,7 @@ def build_model(
     )
     source = af.Model(al.Galaxy, redshift=1.0, bulge=source_bulge)
 
-    return af.Collection(galaxies=af.Collection(lens=lens, source=source))
+    return af.Collection(galaxies=af.Collection(lens=lens, source=source), fields=field)
 
 
 def build_analysis(dataset: al.Imaging, use_jax: bool = False) -> al.AnalysisImaging:
@@ -101,7 +102,7 @@ def build_analysis(dataset: al.Imaging, use_jax: bool = False) -> al.AnalysisIma
 def format_best_fit(instance) -> str:
     """Terse one-line summary of the lens mass + shear of a best-fit instance."""
     mass = instance.galaxies.lens.mass
-    shear = instance.galaxies.lens.shear
+    shear = instance.fields.shear
     return (
         f"lens.mass.einstein_radius={mass.einstein_radius:.4f}  "
         f"lens.mass.centre=({mass.centre[0]:.3f}, {mass.centre[1]:.3f})  "

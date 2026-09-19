@@ -359,8 +359,13 @@ def source_lp_1(
         centre_sigma=0.6,
     )
 
-    # --- main lens full models (light fixed from stage 0, mass + shear free) ---
-    # Only lens_0 carries the ExternalShear; one shear per mgl system.
+    # --- main lens full models (light fixed from stage 0, mass + field free) ---
+    # One external field acts on the whole multi-galaxy lens system.
+    field = af.Model(
+        al.MassField,
+        redshift=redshift_lens,
+        shear=af.Model(al.mp.ExternalShear),
+    )
     lens_dict = {}
     for i in range(n_main):
         lp0_lens = getattr(lens_light_result.instance.galaxies, f"lens_{i}")
@@ -376,7 +381,6 @@ def source_lp_1(
             disk=lp0_lens.disk,
             point=lp0_lens.point,
             mass=mass,
-            shear=af.Model(al.mp.ExternalShear) if i == 0 else None,
         )
 
     # --- Find BGC: the brightest of the main lens galaxies ---
@@ -465,6 +469,7 @@ def source_lp_1(
 
     model = af.Collection(
         galaxies=af.Collection(**lens_dict, source=source),
+        fields=field,
         extra_galaxies=extra_galaxies,
         scaling_galaxies=scaling_galaxies,
     )
@@ -572,11 +577,19 @@ def source_pix_1(
         lp_lens_instance = getattr(source_lp_result_1.instance.galaxies, f"lens_{i}")
         lp_lens_model = getattr(source_lp_result_1.model.galaxies, f"lens_{i}")
 
-        mass = al.util.chaining.mass_from(
-            mass=af.Model(al.mp.Isothermal),
-            mass_result=lp_lens_model.mass,
-            unfix_mass_centre=True,
-        )
+        if i == 0:
+            mass, field = al.util.chaining.mass_and_fields_from(
+                mass=af.Model(al.mp.Isothermal),
+                mass_result=lp_lens_model.mass,
+                fields_result=source_lp_result_1.model.fields,
+                unfix_mass_centre=True,
+            )
+        else:
+            mass = al.util.chaining.mass_from(
+                mass=af.Model(al.mp.Isothermal),
+                mass_result=lp_lens_model.mass,
+                unfix_mass_centre=True,
+            )
 
         lens_dict[f"lens_{i}"] = af.Model(
             al.Galaxy,
@@ -585,7 +598,6 @@ def source_pix_1(
             disk=lp_lens_instance.disk,
             point=lp_lens_instance.point,
             mass=mass,
-            shear=lp_lens_model.shear,
         )
 
     source = af.Model(
@@ -602,6 +614,7 @@ def source_pix_1(
 
     model = af.Collection(
         galaxies=af.Collection(**lens_dict, source=source),
+        fields=field,
         extra_galaxies=source_lp_result_1.model.extra_galaxies,
         scaling_galaxies=source_lp_result_1.model.scaling_galaxies,
     )
@@ -711,7 +724,6 @@ def source_pix_2(
             disk=lp_lens_instance.disk,
             point=lp_lens_instance.point,
             mass=pix1_lens_instance.mass,
-            shear=pix1_lens_instance.shear,
         )
 
     source = af.Model(
@@ -728,6 +740,7 @@ def source_pix_2(
 
     model = af.Collection(
         galaxies=af.Collection(**lens_dict, source=source),
+        fields=source_pix_result_1.instance.fields,
         extra_galaxies=source_pix_result_1.instance.extra_galaxies,
         scaling_galaxies=source_pix_result_1.instance.scaling_galaxies,
     )
@@ -835,11 +848,11 @@ def light_lp(
             disk=None,
             point=None,
             mass=lens_instance.mass,
-            shear=lens_instance.shear,
         )
 
     model = af.Collection(
         galaxies=af.Collection(**lens_dict, source=source),
+        fields=source_pix_result_2.instance.fields,
         extra_galaxies=extra_galaxies,
         scaling_galaxies=source_pix_result_2.instance.scaling_galaxies,
     )
@@ -901,11 +914,19 @@ def mass_total(
         lens_model = getattr(source_pix_result_1.model.galaxies, f"lens_{i}")
         light_lens_instance = getattr(light_result.instance.galaxies, f"lens_{i}")
 
-        mass = al.util.chaining.mass_from(
-            mass=af.Model(al.mp.PowerLaw),
-            mass_result=lens_model.mass,
-            unfix_mass_centre=True,
-        )
+        if i == 0:
+            mass, field = al.util.chaining.mass_and_fields_from(
+                mass=af.Model(al.mp.PowerLaw),
+                mass_result=lens_model.mass,
+                fields_result=source_pix_result_1.model.fields,
+                unfix_mass_centre=True,
+            )
+        else:
+            mass = al.util.chaining.mass_from(
+                mass=af.Model(al.mp.PowerLaw),
+                mass_result=lens_model.mass,
+                unfix_mass_centre=True,
+            )
 
         lens_dict[f"lens_{i}"] = af.Model(
             al.Galaxy,
@@ -914,7 +935,6 @@ def mass_total(
             disk=light_lens_instance.disk,
             point=light_lens_instance.point,
             mass=mass,
-            shear=lens_model.shear,
         )
 
     # --- Find BGC: the brightest of the main lens galaxies ---
@@ -1013,6 +1033,7 @@ def mass_total(
 
     model = af.Collection(
         galaxies=af.Collection(**lens_dict, source=source),
+        fields=field,
         extra_galaxies=extra_galaxies,
         scaling_galaxies=scaling_galaxies,
     )

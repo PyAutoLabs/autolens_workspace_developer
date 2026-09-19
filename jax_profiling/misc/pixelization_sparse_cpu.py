@@ -214,7 +214,8 @@ with timer.section("model_build"):
     shear.gamma_1 = af.GaussianPrior(mean=0.05, sigma=0.005)
     shear.gamma_2 = af.GaussianPrior(mean=0.05, sigma=0.005)
 
-    lens = af.Model(al.Galaxy, redshift=0.5, bulge=lens_bulge, mass=mass, shear=shear)
+    lens = af.Model(al.Galaxy, redshift=0.5, bulge=lens_bulge, mass=mass)
+    field = af.Model(al.MassField, redshift=0.5, shear=shear)
 
     pixelization = al.Pixelization(
         mesh=al.mesh.RectangularBilinearAdaptDensity(shape=mesh_shape),
@@ -223,7 +224,7 @@ with timer.section("model_build"):
 
     source = af.Model(al.Galaxy, redshift=1.0, pixelization=pixelization)
 
-    model = af.Collection(galaxies=af.Collection(lens=lens, source=source))
+    model = af.Collection(galaxies=af.Collection(lens=lens, source=source), fields=field)
 
 print(f"  Total free parameters: {model.total_free_parameters}")
 print(f"  Mesh shape: {mesh_shape}")
@@ -239,7 +240,7 @@ with timer.section("instance_from_vector"):
     param_vector = model.physical_values_from_prior_medians
     instance = model.instance_from_vector(vector=param_vector)
 
-tracer = al.Tracer(galaxies=list(instance.galaxies))
+tracer = al.Tracer(galaxies=list(instance.galaxies), fields=[instance.fields])
 
 print(f"  Tracer planes: {tracer.total_planes}")
 
