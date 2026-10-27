@@ -105,6 +105,7 @@ import autolens as al
 from astropy.io import fits
 import json
 
+
 def dataset_instrument_hdu_dict_via_fits_from(
     dataset_path, dataset_fits_name, image_tag: str = "_FLUX"
 ):
@@ -146,7 +147,6 @@ def _load_centres(path):
         return al.Grid2DIrregular(al.from_json(file_path=path))
     except FileNotFoundError:
         return al.Grid2DIrregular([])
-
 
 
 def lens_light_1(
@@ -215,6 +215,7 @@ def lens_light_1(
 
     return search.fit(model=model, analysis=analysis, **settings_search.fit_dict)
 
+
 def lens_light_2(
     dataset,
     settings_search,
@@ -256,7 +257,9 @@ def lens_light_2(
 
         extra_mass_models.append(
             af.Model(
-                al.Galaxy, redshift=redshift_lens, bulge=lp1_extra.bulge,
+                al.Galaxy,
+                redshift=redshift_lens,
+                bulge=lp1_extra.bulge,
             )
         )
 
@@ -372,7 +375,9 @@ def source_lp_1(
 
         mass = af.Model(al.mp.Isothermal)
         mass.centre = lp0_lens.bulge.centre
-        mass.einstein_radius = af.UniformPrior(lower_limit=0.0, upper_limit=upper_einstein_radius)
+        mass.einstein_radius = af.UniformPrior(
+            lower_limit=0.0, upper_limit=upper_einstein_radius
+        )
 
         lens_dict[f"lens_{i}"] = af.Model(
             al.Galaxy,
@@ -387,10 +392,13 @@ def source_lp_1(
     # Computed here so luminosity_bgc is available for both the extra galaxy bounds
     # and the scaling galaxy Faber-Jackson relation below.
     main_luminosities = [
-        np.sum([
-            2 * np.pi * g.sigma**2 / g.axis_ratio() * g.intensity
-            for g in tracer.galaxies[i].bulge.profile_list
-        ]) / pixel_scale**2
+        np.sum(
+            [
+                2 * np.pi * g.sigma**2 / g.axis_ratio() * g.intensity
+                for g in tracer.galaxies[i].bulge.profile_list
+            ]
+        )
+        / pixel_scale**2
         for i in range(n_main)
     ]
     bgc_index = int(np.argmax(main_luminosities))
@@ -419,7 +427,9 @@ def source_lp_1(
         mass.einstein_radius = af.UniformPrior(
             lower_limit=0.0,
             upper_limit=min(
-                2 * (upper_einstein_radius / luminosity_bgc**0.5) * total_luminosity**0.5,
+                2
+                * (upper_einstein_radius / luminosity_bgc**0.5)
+                * total_luminosity**0.5,
                 5.0,
             ),
         )
@@ -463,9 +473,7 @@ def source_lp_1(
         af.Collection(scaling_mass_models) if scaling_mass_models else None
     )
 
-    source = af.Model(
-        al.Galaxy, redshift=redshift_source, bulge=source_bulge
-    )
+    source = af.Model(al.Galaxy, redshift=redshift_source, bulge=source_bulge)
 
     model = af.Collection(
         galaxies=af.Collection(**lens_dict, source=source),
@@ -563,7 +571,10 @@ def source_pix_1(
         adapt_images=adapt_images,
         positions_likelihood_list=[
             source_lp_result_1.positions_likelihood_from(
-                factor=2.0, positions=positions, minimum_threshold=0.2, maximum_threshold=0.8
+                factor=2.0,
+                positions=positions,
+                minimum_threshold=0.2,
+                maximum_threshold=0.8,
             )
         ],
     )
@@ -941,10 +952,15 @@ def mass_total(
     # Computed here so luminosity_bgc and einstein_radius_bgc are available for both
     # the extra galaxy bounds and the scaling galaxy Faber-Jackson relation below.
     main_luminosities = [
-        np.sum([
-            2 * np.pi * g.sigma**2 / g.axis_ratio() * g.intensity
-            for g in getattr(light_result.instance.galaxies, f"lens_{i}").bulge.profile_list
-        ]) / pixel_scale**2
+        np.sum(
+            [
+                2 * np.pi * g.sigma**2 / g.axis_ratio() * g.intensity
+                for g in getattr(
+                    light_result.instance.galaxies, f"lens_{i}"
+                ).bulge.profile_list
+            ]
+        )
+        / pixel_scale**2
         for i in range(n_lenses)
     ]
     bgc_index = int(np.argmax(main_luminosities))
@@ -1024,7 +1040,10 @@ def mass_total(
         adapt_images=adapt_images,
         positions_likelihood_list=[
             source_lp_result_1.positions_likelihood_from(
-                factor=2.0, positions=positions, minimum_threshold=0.2, maximum_threshold=0.8
+                factor=2.0,
+                positions=positions,
+                minimum_threshold=0.2,
+                maximum_threshold=0.8,
             )
         ],
     )
@@ -1057,6 +1076,7 @@ __Dataset__
 Load, plot and mask the `Imaging` data.
 """
 
+
 def _cli_arg(flag: str, default: str) -> str:
     """
     Return the value passed via `--<flag>=<value>` on the command line, falling back to
@@ -1065,7 +1085,7 @@ def _cli_arg(flag: str, default: str) -> str:
     prefix = f"--{flag}="
     for arg in sys.argv[1:]:
         if arg.startswith(prefix):
-            return arg[len(prefix):]
+            return arg[len(prefix) :]
     return default
 
 
@@ -1170,7 +1190,7 @@ all_galaxy_centres = al.Grid2DIrregular(
 
 positions = al.Grid2DIrregular(al.from_json(file_path=dataset_path / "positions.json"))
 
-dist_galaxies = np.sqrt(all_galaxy_centres[:,0]**2 + all_galaxy_centres[:,1]**2)
+dist_galaxies = np.sqrt(all_galaxy_centres[:, 0] ** 2 + all_galaxy_centres[:, 1] ** 2)
 
 
 """
@@ -1179,9 +1199,9 @@ __Mask__
 
 try:
     extra_masking = al.Mask2D.from_fits(
-            file_path=dataset_path / "extra_masking.fits",
-            pixel_scales=pixel_scale,
-            invert=True,
+        file_path=dataset_path / "extra_masking.fits",
+        pixel_scales=pixel_scale,
+        invert=True,
     )
     dataset = dataset.apply_noise_scaling(mask=extra_masking)
 except FileNotFoundError:
@@ -1206,7 +1226,9 @@ over_sample_size_larger = al.util.over_sample.over_sample_size_via_radial_bins_f
     centre_list=list(all_galaxy_centres),
 )
 
-dataset_larger = dataset_larger.apply_over_sampling(over_sample_size_lp=over_sample_size_larger)
+dataset_larger = dataset_larger.apply_over_sampling(
+    over_sample_size_lp=over_sample_size_larger
+)
 
 mask = al.Mask2D.circular(
     shape_native=dataset.shape_native,
@@ -1273,7 +1295,7 @@ source_lp_result_1 = source_lp_1(
     redshift_lens=redshift_lens,
     redshift_source=redshift_source,
     source_mge_radius=source_mge_radius,
-    upper_einstein_radius=mask_radius
+    upper_einstein_radius=mask_radius,
 )
 
 source_pix_result_1, dataset, adapt_images = source_pix_1(
